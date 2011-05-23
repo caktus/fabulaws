@@ -159,6 +159,10 @@ class UbuntuInstance(EC2Instance):
         self.volumes = []
 
     def _create_volume(self, device, mount_point, vol_size):
+        """
+        Creates an EBS volume of size ``vol_size``, manifests the device at
+        ``device`` in this instance, and mounts it at ``mount_point``.
+        """
         logger.info('Attaching {0}'.format(device))
         inst = self.instance
         # the placement is the availability zone
@@ -186,6 +190,10 @@ class UbuntuInstance(EC2Instance):
         return vol
 
     def _destroy_volume(self, vol):
+        """
+        Forcibly detaches and destroys the given EBS volume, where vol is an
+        instance of ``boto.ec2.volume``.
+        """
         logger.debug('Detaching volume {0}'.format(vol.id))
         vol.detach(force=True)
         logger.debug('Waiting for volume {0} to become '
@@ -197,6 +205,12 @@ class UbuntuInstance(EC2Instance):
         vol.delete()
 
     def setup(self):
+        """
+        Extends the base EC2Instance ``setup()`` method with routines to
+        run apt-get update and, if desired, apt-get upgrade, on the instance.
+        Also creates volumes defined in the ``volume_info`` list on this
+        instance.
+        """
         super(UbuntuInstance, self).setup()
         sudo('apt-get update')
         if self.run_upgrade:
@@ -205,6 +219,10 @@ class UbuntuInstance(EC2Instance):
             self.volumes.append(self._create_volume(*vol))
 
     def cleanup(self):
+        """
+        Destroys any volumes created for this instance and then calls the
+        base class's ``cleanup()`` method.
+        """
         while self.volumes:
             vol = self.volumes.pop()
             self._destroy_volume(vol)
