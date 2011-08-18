@@ -4,7 +4,7 @@ import tempfile
 import logging
 
 from boto.ec2.connection import EC2Connection
-from fabric.api import *
+from fabulaws.ssh import SSH
 
 logger = logging.getLogger('fabulaws.ec2')
 
@@ -23,7 +23,7 @@ class EC2Instance(object):
             raise Exception('You must extend this class and define the ami, '
                             'user, and instance_type class variables.')
         # ensure these attributes exist
-        self.conn = self.key = self.key_file = self.instance = None
+        self.conn = self.key = self.key_file = self.instance = self.ssh = None
         self._key_id = key_id
         self._secret = secret
 
@@ -70,13 +70,39 @@ class EC2Instance(object):
             time.sleep(5) 
             while inst.update() != 'running':
                 time.sleep(2)
-            logger.info('Waiting extra 20 seconds for SSH daemon to launch...')
-            time.sleep(20)
         except:
             logger.info('Terminating instance early due to unexpected error')
             inst.terminate()
             raise
         return inst
+
+    def _connect_instance(self):
+        """
+        Establishes a Paramiko SSHClient connection to this instance.
+        """
+        logger.info('Establishing SSH connection')
+        pkey = paramiko.RSAKey.from_private_key(StringIO(self.key.material))
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        times = 0
+        wait = 2
+        while times < 120/wait:
+            try:
+                ssh.connect(self.instance.public_dns_name, allow_agent=False,
+                            look_for_keys=False, username=self.user,
+                            #pkey=pkey,
+                            key_filename=self.key_file.name)
+                break
+            except socket.error, e:
+                if e.errno in (110, 111): # Connection timed out & refused
+                    logger.debug('Error connecting, retrying in {0} '
+                                 'seconds'.format(wait))
+                    times += 1
+                    time.sleep(wait)
+                else:
+                    raise
+        ssh.exec_command('ls')
+        return ssh
 
     def _setup_context(self):
         """
@@ -111,7 +137,9 @@ class EC2Instance(object):
         self.conn = self._connect_ec2()
         self.key, self.key_file = self._create_key_pair()
         self.instance = self._create_instance()
-        self._setup_context()
+        self.ssh = SSH(self.instance.public_dns_name, self.user,
+                       self.key_file.name)
+        #self._setup_context()
 
     def cleanup(self):
         """
@@ -131,6 +159,10 @@ class EC2Instance(object):
             logger.debug('Deleting key file {0}'.format(self.key_file.name))
             self.key_file.close()
             self.key_file = None
+        if self.ssh:
+            logger.debug('Destroying SSH connection')
+            del self.ssh
+            self.ssh = None
 
     def __enter__(self):
         self.setup()
@@ -138,7 +170,7 @@ class EC2Instance(object):
 
     def __exit__(self, exc_type, exc_value, traceback):
         self.cleanup()
-        self._restore_context()
+        #self._restore_context()
 
     def __del__(self):
         self.cleanup()
@@ -174,16 +206,18 @@ class UbuntuInstance(EC2Instance):
             while vol.volume_state() == 'creating':
                 time.sleep(1)
                 vol.update()
+            logger.debug('volume state: {0}'.format(vol.volume_state()))
             if self.fs_encrypt:
-                sudo('apt-get install -y pwgen cryptsetup')
+                self.ssh.sudo('apt-get install -y pwgen cryptsetup')
+                logger.debug('volume state: {0}'.format(vol.volume_state()))
                 crypt = 'crypt-{0}'.format(device.split('/')[-1])
-                sudo('pwgen -y 256 1 | cryptsetup create {crypt} '
-                    '{device}'.format(crypt=crypt, device=device))
-                sudo('cryptsetup status {0}'.format(crypt))
+                self.ssh.sudo('pwgen -y 256 1 | cryptsetup create {crypt} '
+                              '{device}'.format(crypt=crypt, device=device))
+                self.ssh.sudo('cryptsetup status {0}'.format(crypt))
                 device = '/dev/mapper/{0}'.format(crypt)
-            sudo('mkfs.{0} {1}'.format(self.fs_type, device))
-            sudo('mkdir {0}'.format(mount_point))
-            sudo('mount {0} {1}'.format(device, mount_point))
+            self.ssh.sudo('mkfs.{0} {1}'.format(self.fs_type, device))
+            self.ssh.sudo('mkdir {0}'.format(mount_point))
+            self.ssh.sudo('mount {0} {1}'.format(device, mount_point))
         except:
             self._destroy_volume(vol)
             raise
@@ -212,9 +246,9 @@ class UbuntuInstance(EC2Instance):
         instance.
         """
         super(UbuntuInstance, self).setup()
-        sudo('apt-get update')
+        self.ssh.sudo('apt-get update')
         if self.run_upgrade:
-            sudo('apt-get upgrade -y')
+            self.ssh.sudo('apt-get upgrade -y')
         for vol in self.volume_info:
             self.volumes.append(self._create_volume(*vol))
 
