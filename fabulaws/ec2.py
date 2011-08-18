@@ -1,8 +1,11 @@
 import uuid
 import time
+import socket
 import tempfile
 import logging
+from StringIO import StringIO
 
+import paramiko
 from boto.ec2.connection import EC2Connection
 from fabric.api import *
 
@@ -18,7 +21,9 @@ class EC2Instance(object):
     security_groups = []
     key_prefix = ''
 
-    def __init__(self, key_id, secret):
+    _saved_contexts = []
+
+    def __init__(self, key_id, secret, terminate=True):
         if not self.ami or not self.user or not self.instance_type:
             raise Exception('You must extend this class and define the ami, '
                             'user, and instance_type class variables.')
@@ -26,6 +31,8 @@ class EC2Instance(object):
         self.conn = self.key = self.key_file = self.instance = None
         self._key_id = key_id
         self._secret = secret
+        self._terminate = terminate
+        self.setup()
 
     def _connect_ec2(self):
         logger.info('Connecting to EC2')
@@ -70,22 +77,47 @@ class EC2Instance(object):
             time.sleep(5) 
             while inst.update() != 'running':
                 time.sleep(2)
-            logger.info('Waiting extra 20 seconds for SSH daemon to launch...')
-            time.sleep(20)
+            logger.info('Waiting for SSH daemon to launch...')
+            self._wait_for_ssh(inst)
         except:
             logger.info('Terminating instance early due to unexpected error')
             inst.terminate()
             raise
         return inst
 
+    def _wait_for_ssh(self, instance):
+        """
+        Keeps retrying an SSH connection until it succeeds, then closes the
+        connection and returns.
+        """
+        pkey = paramiko.RSAKey.from_private_key(StringIO(self.key.material))
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        times = 0
+        wait = 2
+        while times < 120/wait:
+            try:
+                ssh.connect(instance.public_dns_name, allow_agent=False,
+                            look_for_keys=False, username=self.user,
+                            #pkey=pkey,
+                            key_filename=self.key_file.name)
+                break
+            except (EOFError, socket.error), e:
+                logger.debug('Error connecting, retrying in {0} '
+                             'seconds'.format(wait))
+                times += 1
+                time.sleep(wait)
+        ssh.close()
+
     def _setup_context(self):
         """
         Sets up the Fabric context so commands can be run on this instance.
         """
         logger.info('Setting up context')
-        self._saved_context = {}
+        context = {}
         for attr in 'key_filename', 'user', 'host_string':
-            self._saved_context[attr] = getattr(env, attr)
+            context[attr] = getattr(env, attr)
+        self._saved_contexts.append(context)
         logger.debug('Setting env.key_filename = "{0}"'
                      ''.format(self.key_file.name))
         env.key_filename = [self.key_file.name]
@@ -100,7 +132,8 @@ class EC2Instance(object):
         Restores the original Fabric context.
         """
         logger.info('Restoring context')
-        for key, value in self._saved_context.items():
+        context = self._saved_contexts.pop()
+        for key, value in context.items():
             setattr(env, key, value)
 
     def setup(self):
@@ -111,7 +144,6 @@ class EC2Instance(object):
         self.conn = self._connect_ec2()
         self.key, self.key_file = self._create_key_pair()
         self.instance = self._create_instance()
-        self._setup_context()
 
     def cleanup(self):
         """
@@ -123,21 +155,30 @@ class EC2Instance(object):
             logger.debug('Deleting key {0}'.format(self.key.name))
             self.key.delete()
             self.key = None
-        if self.instance:
+        if self.instance and self._terminate:
             logger.debug('Terminating instance {0}'.format(self.instance.id))
             self.instance.terminate()
             self.instance = None
+        elif self.instance:
+            logger.warning('Left instance running at {0}'.format(self.hostname))
         if self.key_file:
             logger.debug('Deleting key file {0}'.format(self.key_file.name))
             self.key_file.close()
             self.key_file = None
 
+    @property
+    def hostname(self):
+        if self.instance:
+            return self.instance.public_dns_name
+        else:
+            raise ValueError('No instance has been created yet, or the '
+                             'instance has already been destroyed.')
+
     def __enter__(self):
-        self.setup()
+        self._setup_context()
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        self.cleanup()
         self._restore_context()
 
     def __del__(self):
@@ -154,9 +195,9 @@ class UbuntuInstance(EC2Instance):
     fs_encrypt = True
     run_upgrade = True
     
-    def __init__(self, key_id, secret):
-        super(UbuntuInstance, self).__init__(key_id, secret)
+    def __init__(self, *args, **kwargs):
         self.volumes = []
+        super(UbuntuInstance, self).__init__(*args, **kwargs)
 
     def _create_volume(self, device, mount_point, vol_size):
         """
@@ -174,16 +215,17 @@ class UbuntuInstance(EC2Instance):
             while vol.volume_state() == 'creating':
                 time.sleep(1)
                 vol.update()
-            if self.fs_encrypt:
-                sudo('apt-get install -y pwgen cryptsetup')
-                crypt = 'crypt-{0}'.format(device.split('/')[-1])
-                sudo('pwgen -y 256 1 | cryptsetup create {crypt} '
-                    '{device}'.format(crypt=crypt, device=device))
-                sudo('cryptsetup status {0}'.format(crypt))
-                device = '/dev/mapper/{0}'.format(crypt)
-            sudo('mkfs.{0} {1}'.format(self.fs_type, device))
-            sudo('mkdir {0}'.format(mount_point))
-            sudo('mount {0} {1}'.format(device, mount_point))
+            with self:
+                if self.fs_encrypt:
+                    sudo('apt-get install -y pwgen cryptsetup')
+                    crypt = 'crypt-{0}'.format(device.split('/')[-1])
+                    sudo('pwgen -y 256 1 | cryptsetup create {crypt} '
+                        '{device}'.format(crypt=crypt, device=device))
+                    sudo('cryptsetup status {0}'.format(crypt))
+                    device = '/dev/mapper/{0}'.format(crypt)
+                sudo('mkfs.{0} {1}'.format(self.fs_type, device))
+                sudo('mkdir {0}'.format(mount_point))
+                sudo('mount {0} {1}'.format(device, mount_point))
         except:
             self._destroy_volume(vol)
             raise
@@ -212,9 +254,10 @@ class UbuntuInstance(EC2Instance):
         instance.
         """
         super(UbuntuInstance, self).setup()
-        sudo('apt-get update')
-        if self.run_upgrade:
-            sudo('apt-get upgrade -y')
+        with self:
+            sudo('apt-get update')
+            if self.run_upgrade:
+                sudo('apt-get upgrade -y')
         for vol in self.volume_info:
             self.volumes.append(self._create_volume(*vol))
 
