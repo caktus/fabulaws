@@ -1,3 +1,4 @@
+import os
 import uuid
 import time
 import socket
@@ -9,6 +10,7 @@ from StringIO import StringIO
 
 import paramiko
 from boto.ec2.connection import EC2Connection
+from boto.ec2 import elb
 from fabric.api import *
 from fabric.contrib import files
 
@@ -26,20 +28,26 @@ class EC2Instance(object):
 
     _saved_contexts = []
 
-    def __init__(self, key_id, secret, terminate=True):
+    def __init__(self, access_key_id=None, secret_access_key=None,
+                 terminate=True, placement=None):
         if not self.ami or not self.user or not self.instance_type:
             raise Exception('You must extend this class and define the ami, '
                             'user, and instance_type class variables.')
         # ensure these attributes exist
         self.conn = self.key = self.key_file = self.instance = None
-        self._key_id = key_id
-        self._secret = secret
+        self._key_id = access_key_id or os.environ['AWS_ACCESS_KEY_ID']
+        self._secret = secret_access_key or os.environ['AWS_SECRET_ACCESS_KEY']
         self._terminate = terminate
+        self._placement = placement
         self.setup()
 
     def _connect_ec2(self):
         logger.info('Connecting to EC2')
         return EC2Connection(self._key_id, self._secret)
+
+    def _connect_elb(self):
+        logger.info('Connecting to ELB')
+        return elb.ELBConnection(self._key_id, self._secret)
 
     def _create_key_pair(self):
         """
@@ -72,7 +80,8 @@ class EC2Instance(object):
         image = self.conn.get_image(self.ami)
         res = image.run(key_name=self.key.name,
                         security_groups=self.security_groups,
-                        instance_type=self.instance_type)
+                        instance_type=self.instance_type,
+                        placement=self._placement)
         inst = res.instances[0]
         logger.debug('Created EC2 instance {0}'.format(inst.id))
         try:
@@ -145,8 +154,15 @@ class EC2Instance(object):
         method in your subclass to further customize the instance.
         """
         self.conn = self._connect_ec2()
+        self.elb_conn = self._connect_elb()
         self.key, self.key_file = self._create_key_pair()
         self.instance = self._create_instance()
+
+    def add_to_elb(self, elb_name):
+        """
+        Adds this instance to the specified load balancer.
+        """
+        return self.elb_conn.register_instances(elb_name, [self.instance.id])
 
     def cleanup(self):
         """
