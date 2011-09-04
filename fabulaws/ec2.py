@@ -312,7 +312,7 @@ class UbuntuInstance(EC2Instance):
                 put(keyfile, '/home/{0}/.ssh/authorized_keys'.format(name),
                     use_sudo=True)
                 sudo('chown -R {0} /home/{0}/.ssh'.format(name))
-                sudo('echo -n tobias: > /home/{0}/pass'.format(name))
+                sudo('echo -n {0}: > /home/{0}/pass'.format(name))
                 passwd = self.create_pass_file(name, 'pass')
                 sudo('chpasswd < /home/{0}/pass'.format(name))
                 passwords[name] = passwd
