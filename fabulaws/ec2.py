@@ -16,6 +16,44 @@ from fabric.contrib import files
 
 logger = logging.getLogger('fabulaws.ec2')
 
+
+class EC2Service(object):
+    """
+    Represents a connection to the EC2 service
+    """
+
+    def __init__(self, access_key_id=None, secret_access_key=None):
+        # ensure these attributes exist
+        self.conn = self.key = self.key_file = self.instance = None
+        self._key_id = access_key_id or os.environ['AWS_ACCESS_KEY_ID']
+        self._secret = secret_access_key or os.environ['AWS_SECRET_ACCESS_KEY']
+        self.setup()
+
+    def _connect_ec2(self):
+        logger.info('Connecting to EC2')
+        return EC2Connection(self._key_id, self._secret)
+
+    def setup(self):
+        self.conn = self._connect_ec2()
+
+    def instances(self, filters=None):
+        """
+        Return list of all matching reservation instances
+        """
+        if not filters:
+            filters = {}
+        reservations = self.conn.get_all_instances(filters=filters)
+        for reservation in reservations:
+            for instance in reservation.instances:
+                yield instance
+
+    def public_dns(self, filters=None):
+        """
+        List all public DNS entries for matching instances
+        """
+        return [i.public_dns_name for i in self.instances(filters)]
+
+
 class EC2Instance(object):
     """
     Base class for EC2 instances.
