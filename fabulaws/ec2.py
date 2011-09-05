@@ -24,7 +24,7 @@ class EC2Service(object):
 
     def __init__(self, access_key_id=None, secret_access_key=None):
         # ensure these attributes exist
-        self.conn = self.key = self.key_file = self.instance = None
+        self.conn = None
         self._key_id = access_key_id or os.environ['AWS_ACCESS_KEY_ID']
         self._secret = secret_access_key or os.environ['AWS_SECRET_ACCESS_KEY']
         self.setup()
