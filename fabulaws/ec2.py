@@ -16,6 +16,47 @@ from fabric.contrib import files
 
 logger = logging.getLogger('fabulaws.ec2')
 
+
+class EC2Service(object):
+    """
+    Represents a connection to the EC2 service
+    """
+
+    def __init__(self, access_key_id=None, secret_access_key=None):
+        # ensure these attributes exist
+        self.conn = None
+        self._key_id = access_key_id or os.environ['AWS_ACCESS_KEY_ID']
+        self._secret = secret_access_key or os.environ['AWS_SECRET_ACCESS_KEY']
+        self.setup()
+
+    def _connect_ec2(self):
+        logger.info('Connecting to EC2')
+        return EC2Connection(self._key_id, self._secret)
+
+    def setup(self):
+        self.conn = self._connect_ec2()
+
+    def instances(self, filters=None):
+        """
+        Return list of all matching reservation instances
+        """
+        if not filters:
+            filters = {}
+        reservations = self.conn.get_all_instances(filters=filters)
+        for reservation in reservations:
+            for instance in reservation.instances:
+                yield instance
+
+    def public_dns(self, filters=None):
+        """
+        List all public DNS entries for all running instances
+        """
+        if not filters:
+            filters = {}
+        filters['instance-state-name'] = 'running'
+        return [i.public_dns_name for i in self.instances(filters)]
+
+
 class EC2Instance(object):
     """
     Base class for EC2 instances.
@@ -29,7 +70,7 @@ class EC2Instance(object):
     _saved_contexts = []
 
     def __init__(self, access_key_id=None, secret_access_key=None,
-                 terminate=True, placement=None):
+                 terminate=True, placement=None, tags=None):
         if not self.ami or not self.user or not self.instance_type:
             raise Exception('You must extend this class and define the ami, '
                             'user, and instance_type class variables.')
@@ -39,6 +80,7 @@ class EC2Instance(object):
         self._secret = secret_access_key or os.environ['AWS_SECRET_ACCESS_KEY']
         self._terminate = terminate
         self._placement = placement
+        self._tags = tags
         self.setup()
 
     def _connect_ec2(self):
@@ -157,6 +199,7 @@ class EC2Instance(object):
         self.elb_conn = self._connect_elb()
         self.key, self.key_file = self._create_key_pair()
         self.instance = self._create_instance()
+        self.add_tags(self._tags)
 
     def add_to_elb(self, elb_name):
         """
@@ -184,6 +227,13 @@ class EC2Instance(object):
             logger.debug('Deleting key file {0}'.format(self.key_file.name))
             self.key_file.close()
             self.key_file = None
+
+    def add_tags(self, tags):
+        """
+        Associate specified tags with instance
+        """
+        if tags:
+            self.conn.create_tags([self.instance.id], tags)
 
     @property
     def hostname(self):
