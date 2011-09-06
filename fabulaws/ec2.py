@@ -70,18 +70,29 @@ class EC2Instance(object):
     _saved_contexts = []
 
     def __init__(self, access_key_id=None, secret_access_key=None,
-                 terminate=True, placement=None, tags=None):
-        if not self.ami or not self.user or not self.instance_type:
+                 terminate=True, placement=None, tags=None, instance_id=None):
+        if not instance_id and (not self.ami or not self.user or 
+                                not self.instance_type):
             raise Exception('You must extend this class and define the ami, '
                             'user, and instance_type class variables.')
         # ensure these attributes exist
-        self.conn = self.key = self.key_file = self.instance = None
+        self.conn = self.elb_conn = None
+        self.key = self.key_file = self.instance = None
         self._key_id = access_key_id or os.environ['AWS_ACCESS_KEY_ID']
         self._secret = secret_access_key or os.environ['AWS_SECRET_ACCESS_KEY']
         self._terminate = terminate
         self._placement = placement
         self._tags = tags
-        self.setup()
+        self.connect()
+        if instance_id:
+            if terminate or tags or placement:
+                logger.warning('The terminate, tags, and placement arguments '
+                               'have no effect when instance_id is set.')
+            # attach to an existing instance
+            self.attach_to(instance_id)
+        else:
+            # setup a new instance
+            self.setup()
 
     def _connect_ec2(self):
         logger.info('Connecting to EC2')
@@ -113,30 +124,38 @@ class EC2Instance(object):
             raise
         return key, key_file
 
-    def _create_instance(self):
+    def _create_instance(self, instance_id=None):
         """
         Creates a new EC2 instance.  The instance is destroyed when exiting the
         context manager or destroying this object.
         """
-        logger.info('Creating EC2 instance')
-        image = self.conn.get_image(self.ami)
-        res = image.run(key_name=self.key.name,
-                        security_groups=self.security_groups,
-                        instance_type=self.instance_type,
-                        placement=self._placement)
+        if instance_id:
+            logger.info('Fetching existing instance {0}'.format(instance_id))
+            res = self.conn.get_all_instances([instance_id])[0]
+            created = False
+        else:
+            logger.info('Creating EC2 instance')
+            image = self.conn.get_image(self.ami)
+            res = image.run(key_name=self.key.name,
+                            security_groups=self.security_groups,
+                            instance_type=self.instance_type,
+                            placement=self._placement)
+            created = True
         inst = res.instances[0]
-        logger.debug('Created EC2 instance {0}'.format(inst.id))
-        try:
-            logger.info('Waiting for instance to enter "running" state...')
-            time.sleep(5) 
-            while inst.update() != 'running':
-                time.sleep(2)
-            logger.info('Waiting for SSH daemon to launch...')
-            self._wait_for_ssh(inst)
-        except:
-            logger.info('Terminating instance early due to unexpected error')
-            inst.terminate()
-            raise
+        logger.debug('Attached to EC2 instance {0}'.format(inst.id))
+        if created:
+            try:
+                logger.info('Waiting for instance to enter "running" state...')
+                time.sleep(5) 
+                while inst.update() != 'running':
+                    time.sleep(2)
+                logger.info('Waiting for SSH daemon to launch...')
+                self._wait_for_ssh(inst)
+            except:
+                logger.info('Terminating instance early due to unexpected '
+                            'error')
+                inst.terminate()
+                raise
         return inst
 
     def _wait_for_ssh(self, instance):
@@ -190,13 +209,24 @@ class EC2Instance(object):
         for key, value in context.items():
             setattr(env, key, value)
 
+    def connect(self):
+        """
+        Sets up connections for EC2 and ELB.
+        """
+        self.conn = self._connect_ec2()
+        self.elb_conn = self._connect_elb()
+
+    def attach_to(self, instance_id):
+        """
+        Attaches to an existing EC2 instance, identified by instance_id.
+        """
+        self.instance = self._create_instance(instance_id=instance_id)
+
     def setup(self):
         """
         Creates the instance and sets up the Fabric context.  Extend this
         method in your subclass to further customize the instance.
         """
-        self.conn = self._connect_ec2()
-        self.elb_conn = self._connect_elb()
         self.key, self.key_file = self._create_key_pair()
         self.instance = self._create_instance()
         self.add_tags(self._tags)
