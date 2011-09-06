@@ -70,7 +70,7 @@ class EC2Instance(object):
     _saved_contexts = []
 
     def __init__(self, access_key_id=None, secret_access_key=None,
-                 terminate=True, placement=None, tags=None, instance_id=None):
+                 terminate=False, placement=None, tags=None, instance_id=None):
         if not instance_id and (not self.ami or not self.user or 
                                 not self.instance_type):
             raise Exception('You must extend this class and define the ami, '
