@@ -26,7 +26,8 @@ module as needed to further customize the instance before presenting it as
 a context manager (or using it in your fab file).  To do so, simply extend
 the ``setup()`` and ``cleanup()`` methods in one of the existing classes.
 
-Contents:
+Contents
+--------
 
 .. toctree::
    :maxdepth: 2
