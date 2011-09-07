@@ -5,8 +5,8 @@ FabulAWS uses `Fabric <http://www.fabfile.org/>`_ internally to communicate
 with newly-created servers, so it follows naturally that you can use FabulAWS
 in your fab files to create new servers and deploy code to them.
 
-Simple example
---------------
+Simple Fabric example
+---------------------
 
 Adding ``fabulaws`` to an existing fab file can be as simple as importing
 and instantiating an EC2 instance class, e.g.::
