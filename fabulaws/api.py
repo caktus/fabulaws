@@ -1,7 +1,10 @@
 from fabric.api import *
 from fabric.operations import _prefix_commands, _prefix_env_vars
 
-__all__ = ['sshagent_run']
+from fabulaws.ec2 import EC2Service
+
+
+__all__ = ['sshagent_run', 'hostnames']
 
 
 def sshagent_run(cmd, user=None):
@@ -23,3 +26,10 @@ def sshagent_run(cmd, user=None):
     except ValueError:
         return local("ssh -o StrictHostKeyChecking=no -A "
                      "%s@%s '%s'" % (user, env.host_string, wrapped_cmd))
+
+
+def hostnames(*args, **kwargs):
+    """
+    Returns a list of hostnames for the specified filters.
+    """
+    return EC2Service().public_dns(*args, **kwargs)
