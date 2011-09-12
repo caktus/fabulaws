@@ -362,31 +362,12 @@ class UbuntuInstance(EC2Instance):
         for vol in self.volume_info:
             self.volumes.append(self._create_volume(*vol))
 
-    def _generate_passwd(self, length=20):
-        """
-        Generates a random password.
-        """
-        chars = string.letters + string.digits
-        return ''.join(choice(chars) for _ in range(length))
-
-    def create_pass_file(self, user, file_name):
-        passwd = self._generate_passwd(20)
-        with self:
-            sudo('touch /home/{0}/{1}'.format(user, file_name))
-            sudo('chown {0}:{0} /home/{0}/{1}'.format(user, file_name))
-            sudo('chmod 600 /home/{0}/{1}'.format(user, file_name))
-            # don't log the password to stdout:
-            with hide('running'):
-                files.append('/home/{0}/{1}'.format(user, file_name), passwd,
-                             use_sudo=True)
-        return passwd
-
     def create_users(self, users):
         """
         Create admin users and deploy SSH keys to the server.  ``users`` is
-        a list of (username, keyfile) tuples.
+        a list of (username, keyfile) tuples.  The users will be created with
+        empty passwords.
         """
-        passwords = {}
         if self.admin_groups:
             groups = '-G {0}'.format(','.join(self.admin_groups))
         else:
@@ -394,15 +375,11 @@ class UbuntuInstance(EC2Instance):
         with self:
             for name, keyfile in users:
                 sudo('useradd -m {0} -s /bin/bash {1}'.format(groups, name))
+                sudo('passwd -d {0}'.format(name))
                 sudo('mkdir /home/{0}/.ssh'.format(name))
                 put(keyfile, '/home/{0}/.ssh/authorized_keys'.format(name),
                     use_sudo=True)
                 sudo('chown -R {0} /home/{0}/.ssh'.format(name))
-                sudo('echo -n {0}: > /home/{0}/pass'.format(name))
-                passwd = self.create_pass_file(name, 'pass')
-                sudo('chpasswd < /home/{0}/pass'.format(name))
-                passwords[name] = passwd
-        return passwords
 
     def cleanup(self):
         """
