@@ -63,6 +63,7 @@ class EC2Instance(object):
     """
     ami = ''
     user = ''
+    admin_groups = []
     instance_type = ''
     security_groups = []
     key_prefix = ''
@@ -289,6 +290,7 @@ class UbuntuInstance(EC2Instance):
     Base class for all Ubuntu instances.
     """
     user = 'ubuntu'
+    admin_groups = ['admin']
     volume_info = [] # tuples of (device, mount_point, size_in_GB)
     fs_type = 'ext3'
     fs_encrypt = True
@@ -385,9 +387,13 @@ class UbuntuInstance(EC2Instance):
         a list of (username, keyfile) tuples.
         """
         passwords = {}
+        if self.admin_groups:
+            groups = '-G {0}'.format(','.join(self.admin_groups))
+        else:
+            groups = ''
         with self:
             for name, keyfile in users:
-                sudo('useradd -m -G admin -s /bin/bash {0}'.format(name))
+                sudo('useradd -m {0} -s /bin/bash {1}'.format(groups, name))
                 sudo('mkdir /home/{0}/.ssh'.format(name))
                 put(keyfile, '/home/{0}/.ssh/authorized_keys'.format(name),
                     use_sudo=True)
