@@ -176,7 +176,7 @@ class EC2Instance(object):
                             key_filename=self.key_file.name)
                 break
             except (EOFError, socket.error, paramiko.SSHException), e:
-                logger.debug('Error connecting ({0}); retrying in {0} '
+                logger.debug('Error connecting ({0}); retrying in {1} '
                              'seconds'.format(e, wait))
                 times += 1
                 time.sleep(wait)
