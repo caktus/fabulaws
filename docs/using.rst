@@ -60,7 +60,7 @@ Now, you can pass the environment that you're creating into when you run
 Retrieving tagged instances
 ---------------------------
 
-To retrieve and use tagged instances from your fab file, use the ``hostnames``
+To retrieve and use tagged instances from your fab file, use the ``ec2_hostnames``
 method in ``fabulaws.api`` to retrieve the hostnames for the instances
 tagged with the appropriate tags, e.g.::
 
@@ -69,7 +69,7 @@ tagged with the appropriate tags, e.g.::
 
     def staging():
         filters = {'tag:environment': 'staging', 'tag:product': 'caktus-website'}
-        env.hosts = hostnames(filters=filters)
+        env.hosts = ec2_hostnames(filters=filters)
 
     def update():
         run('git pull')

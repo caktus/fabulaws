@@ -36,25 +36,29 @@ class EC2Service(object):
     def setup(self):
         self.conn = self._connect_ec2()
 
-    def instances(self, filters=None):
+    def instances(self, filters=None, cls=None, inst_kwargs=None):
         """
         Return list of all matching reservation instances
         """
-        if not filters:
-            filters = {}
+        filters = filters or {}
+        cls = cls or EC2Instance
+        inst_kwargs = inst_kwargs or {}
         reservations = self.conn.get_all_instances(filters=filters)
+        results = []
         for reservation in reservations:
             for instance in reservation.instances:
-                yield instance
+                results.append(cls(instance=instance, **inst_kwargs))
+        return results
 
-    def public_dns(self, filters=None):
+    def public_dns(self, filters=None, cls=None, inst_kwargs=None):
         """
         List all public DNS entries for all running instances
         """
-        if not filters:
-            filters = {}
-        filters['instance-state-name'] = 'running'
-        return [i.public_dns_name for i in self.instances(filters)]
+        filters = filters or {}
+        if 'instance-state-name' not in filters:
+            filters['instance-state-name'] = 'running'
+        instances = self.instances(filters, cls, inst_kwargs)
+        return [i.hostname for i in instances]
 
 
 class EC2Instance(object):
@@ -71,9 +75,10 @@ class EC2Instance(object):
     _saved_contexts = []
 
     def __init__(self, access_key_id=None, secret_access_key=None,
-                 terminate=False, placement=None, tags=None, instance_id=None):
-        if not instance_id and (not self.ami or not self.user or 
-                                not self.instance_type):
+                 terminate=False, placement=None, tags=None, instance_id=None,
+                 instance=None):
+        if (not self.ami or not self.user or not self.instance_type) and \
+          not instance_id and not instance:
             raise Exception('You must extend this class and define the ami, '
                             'user, and instance_type class variables.')
         # ensure these attributes exist
@@ -84,16 +89,22 @@ class EC2Instance(object):
         self._terminate = terminate
         self._placement = placement
         self._tags = tags
-        self.connect()
-        if instance_id:
-            if terminate or tags or placement:
-                logger.warning('The terminate, tags, and placement arguments '
-                               'have no effect when instance_id is set.')
+        if terminate or tags or placement:
+            logger.warning('The terminate, tags, and placement arguments '
+                           'have no effect when instance_id is set.')
+        if instance:
+            self.conn = instance.connection
+            self.instance = instance
+            self.user = None
+        elif instance_id:
+            self.conn = self._connect_ec2()
             # attach to an existing instance
             self.attach_to(instance_id)
         else:
+            self.conn = self._connect_ec2()
             # setup a new instance
             self.setup()
+        self.elb_conn = self._connect_elb()
 
     def _connect_ec2(self):
         logger.info('Connecting to EC2')
@@ -192,11 +203,13 @@ class EC2Instance(object):
         for attr in 'key_filename', 'user', 'host_string':
             context[attr] = getattr(env, attr)
         self._saved_contexts.append(context)
-        logger.debug('Setting env.key_filename = "{0}"'
-                     ''.format(self.key_file.name))
-        env.key_filename = [self.key_file.name]
-        logger.debug('Setting env.user = "{0}"'.format(self.user))
-        env.user = self.user
+        if self.key_file:
+            logger.debug('Setting env.key_filename = "{0}"'
+                         ''.format(self.key_file.name))
+            env.key_filename = [self.key_file.name]
+        if self.user:
+            logger.debug('Setting env.user = "{0}"'.format(self.user))
+            env.user = self.user
         logger.debug('Setting env.host_string = "{0}"'
                      ''.format(self.instance.public_dns_name))
         env.host_string = self.instance.public_dns_name
@@ -209,13 +222,6 @@ class EC2Instance(object):
         context = self._saved_contexts.pop()
         for key, value in context.items():
             setattr(env, key, value)
-
-    def connect(self):
-        """
-        Sets up connections for EC2 and ELB.
-        """
-        self.conn = self._connect_ec2()
-        self.elb_conn = self._connect_elb()
 
     def attach_to(self, instance_id):
         """

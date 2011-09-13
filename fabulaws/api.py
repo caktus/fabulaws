@@ -4,7 +4,7 @@ from fabric.operations import _prefix_commands, _prefix_env_vars
 from fabulaws.ec2 import EC2Service
 
 
-__all__ = ['sshagent_run', 'hostnames']
+__all__ = ['sshagent_run', 'ec2_hostnames', 'ec2_instances']
 
 
 def sshagent_run(cmd, user=None):
@@ -28,8 +28,15 @@ def sshagent_run(cmd, user=None):
                      "%s@%s '%s'" % (user, env.host_string, wrapped_cmd))
 
 
-def hostnames(*args, **kwargs):
+def ec2_hostnames(*args, **kwargs):
     """
     Returns a list of hostnames for the specified filters.
     """
     return EC2Service().public_dns(*args, **kwargs)
+
+
+def ec2_instances(*args, **kwargs):
+    """
+    Returns a list of instances for the specified filters.
+    """
+    return EC2Service().instances(*args, **kwargs)
