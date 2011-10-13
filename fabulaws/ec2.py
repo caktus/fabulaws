@@ -7,6 +7,7 @@ import logging
 import string
 from random import choice
 from StringIO import StringIO
+from getpass import getpass
 
 import paramiko
 from boto.ec2.connection import EC2Connection
@@ -324,11 +325,16 @@ class UbuntuInstance(EC2Instance):
                 vol.update()
             with self:
                 if self.fs_encrypt:
-                    sudo('apt-get install -y pwgen cryptsetup')
+                    sudo('apt-get install -y cryptsetup')
                     crypt = 'crypt-{0}'.format(device.split('/')[-1])
-                    sudo('pwgen -y 256 1 | cryptsetup create {crypt} '
-                        '{device}'.format(crypt=crypt, device=device))
-                    sudo('cryptsetup status {0}'.format(crypt))
+                    #passwd = getpass('Enter Password for {0} encrypted volume: '.format(device))
+                    #passwd = passwd.replace('"', '\\"')
+                    #
+                    #sudo('echo "{passwd}" | cryptsetup  create  {crypt} '
+                        #'{device}'.format(passwd=passwd, crypt=crypt, device=device))
+                    #sudo('cryptsetup status {0}'.format(crypt))
+                    sudo('cryptsetup  -y luksFormat {device}'.format(device=device))
+                    sudo('cryptsetup luksOpen {device} {crypt}'.format(device=device, crypt=crypt))
                     device = '/dev/mapper/{0}'.format(crypt)
                 sudo('mkfs.{0} {1}'.format(self.fs_type, device))
                 sudo('mkdir {0}'.format(mount_point))
