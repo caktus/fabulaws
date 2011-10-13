@@ -71,6 +71,7 @@ class EC2Instance(object):
     instance_type = ''
     security_groups = []
     key_prefix = ''
+    ssh_timeout = 5
 
     _saved_contexts = []
 
@@ -175,7 +176,6 @@ class EC2Instance(object):
         Keeps retrying an SSH connection until it succeeds, then closes the
         connection and returns.
         """
-        pkey = paramiko.RSAKey.from_private_key(StringIO(self.key.material))
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         times = 0
@@ -184,8 +184,8 @@ class EC2Instance(object):
             try:
                 ssh.connect(instance.public_dns_name, allow_agent=False,
                             look_for_keys=False, username=self.user,
-                            #pkey=pkey,
-                            key_filename=self.key_file.name)
+                            key_filename=self.key_file.name,
+                            timeout=self.ssh_timeout)
                 break
             except (EOFError, socket.error, paramiko.SSHException), e:
                 logger.debug('Error connecting ({0}); retrying in {1} '
