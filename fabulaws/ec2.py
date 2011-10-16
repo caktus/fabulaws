@@ -13,6 +13,7 @@ from boto.ec2.connection import EC2Connection
 from boto.ec2 import elb
 from fabric.api import *
 from fabric.contrib import files
+from fabulaws.api import *
 
 logger = logging.getLogger('fabulaws.ec2')
 
@@ -385,6 +386,23 @@ class UbuntuInstance(EC2Instance):
                 put(keyfile, '/home/{0}/.ssh/authorized_keys'.format(name),
                     use_sudo=True)
                 sudo('chown -R {0} /home/{0}/.ssh'.format(name))
+
+    def secure_directories(self, secure_dirs, secure_root):
+        """
+        Move the given directories, ``secure_dirs'', to the secure file system
+        mounted at ``secure_root''.
+        """
+        assert files.exists(secure_root)
+        for sdir in secure_dirs:
+            secured_sdir = ''.join([secure_root, sdir])
+            secured_sdir_parent = call_python('os.path.dirname', secured_sdir)
+            if files.exists(sdir):
+                sudo('mkdir -p {0}'.format(secured_sdir_parent))
+                sudo('mv {0} {1}'.format(sdir, secured_sdir))
+            else:
+                sudo('mkdir -p {0}'.format(secured_sdir))
+            sudo('mkdir -p {0}'.format(sdir))
+            sudo('mount -o bind {0} {1}'.format(secured_sdir, sdir))
 
     def cleanup(self):
         """
