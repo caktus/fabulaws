@@ -41,6 +41,8 @@ class EC2Service(object):
         Return list of all matching reservation instances
         """
         filters = filters or {}
+        if 'instance-state-name' not in filters:
+            filters['instance-state-name'] = 'running'
         cls = cls or EC2Instance
         inst_kwargs = inst_kwargs or {}
         reservations = self.conn.get_all_instances(filters=filters)
@@ -54,9 +56,6 @@ class EC2Service(object):
         """
         List all public DNS entries for all running instances
         """
-        filters = filters or {}
-        if 'instance-state-name' not in filters:
-            filters['instance-state-name'] = 'running'
         instances = self.instances(filters, cls, inst_kwargs)
         return [i.hostname for i in instances]
 
