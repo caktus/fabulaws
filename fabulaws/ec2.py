@@ -7,7 +7,6 @@ import logging
 import string
 from random import choice
 from StringIO import StringIO
-from getpass import getpass
 
 import paramiko
 from boto.ec2.connection import EC2Connection
@@ -260,7 +259,8 @@ class EC2Instance(object):
             self.instance.terminate()
             self.instance = None
         elif self.instance:
-            logger.warning('Left instance running at {0}'.format(self.hostname))
+            logger.warning('Left instance "{0}" running at {1}'
+                           ''.format(self.instance.id, self.hostname))
         if self.key_file:
             logger.debug('Deleting key file {0}'.format(self.key_file.name))
             self.key_file.close()
@@ -327,13 +327,7 @@ class UbuntuInstance(EC2Instance):
                 if self.fs_encrypt:
                     sudo('apt-get install -y cryptsetup')
                     crypt = 'crypt-{0}'.format(device.split('/')[-1])
-                    #passwd = getpass('Enter Password for {0} encrypted volume: '.format(device))
-                    #passwd = passwd.replace('"', '\\"')
-                    #
-                    #sudo('echo "{passwd}" | cryptsetup  create  {crypt} '
-                        #'{device}'.format(passwd=passwd, crypt=crypt, device=device))
-                    #sudo('cryptsetup status {0}'.format(crypt))
-                    sudo('cryptsetup  -y luksFormat {device}'.format(device=device))
+                    sudo('cryptsetup -y luksFormat {device}'.format(device=device))
                     sudo('cryptsetup luksOpen {device} {crypt}'.format(device=device, crypt=crypt))
                     device = '/dev/mapper/{0}'.format(crypt)
                 sudo('mkfs.{0} {1}'.format(self.fs_type, device))
@@ -395,12 +389,17 @@ class UbuntuInstance(EC2Instance):
 
     def cleanup(self):
         """
-        Destroys any volumes created for this instance and then calls the
-        base class's ``cleanup()`` method.
+        If needed, destroys any volumes created for this instance and then
+        calls the base class's ``cleanup()`` method.
         """
-        while self.volumes:
-            vol = self.volumes.pop()
-            self._destroy_volume(vol)
+        if self._terminate:
+            while self.volumes:
+                vol = self.volumes.pop()
+                self._destroy_volume(vol)
+        else:
+            for vol in self.volumes:
+                logger.warning('Left volume "{0}" in state "{1}"'
+                               ''.format(vol.id, vol.volume_state()))
         super(UbuntuInstance, self).cleanup()
 
 
