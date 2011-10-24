@@ -85,14 +85,14 @@ class EC2Instance(object):
         # ensure these attributes exist
         self.conn = self.elb_conn = None
         self.key = self.key_file = self.instance = None
-        self._key_id = access_key_id or os.environ['AWS_ACCESS_KEY_ID']
-        self._secret = secret_access_key or os.environ['AWS_SECRET_ACCESS_KEY']
         self._terminate = terminate
         self._placement = placement
         self._tags = tags
         if terminate or tags or placement:
             logger.warning('The terminate, tags, and placement arguments '
                            'have no effect when instance_id is set.')
+        self._key_id = access_key_id or os.environ['AWS_ACCESS_KEY_ID']
+        self._secret = secret_access_key or os.environ['AWS_SECRET_ACCESS_KEY']
         if instance:
             self.conn = instance.connection
             self.instance = instance
