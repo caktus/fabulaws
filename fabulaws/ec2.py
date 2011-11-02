@@ -368,7 +368,7 @@ class UbuntuInstance(EC2Instance):
         for vol in self.volume_info:
             self.volumes.append(self._create_volume(*vol))
 
-    def create_users(self, users):
+    def create_users(self, users, ignore_existing=True):
         """
         Create admin users and deploy SSH keys to the server.  ``users`` is
         a list of (username, keyfile) tuples.  The users will be created with
@@ -380,6 +380,9 @@ class UbuntuInstance(EC2Instance):
             groups = ''
         with self:
             for name, keyfile in users:
+                if ignore_existing and files.exists('/home/{0}'.format(name)):
+                    logger.info('Not creating existing user {0}'.format(name))
+                    continue
                 sudo('useradd -m {0} -s /bin/bash {1}'.format(groups, name))
                 sudo('passwd -d {0}'.format(name))
                 sudo('mkdir /home/{0}/.ssh'.format(name))
