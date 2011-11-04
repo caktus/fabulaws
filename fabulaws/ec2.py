@@ -395,17 +395,18 @@ class UbuntuInstance(EC2Instance):
         Move the given directories, ``secure_dirs'', to the secure file system
         mounted at ``secure_root''.
         """
-        assert files.exists(secure_root)
-        for sdir in secure_dirs:
-            secured_sdir = ''.join([secure_root, sdir])
-            secured_sdir_parent = call_python('os.path.dirname', secured_sdir)
-            if files.exists(sdir):
-                sudo('mkdir -p {0}'.format(secured_sdir_parent))
-                sudo('mv {0} {1}'.format(sdir, secured_sdir))
-            else:
-                sudo('mkdir -p {0}'.format(secured_sdir))
-            sudo('mkdir -p {0}'.format(sdir))
-            sudo('mount -o bind {0} {1}'.format(secured_sdir, sdir))
+        with self:
+            assert files.exists(secure_root)
+            for sdir in secure_dirs:
+                secured_sdir = ''.join([secure_root, sdir])
+                secured_parent = call_python('os.path.dirname', secured_sdir)
+                if files.exists(sdir):
+                    sudo('mkdir -p {0}'.format(secured_parent))
+                    sudo('mv {0} {1}'.format(sdir, secured_sdir))
+                else:
+                    sudo('mkdir -p {0}'.format(secured_sdir))
+                sudo('mkdir -p {0}'.format(sdir))
+                sudo('mount -o bind {0} {1}'.format(secured_sdir, sdir))
 
     def cleanup(self):
         """
