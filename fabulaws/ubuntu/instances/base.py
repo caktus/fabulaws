@@ -45,7 +45,7 @@ class UbuntuInstance(AptMixin, EC2Instance):
                 time.sleep(1)
                 vol.update()
             if self.fs_encrypt:
-                self.install_packages(['cryptsetup])
+                self.install_packages(['cryptsetup'])
                 crypt = 'crypt-{0}'.format(device.split('/')[-1])
                 sudo('cryptsetup -y luksFormat {device}'.format(device=device))
                 sudo('cryptsetup luksOpen {device} {crypt}'.format(device=device, crypt=crypt))
