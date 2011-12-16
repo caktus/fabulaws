@@ -45,7 +45,7 @@ class UbuntuInstance(AptMixin, EC2Instance):
                 time.sleep(1)
                 vol.update()
             if self.fs_encrypt:
-                sudo('apt-get install -y cryptsetup')
+                self.install_packages(['cryptsetup])
                 crypt = 'crypt-{0}'.format(device.split('/')[-1])
                 sudo('cryptsetup -y luksFormat {device}'.format(device=device))
                 sudo('cryptsetup luksOpen {device} {crypt}'.format(device=device, crypt=crypt))
@@ -76,11 +76,12 @@ class UbuntuInstance(AptMixin, EC2Instance):
     def setup(self):
         """
         Extends the base EC2Instance ``setup()`` method with routines to
-        run apt-get update and, if desired, apt-get upgrade, on the instance.
-        Also creates volumes defined in the ``volume_info`` list on this
-        instance.
+        update apt sources on the instance.  Also creates volumes defined in
+        the ``volume_info`` list on this instance.
         """
         super(UbuntuInstance, self).setup()
+        # this is required because we may need to install cryptsetup when
+        # creating volumes
         self.update_apt_sources()
         for vol in self.volume_info:
             self.volumes.append(self._create_volume(*vol))

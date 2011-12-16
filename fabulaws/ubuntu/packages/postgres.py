@@ -8,14 +8,17 @@ class PostgresMixin(object):
     """
     FabulAWS Ubuntu mixin that installs and configures PostgresSQL.
     """
+    postgresql_ppa = None
+    postgresql_packages = ['postgresql', 'postgresql-common']
 
     def setup(self):
         """
         Postgres mixin
         """
         super(PostgresMixin, self).setup()
-#        with self:
-#            sudo('apt-get install -y postgresql')
+        if self.postgresql_ppa:
+            self.add_ppa(self.postgresql_ppa)
+        self.install_packages(self.postgresql_packages)
 
     @uses_fabric
     def create_db_user(self, username, password=None, flags=None):

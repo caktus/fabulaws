@@ -15,7 +15,7 @@ class AptMixin(object):
         return map(lambda x: x.strip('\n\r'), packages)
 
     @uses_fabric
-    def install_packages(self, *packages):
+    def install_packages(self, packages):
         """Install apt packages from a list."""
 
         sudo(u"apt-get install -y %s" % u" ".join(packages))
@@ -24,7 +24,7 @@ class AptMixin(object):
     def install_packages_from_file(self, file_name):
         """Install apt packages from a file list."""
 
-        self.install_packages(*self._read_lines_from_file(file_name))
+        self.install_packages(self._read_lines_from_file(file_name))
 
     @uses_fabric
     def update_apt_sources(self):
