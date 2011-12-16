@@ -1,6 +1,8 @@
 from fabric.api import *
 from fabric.contrib import files
 
+from fabulaws.decorators import uses_fabric
+
 class ShorewallMixin(object):
     """
     FabulAWS Ubuntu mixin that installs and configures the Shorewall firewall
@@ -13,9 +15,9 @@ class ShorewallMixin(object):
         server.
         """
         super(ShorewallMixin, self).setup()
-        with self:
-            self._setup_firewall()
+        self._setup_firewall()
 
+    @uses_fabric
     def _setup_firewall(self):
         """
         Configures and starts up a Shorewall firewall on the remote server.
