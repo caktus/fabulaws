@@ -17,12 +17,16 @@ class PostgresMixin(object):
     postgresql_shmmax = 536870912 # 512 MB
 
     @uses_fabric
+    def get_version(self):
+        version = run('pg_config --version')
+        return re.findall(r'(\d+\.\d+)\.?\d+?', version)[0]
+
+    @uses_fabric
     def postgresql_tune_config(self):
         """Tune the postgresql configuration using pgtune"""
 
         self.install_packages(['pgtune'])
-        version = run('pg_config --version')
-        version = re.findall(r'(\d+\.\d+)\.?\d+?', version)[0]
+        version = self.get_version()
         current = '/etc/postgresql/%s/main/postgresql.conf' % version
         old = '%s.bak' % current
         new = '%s.new' % current
@@ -33,6 +37,19 @@ class PostgresMixin(object):
         shmmax = self.postgresql_shmmax
         sudo('sysctl -w kernel.shmmax=%s' % shmmax)
         files.append('/etc/sysctl.conf', 'kernel.shmmax=%s' % shmmax, use_sudo=True)
+        sudo('service postgresql restart')
+
+    @uses_fabric
+    def allow_external_connections(self, ip_range):
+        """Allow external connections from the given IP range."""
+
+        version = self.get_version()
+        pghba = '/etc/postgresql/%s/main/pg_hba.conf' % version
+        pgconf = '/etc/postgresql/%s/main/postgresql.conf' % version
+        hostssl_line = 'hostssl    all    all    %s    md5' % ip_range
+        files.append(pghba, hostssl_line, use_sudo=True)
+        # fabric doesn't properly escape single quotes for sed commands, so run sed manually instead
+        sudo('sed -i.bak -r -e "s/#listen_addresses = \'localhost\'/listen_addresses = \'*\'/g" %s' % pgconf)
         sudo('service postgresql restart')
 
     def setup(self):

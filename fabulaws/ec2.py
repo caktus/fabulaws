@@ -282,6 +282,14 @@ class EC2Instance(object):
             raise ValueError('No instance has been created yet, or the '
                              'instance has already been destroyed.')
 
+    @property
+    def internal_ip(self):
+        if self.instance:
+            return self.instance.private_ip_address
+        else:
+            raise ValueError('No instance has been created yet, or the '
+                             'instance has already been destroyed.')
+
     def __enter__(self):
         self._setup_context()
         return self
