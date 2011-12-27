@@ -104,8 +104,6 @@ class EC2Instance(object):
             self.attach_to(instance_id)
         else:
             self.conn = self._connect_ec2()
-            # setup a new instance
-            self.setup()
         self.elb_conn = self._connect_elb()
 
     def _connect_ec2(self):
