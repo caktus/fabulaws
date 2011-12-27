@@ -1,9 +1,11 @@
 import re
+import datetime
 
 from fabric.api import *
 from fabric.contrib import files
 
 from fabulaws.decorators import *
+from fabulaws.api import *
 
 
 class PostgresMixin(object):
@@ -26,7 +28,22 @@ class PostgresMixin(object):
     @cached_property()
     @uses_fabric
     def pg_conf(self):
-        return '/etc/postgresql/%s/main/postgresql.conf' % self.pg_version
+        return '/etc/postgresql/{0}/main/postgresql.conf'.format(self.pg_version)
+
+    @cached_property()
+    @uses_fabric
+    def pg_data(self):
+        return '/var/lib/postgresql/{0}/main'.format(self.pg_version)
+
+    @cached_property()
+    @uses_fabric
+    def pg_hba(self):
+        return '/etc/postgresql/{0}/main/pg_hba.conf'.format(self.pg_version)
+
+    @cached_property()
+    @uses_fabric
+    def pg_bin(self):
+        return '/usr/lib/postgresql/{0}/bin'.format(self.pg_version)
 
     @uses_fabric
     def pg_set_str(self, setting, value):
@@ -67,10 +84,10 @@ class PostgresMixin(object):
         """Allow external connections from the given IP range."""
 
         self.pg_set_str('listen_addresses', '*')
-        pghba = '/etc/postgresql/%s/main/pg_hba.conf' % self.pg_version
+        files.uncomment(self.pg_hba, 'local +replication', use_sudo=True)
         for ip_range in ip_ranges:
             hostssl_line = 'hostssl    all    all    %s    md5' % ip_range
-            files.append(pghba, hostssl_line, use_sudo=True)
+            files.append(self.pg_hba, hostssl_line, use_sudo=True)
         if restart:
             self.pg_cmd('restart')
 
@@ -81,6 +98,48 @@ class PostgresMixin(object):
             self.pg_set(k, v)
         if restart:
             self.pg_cmd('restart')
+
+    @uses_fabric
+    def pg_allow_replication(self, user, password, ip_ranges, restart=True):
+        """Creates a user for replication and enables replication in pg_hba.conf."""
+
+        # XXX: does not support differing master/slave pg versions
+        self.create_db_user(user, password, replication=True)
+        files.uncomment(self.pg_hba, 'local +replication', use_sudo=True)
+        for ip_range in ip_ranges:
+            hostssl_line = 'hostssl    replication    all    %s    md5' % ip_range
+            files.append(self.pg_hba, hostssl_line, use_sudo=True)
+        if restart:
+            sudo('service postgresql restart')
+        
+    @uses_fabric
+    def pg_copy_master(self, master_db, user, password):
+        """Replaces this database host with a copy of the data at master_host."""
+
+        with master_db:
+            now = datetime.datetime.today().strftime('%m-%d-%Y_%H-%M-%S')
+            backup_dir = '/tmp/pg_basebackup_{0}'.format(now)
+            sudo('{pg_bin}/pg_basebackup -F t -z -x -D {backup_dir}'
+                 ''.format(pg_bin=self.pg_bin, backup_dir=backup_dir), user='postgres')
+            sudo('chmod -R a+rx {0}'.format(backup_dir))
+        self.pg_cmd('stop')
+        sshagent_run('scp -o StrictHostKeyChecking=no '
+                     '{user}@{master}:{backup_dir}/base.tar.gz '
+                     '{backup_dir}.tar.gz'
+                     ''.format(master=master_db.internal_ip, user=env.user,
+                               backup_dir=backup_dir))
+        with cd(self.pg_data):
+            recovery = 'recovery.conf'
+            sudo('echo "standby_mode = \'on\'" > {file_}'
+                 ''.format(file_=recovery), user='postgres')
+            sudo('echo "primary_conninfo = \'host={host} user={user} '
+                 'password={password}\'" >> {file_}'
+                 ''.format(host=master_db.internal_ip, file_=recovery,
+                           user=user, password=password), user='postgres')
+            sudo('tar xzf {0}.tar.gz'.format(backup_dir), user='postgres')
+        self.pg_cmd('start')
+        with master_db:
+            sudo('rm -rf %s' % backup_dir)
 
     def setup(self):
         """Postgres mixin"""
@@ -96,20 +155,27 @@ class PostgresMixin(object):
         self.pg_cmd('restart')
 
     @uses_fabric
-    def create_db_user(self, username, password=None, flags=None):
-        """Create a databse user."""
+    def sql(self, sql):
+        sudo('psql -c "%s"' % sql, user='postgres')
 
-        flags = flags or u'-D -A -R'
-        sudo(u'createuser %s %s' % (flags, username), user=u'postgres')
-        if password:
-            self.change_db_user_password(username, password)
+    @uses_fabric
+    def create_db_user(self, username, password=None, **kwargs):
+        """Create a database user."""
+
+        defaults = {'login': True}
+        defaults.update(kwargs)
+        options = [k.upper() for k in defaults if k]
+        options.extend(['NO' + k.upper() for k in defaults if not k])
+        sql = "CREATE ROLE {name} {options}".format(name=username, options=' '.join(options))
+        if password is not None:
+            sql += " PASSWORD '%s'" % password
+        self.sql(sql)
 
     @uses_fabric
     def change_db_user_password(self, username, password):
         """Change a db user's password."""
 
-        sql = "ALTER USER %s WITH PASSWORD '%s'" % (username, password)
-        sudo('psql -c "%s"' % sql, user='postgres')
+        self.sql("ALTER USER %s WITH PASSWORD '%s'" % (username, password))
 
     @uses_fabric
     def create_db(self, name, owner=None, encoding=u'UTF-8'):
