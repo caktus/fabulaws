@@ -97,7 +97,8 @@ class EC2Instance(object):
         if instance:
             self.conn = instance.connection
             self.instance = instance
-            self.user = None
+            # XXX find the proper way to default to the default Fabric user
+            self.user = os.environ['USER']
         elif instance_id:
             self.conn = self._connect_ec2()
             # attach to an existing instance
@@ -206,6 +207,8 @@ class EC2Instance(object):
             logger.debug('Setting env.key_filename = "{0}"'
                          ''.format(self.key_file.name))
             env.key_filename = [self.key_file.name]
+        else:
+            env.key_filename = None
         if self.user:
             logger.debug('Setting env.user = "{0}"'.format(self.user))
             env.user = self.user
