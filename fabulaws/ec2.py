@@ -225,6 +225,20 @@ class EC2Instance(object):
         for key, value in context.items():
             setattr(env, key, value)
 
+    def reset_authentication(self):
+        """
+        Resets this instance to use the default Fabric user, rather than
+        the default sysadmin user on this AMI.  This can be called, e.g., after
+        creating personal sysadmin users on the remote server so that SSH
+        agent forwarding will work properly when connecting to other remote
+        servers.
+        """
+        if len(self._saved_contexts) > 0:
+            raise ValueError('reset_authentication() can only be called when '
+                             'a FabulAWS context is inactive.')
+        self.user = env.user
+        self.key_filename = None
+
     def attach_to(self, instance_id):
         """
         Attaches to an existing EC2 instance, identified by instance_id.
