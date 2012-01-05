@@ -155,6 +155,9 @@ class EC2Instance(object):
                             placement=self._placement)
             created = True
         inst = res.instances[0]
+        if self._tags:
+            logger.debug('Creating tags on instance.')
+            self.conn.create_tags([inst.id], self._tags)
         logger.debug('Attached to EC2 instance {0}'.format(inst.id))
         if created:
             try:
@@ -252,7 +255,6 @@ class EC2Instance(object):
         """
         self.key, self.key_file = self._create_key_pair()
         self.instance = self._create_instance()
-        self.add_tags(self._tags)
 
     def add_to_elb(self, elb_name):
         """
@@ -286,8 +288,7 @@ class EC2Instance(object):
         """
         Associate specified tags with instance
         """
-        if tags:
-            self.conn.create_tags([self.instance.id], tags)
+        self.conn.create_tags([self.instance.id], tags)
 
     @property
     def hostname(self):
