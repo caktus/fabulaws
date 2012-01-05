@@ -1,4 +1,6 @@
+import os
 import time
+import copy
 import logging
 
 from fabric.api import *
@@ -53,6 +55,13 @@ class UbuntuInstance(AptMixin, EC2Instance):
         inst = self.instance
         # the placement is the availability zone
         vol = self.conn.create_volume(vol_size, inst.placement)
+        tags = copy.copy(self._tags) or {}
+        if 'Name' in tags:
+            tags['Name'] = '_'.join([tags['Name'], os.path.basename(device)])
+        else:
+            tags['Name'] = '_'.join([inst.id, os.path.basename(device)])
+        tags['device'] = device
+        self.conn.create_tags([vol.id], tags)
         try:
             vol.attach(inst.id, device)
             logger.debug('Waiting for volume {0} to become '
