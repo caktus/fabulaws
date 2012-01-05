@@ -28,6 +28,22 @@ class UbuntuInstance(AptMixin, EC2Instance):
         super(UbuntuInstance, self).__init__(*args, **kwargs)
 
     @uses_fabric
+    def _wait_for_device(self, device, max_tries=30):
+        """
+        Waits for the given device to manifest in /dev, and returns the actual
+        path of the device.
+        """
+        # try all possible paths for the device in turn until one shows up
+        devices = [device, device.replace('/dev/sd', '/dev/xvd')]
+        logger.info('Waiting for device {0} to appear'.format(device))
+        for _ in range(max_tries):
+            for device in devices:
+                if files.exists(device):
+                    logger.debug('Found device {0}'.format(device))
+                    return device
+            time.sleep(1)
+
+    @uses_fabric
     def _create_volume(self, device, mount_point, vol_size):
         """
         Creates an EBS volume of size ``vol_size``, manifests the device at
@@ -41,9 +57,10 @@ class UbuntuInstance(AptMixin, EC2Instance):
             vol.attach(inst.id, device)
             logger.debug('Waiting for volume {0} to become '
                          'attached'.format(vol.id))
-            while vol.volume_state() == 'creating':
+            while vol.volume_state() != 'in-use':
                 time.sleep(1)
                 vol.update()
+            device = self._wait_for_device(device)
             if self.fs_encrypt:
                 self.install_packages(['cryptsetup'])
                 crypt = 'crypt-{0}'.format(device.split('/')[-1])
@@ -83,6 +100,8 @@ class UbuntuInstance(AptMixin, EC2Instance):
         # this is required because we may need to install cryptsetup when
         # creating volumes
         self.update_apt_sources()
+        # the first apt-get update may update sources.list, so re-run it here
+        self.update_apt_sources()
         for vol in self.volume_info:
             self.volumes.append(self._create_volume(*vol))
 
@@ -104,8 +123,8 @@ class UbuntuInstance(AptMixin, EC2Instance):
             sudo('useradd -m {0} -s /bin/bash {1}'.format(groups, name))
             sudo('passwd -d {0}'.format(name))
             sudo('mkdir /home/{0}/.ssh'.format(name))
-            put(keyfile, '/home/{0}/.ssh/authorized_keys'.format(name),
-                use_sudo=True)
+            put(keyfile, '/home/{0}/.ssh/authorized_keys2'.format(name),
+                use_sudo=True, mode=0600)
             sudo('chown -R {0} /home/{0}/.ssh'.format(name))
 
     @uses_fabric
