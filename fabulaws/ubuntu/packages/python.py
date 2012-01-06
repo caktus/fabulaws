@@ -20,7 +20,7 @@ class PythonMixin(object):
     python_virtualenv_version = None # install the latest version
     python_pypi_mirrors = [
         'http://pypi.python.org',
-        'http://b.pypi.python.org',
+        #'http://b.pypi.python.org', # as of 1/5/12, doesn't have virtualenv==1.7
         'http://c.pypi.python.org',
         'http://d.pypi.python.org',
         'http://e.pypi.python.org',
@@ -43,9 +43,8 @@ class PythonMixin(object):
         """
         Finds a PyPI mirror that appears to be online.
         """
-        mirrors = copy.copy(self.python_pypi_mirrors)
-        random.shuffle(mirrors)
-        for mirror in mirrors:
+
+        for mirror in self.python_pypi_mirrors:
             try:
                 r = urllib2.urlopen(mirror)
                 if r.code == 200:
