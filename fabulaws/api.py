@@ -1,10 +1,11 @@
 import json
+import tempfile
 
 from fabric.api import *
 from fabric.operations import _prefix_commands, _prefix_env_vars
 
 
-__all__ = ['sshagent_run', 'call_python', 'ec2_hostnames', 'ec2_instances']
+__all__ = ['sshagent_run', 'call_python', 'ec2_hostnames', 'ec2_instances', 'answer_sudo']
 
 
 def sshagent_run(cmd, user=None):
@@ -57,3 +58,37 @@ def ec2_instances(*args, **kwargs):
     """
     from fabulaws.ec2 import EC2Service
     return EC2Service().instances(*args, **kwargs)
+
+
+def answer_sudo(cmd, *args, **kwargs):
+    """
+    Answers questions presented via standard out according to the
+    given answers.  The ``answers`` keyword argument should be a list of
+    (question, answer) pairs.  The questions are in regular expression format,
+    so ensure that any special characters are appropriately escaped.
+    """
+    answers = kwargs.pop('answers', [])
+    if answers:
+        # use shared memory rather than potentially writing passwords to the
+        # most likely unencrypted disk
+        script = tempfile.NamedTemporaryFile(dir='/dev/shm')
+        script.writelines([
+            "import pexpect, sys\n",
+            "child = pexpect.spawn('{0}')\n".format(cmd),
+            "child.logfile = sys.stdout\n"
+        ])
+        for question, answer in answers:
+            script.writelines([
+                "child.expect('{0}')\n".format(question),
+                "child.sendline('{0}')\n".format(answer),
+            ])
+        # this is important, otherwise pexect will kill the process before it's
+        # finished
+        script.writelines(["child.wait()\n"])
+        script.flush()
+        put(script.name, script.name, mirror_local_mode=True)
+        cmd = 'python {0}'.format(script.name)
+    result = sudo(cmd, *args, **kwargs)
+    if answers:
+        run('rm {0}'.format(script.name))
+    return result
