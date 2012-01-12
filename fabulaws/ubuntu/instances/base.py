@@ -46,7 +46,32 @@ class UbuntuInstance(AptMixin, EC2Instance):
             time.sleep(1)
 
     @uses_fabric
-    def _create_volume(self, device, mount_point, vol_size):
+    def _encrypt_device(self, device, passwd=None):
+        """
+        Encrypts the given device.  If a password is not specified,
+        cryptsetup will prompt for one as usual.
+        """
+        self.install_packages(['cryptsetup'])
+        crypt = 'crypt-{0}'.format(device.split('/')[-1])
+        answers = []
+        if passwd:
+            answers = [
+                (r'Are you sure\? \(Type uppercase yes\):', 'YES'),
+                ('Enter LUKS passphrase:', passwd),
+                ('Verify passphrase:', passwd),
+            ]
+        answer_sudo('cryptsetup -y luksFormat {device}'.format(device=device),
+                    answers=answers)
+        if passwd:
+            answers = [('Enter passphrase for .+:', passwd)]
+        answer_sudo('cryptsetup luksOpen {device} {crypt}'
+                    ''.format(device=device, crypt=crypt),
+                    answers=answers)
+        device = '/dev/mapper/{0}'.format(crypt)
+        return device
+
+    @uses_fabric
+    def _create_volume(self, device, mount_point, vol_size, passwd=None):
         """
         Creates an EBS volume of size ``vol_size``, manifests the device at
         ``device`` in this instance, and mounts it at ``mount_point``.
@@ -71,11 +96,7 @@ class UbuntuInstance(AptMixin, EC2Instance):
                 vol.update()
             device = self._wait_for_device(device)
             if self.fs_encrypt:
-                self.install_packages(['cryptsetup'])
-                crypt = 'crypt-{0}'.format(device.split('/')[-1])
-                sudo('cryptsetup -y luksFormat {device}'.format(device=device))
-                sudo('cryptsetup luksOpen {device} {crypt}'.format(device=device, crypt=crypt))
-                device = '/dev/mapper/{0}'.format(crypt)
+                device = self._encrypt_device(device, passwd)
             sudo('mkfs.{0} {1}'.format(self.fs_type, device))
             sudo('mkdir {0}'.format(mount_point))
             sudo('mount {0} {1}'.format(device, mount_point))
