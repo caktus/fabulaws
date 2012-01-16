@@ -99,10 +99,12 @@ class EC2Instance(object):
             self.instance = instance
             # XXX find the proper way to default to the default Fabric user
             self.user = os.environ['USER']
+            self._placement = instance.placement
         elif instance_id:
             self.conn = self._connect_ec2()
             # attach to an existing instance
             self.attach_to(instance_id)
+            self._placement = instance.placement
         else:
             self.conn = self._connect_ec2()
         self.elb_conn = self._connect_elb()
@@ -137,42 +139,51 @@ class EC2Instance(object):
             raise
         return key, key_file
 
-    def _create_instance(self, instance_id=None):
+    def _create_instances(self, instance_id=None, count=1, ami=None, placement=None, wait_ssh=True):
         """
         Creates a new EC2 instance.  The instance is destroyed when exiting the
         context manager or destroying this object.
         """
+        if ami is None:
+            ami = self.ami
+        if placement is None:
+            placement = self._placement
         if instance_id:
             logger.info('Fetching existing instance {0}'.format(instance_id))
             res = self.conn.get_all_instances([instance_id])[0]
             created = False
         else:
-            logger.info('Creating EC2 instance')
-            image = self.conn.get_image(self.ami)
-            res = image.run(key_name=self.key.name,
+            logger.info('Creating EC2 instances')
+            image = self.conn.get_image(ami)
+            key_name = self.key and self.key.name or None
+            res = image.run(key_name=key_name,
                             security_groups=self.security_groups,
                             instance_type=self.instance_type,
-                            placement=self._placement)
+                            placement=placement,
+                            min_count=count, max_count=count)
+            time.sleep(1) # wait for AWS to catch up
             created = True
-        inst = res.instances[0]
-        if self._tags:
-            logger.debug('Creating tags on instance.')
-            self.conn.create_tags([inst.id], self._tags)
-        logger.debug('Attached to EC2 instance {0}'.format(inst.id))
-        if created:
-            try:
-                logger.info('Waiting for instance to enter "running" state...')
-                time.sleep(5) 
-                while inst.update() != 'running':
-                    time.sleep(2)
-                logger.info('Waiting for SSH daemon to launch...')
-                self._wait_for_ssh(inst)
-            except:
-                logger.info('Terminating instance early due to unexpected '
-                            'error')
-                inst.terminate()
-                raise
-        return inst
+        for inst in res.instances:
+            if self._tags:
+                logger.debug('Creating tags on instance.')
+                
+                self.conn.create_tags([inst.id], self._tags)
+            logger.debug('Attached to EC2 instance {0}'.format(inst.id))
+        for inst in res.instances:
+            if created:
+                try:
+                    logger.info('Waiting for instance to enter "running" state...')
+                    while inst.update() != 'running':
+                        time.sleep(2)
+                    if wait_ssh:
+                        logger.info('Waiting for SSH daemon to launch...')
+                        self._wait_for_ssh(inst)
+                except:
+                    logger.info('Terminating instance early due to unexpected '
+                                'error')
+                    inst.terminate()
+                    raise
+        return res.instances
 
     def _wait_for_ssh(self, instance):
         """
@@ -185,10 +196,11 @@ class EC2Instance(object):
         wait = 2
         while times < 120/wait:
             try:
+                key = self.key_file and self.key_file.name or env.key_filename
+                user = self.user and self.user or env.user
                 ssh.connect(instance.public_dns_name, allow_agent=False,
-                            look_for_keys=False, username=self.user,
-                            key_filename=self.key_file.name,
-                            timeout=self.ssh_timeout)
+                            look_for_keys=False, username=user,
+                            key_filename=key, timeout=self.ssh_timeout)
                 break
             except (EOFError, socket.error, paramiko.SSHException), e:
                 logger.debug('Error connecting ({0}); retrying in {1} '
@@ -228,6 +240,13 @@ class EC2Instance(object):
         for key, value in context.items():
             setattr(env, key, value)
 
+    @property
+    def tags(self):
+        if self._tags is None:
+            tgs = self.conn.get_all_tags({'resource-id': self.instance.id})
+            self._tags = dict([(t.name, t.value) for t in tgs])
+        return self._tags
+
     def reset_authentication(self):
         """
         Resets this instance to use the default Fabric user, rather than
@@ -246,7 +265,7 @@ class EC2Instance(object):
         """
         Attaches to an existing EC2 instance, identified by instance_id.
         """
-        self.instance = self._create_instance(instance_id=instance_id)
+        self.instance = self._create_instances(instance_id=instance_id)[0]
 
     def setup(self):
         """
@@ -254,13 +273,48 @@ class EC2Instance(object):
         method in your subclass to further customize the instance.
         """
         self.key, self.key_file = self._create_key_pair()
-        self.instance = self._create_instance()
+        self.instance = self._create_instances()[0]
 
     def add_to_elb(self, elb_name):
         """
         Adds this instance to the specified load balancer.
         """
         return self.elb_conn.register_instances(elb_name, [self.instance.id])
+
+    def create_image(self, replace_existing=False, name=None):
+        """
+        Creates an AMI of this instance.
+        """
+        if not name:
+            if 'Name' in self.tags:
+                name = self.tags['Name']
+            else:
+                name = 'Image of {0}'.format(self.instance.id)
+        if replace_existing:
+            images = self.conn.get_all_images(filters={'tag:Name': name})
+            if images:
+                logger.info('Deleting images {0}'.format(images))
+                [img.deregister() for img in images]
+        image_id = self.conn.create_image(self.instance.id, name)
+        time.sleep(1) # wait for AWS to catch up
+        image = self.conn.get_image(image_id)
+        self.conn.create_tags([image_id], self.tags)
+        logger.info('Waiting for image to enter "available" state...')
+        while image.update() == 'pending':
+            time.sleep(2)
+        assert image.update() == 'available'
+        logger.info('Image creation finished.')
+        return image
+
+    def create_copies(self, count, placement=None, **kwargs):
+        """
+        Creates ``count`` copies of this instance by creating an AMI and then
+        running that.
+        """
+        image = self.create_image(replace_existing=True)
+        instances = self._create_instances(count=count, ami=image.id,
+                                           placement=placement, wait_ssh=False)
+        return [EC2Instance(instance=inst, **kwargs) for inst in instances]
 
     def cleanup(self):
         """
