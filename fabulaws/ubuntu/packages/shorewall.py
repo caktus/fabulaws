@@ -18,14 +18,22 @@ class ShorewallMixin(object):
         super(ShorewallMixin, self).setup()
         self._setup_firewall()
 
+    def _get_rules(self, ports):
+        for p in ports:
+            try:
+                p = int(p)
+                yield 'ACCEPT net $FW tcp {0}'.format(p)
+            except ValueError:
+                # looks like a macro, use this format instead
+                yield '{0}/ACCEPT net $FW'.format(p)
+
     @uses_fabric
     def _setup_firewall(self):
         """
         Configures and starts up a Shorewall firewall on the remote server.
         """
         sudo('apt-get install -y shorewall')
-        rules = ['{0}/ACCEPT net $FW'.format(p)
-                 for p in self.shorewall_open_ports]
+        rules = list(self._get_rules(self.shorewall_open_ports))
         rules.extend(self.shorewall_custom)
         with cd('/etc/shorewall'):
             sudo('rsync -a /usr/share/doc/shorewall/examples/one-interface/ .')
