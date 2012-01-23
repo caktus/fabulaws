@@ -9,13 +9,13 @@ from fabric.contrib import files
 from fabulaws.api import *
 from fabulaws.decorators import uses_fabric
 from fabulaws.ec2 import EC2Instance
-from fabulaws.ubuntu.packages.apt import AptMixin
+from fabulaws.ubuntu.packages.base import BaseAptMixin
 
 __all__ = ['UbuntuInstance']
 
 logger = logging.getLogger('fabulaws.ubuntu.instances.base')
 
-class UbuntuInstance(AptMixin, EC2Instance):
+class UbuntuInstance(BaseAptMixin, EC2Instance):
     """
     Base class for all Ubuntu instances.
     """

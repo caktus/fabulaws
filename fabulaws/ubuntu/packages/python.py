@@ -6,13 +6,15 @@ from fabric.api import *
 from fabric.contrib import files
 
 from fabulaws.decorators import uses_fabric
+from fabulaws.ubuntu.packages.base import AptMixin
 
 
-class PythonMixin(object):
+class PythonMixin(AptMixin):
     """
     FabulAWS Ubuntu mixin that installs Python
     """
 
+    package_name = 'python'
     python_ppa = None
     python_packages = ['python', 'python-dev']
     python_install_tools = True
@@ -26,18 +28,6 @@ class PythonMixin(object):
         'http://e.pypi.python.org',
         'http://f.pypi.python.org',
     ]
-
-    def setup(self):
-        """
-        Hook into the FabulAWS setup() routine to install Python and related
-        tools.
-        """
-        super(PythonMixin, self).setup()
-        if self.python_ppa:
-            self.add_ppa(self.python_ppa)
-        self.install_packages(self.python_packages + ['python-setuptools'])
-        if self.python_install_tools:
-            self.install_python_tools()
 
     def _find_mirror(self):
         """
@@ -69,3 +59,13 @@ class PythonMixin(object):
         if self.python_virtualenv_version:
             version = '==%s' % self.python_virtualenv_version
         sudo("pip install -i %s/simple/ -U virtualenv%s" % (mirror, version))
+
+    def setup(self):
+        """
+        Hook into the FabulAWS setup() routine to install Python and related
+        tools.
+        """
+        super(PythonMixin, self).setup()
+        if self.python_install_tools:
+            self.install_packages(['python-setuptools'])
+            self.install_python_tools()

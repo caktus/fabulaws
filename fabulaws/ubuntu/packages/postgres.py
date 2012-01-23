@@ -6,13 +6,14 @@ from fabric.contrib import files
 
 from fabulaws.decorators import *
 from fabulaws.api import *
+from fabulaws.ubuntu.packages.base import AptMixin
 
 
-class PostgresMixin(object):
+class PostgresMixin(AptMixin):
     """
     FabulAWS Ubuntu mixin that installs and configures PostgresSQL.
     """
-    postgresql_ppa = None
+    package_name = 'postgresql'
     postgresql_packages = ['postgresql', 'libpq-dev']
     postgresql_tune = False
     postgresql_tune_type = 'Web'
@@ -145,9 +146,6 @@ class PostgresMixin(object):
         """Postgres mixin"""
 
         super(PostgresMixin, self).setup()
-        if self.postgresql_ppa:
-            self.add_ppa(self.postgresql_ppa)
-        self.install_packages(self.postgresql_packages)
         if self.postgresql_tune:
             self.pg_tune_config(restart=False)
         self.pg_allow_from(self.postgresql_networks, restart=False)

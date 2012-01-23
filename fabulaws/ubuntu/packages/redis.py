@@ -3,13 +3,13 @@ from fabric.contrib import files
 
 from fabulaws.decorators import *
 from fabulaws.api import *
+from fabulaws.ubuntu.packages.base import AptMixin
 
-
-class RedisMixin(object):
+class RedisMixin(AptMixin):
     """
     FabulAWS Ubuntu mixin that installs and configures Redis.
     """
-    redis_ppa = None
+    package_name = 'redis'
     redis_packages = ['redis-server']
     redis_bind = '127.0.0.1' # set to '' to bind to all interfaces
     redis_loglevel = 'notice'
@@ -38,7 +38,4 @@ class RedisMixin(object):
         """Redis mixin"""
 
         super(RedisMixin, self).setup()
-        if self.redis_ppa:
-            self.add_ppa(self.redis_ppa)
-        self.install_packages(self.redis_packages)
         self._redis_configure()

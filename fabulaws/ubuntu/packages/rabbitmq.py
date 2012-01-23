@@ -2,24 +2,17 @@ from fabric.api import *
 from fabric.contrib import files
 
 from fabulaws.decorators import uses_fabric
+from fabulaws.ubuntu.packages.base import AptMixin
 
 
-class RabbitMqMixin(object):
+class RabbitMqMixin(AptMixin):
     """
     FabulAWS Ubuntu mixin that configures RabbitMQ
     """
 
+    package_name = 'rabbitmq'
     rabbitmq_ppa = None
     rabbitmq_packages = ['rabbitmq-server']
-
-    def setup(self):
-        """
-        Postgres mixin
-        """
-        super(RabbitMqMixin, self).setup()
-        if self.rabbitmq_ppa:
-            self.add_ppa(self.rabbitmq_ppa)
-        self.install_packages(self.rabbitmq_packages)
 
     @uses_fabric
     def rabbitmq_command(self, command):
