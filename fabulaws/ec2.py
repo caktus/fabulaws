@@ -281,15 +281,18 @@ class EC2Instance(object):
         """
         return self.elb_conn.register_instances(elb_name, [self.instance.id])
 
+    def _image_name(self):
+        if 'Name' in self.tags:
+            return self.tags['Name']
+        else:
+            return 'Image of {0}'.format(self.instance.id)
+
     def create_image(self, replace_existing=False, name=None):
         """
         Creates an AMI of this instance.
         """
         if not name:
-            if 'Name' in self.tags:
-                name = self.tags['Name']
-            else:
-                name = 'Image of {0}'.format(self.instance.id)
+            name = self._image_name()
         if replace_existing:
             images = self.conn.get_all_images(filters={'tag:Name': name})
             if images:
@@ -306,12 +309,16 @@ class EC2Instance(object):
         logger.info('Image creation finished.')
         return image
 
-    def create_copies(self, count, placement=None, **kwargs):
+    def create_copies(self, count, placement=None, recreate_image=True, **kwargs):
         """
         Creates ``count`` copies of this instance by creating an AMI and then
         running that.
         """
-        image = self.create_image(replace_existing=True)
+        if recreate_image:
+            image = self.create_image(replace_existing=True)
+        else:
+            name = self._image_name()
+            image = self.conn.get_all_images(filters={'tag:Name': name})[0]
         instances = self._create_instances(count=count, ami=image.id,
                                            placement=placement, wait_ssh=False)
         return [EC2Instance(instance=inst, **kwargs) for inst in instances]
