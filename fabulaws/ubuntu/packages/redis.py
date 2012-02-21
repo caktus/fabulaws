@@ -39,3 +39,13 @@ class RedisMixin(AptMixin):
 
         super(RedisMixin, self).setup()
         self._redis_configure()
+
+
+class RedisPpaMixin(RedisMixin):
+    """
+    Redis mixin using the Rowan PPA from:
+    https://launchpad.net/~rwky/+archive/redis
+    """
+
+    redis_ppa = 'ppa:rwky/redis'
+    redis_packages = ['redis-server']
