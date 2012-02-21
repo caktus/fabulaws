@@ -11,7 +11,6 @@ class RabbitMqMixin(AptMixin):
     """
 
     package_name = 'rabbitmq'
-    rabbitmq_ppa = None
     rabbitmq_packages = ['rabbitmq-server']
 
     @uses_fabric
@@ -34,3 +33,12 @@ class RabbitMqMixin(AptMixin):
         """Set permssions for a user on a given vhost."""
 
         self.rabbitmq_command(u'set_permissions -p %s %s %s' % (vhost, username, permissions))
+
+
+class RabbitMqOfficialMixin(RabbitMqMixin):
+    """
+    Installs RabbitMQ from the official upstream APT repository.
+    """
+
+    rabbitmq_aptrepo = ('http://www.rabbitmq.com/debian/', 'testing', 'main', '056E8E56', 'pgp.mit.edu')
+    rabbitmq_packages = ['rabbitmq-server']
