@@ -47,15 +47,22 @@ class PostgresMixin(AptMixin):
         return '/usr/lib/postgresql/{0}/bin'.format(self.pg_version)
 
     @uses_fabric
-    def pg_set_str(self, setting, value):
+    def sed(self, before, after, file_):
         # fabric doesn't properly escape single quotes for sed commands, so run sed manually instead
-        sudo('sed -i.bak -r -e "s/#? ?{setting} = \'.+\'/{setting} = \'{value}\'/g" '
-             '{pg_conf}'.format(setting=setting, value=value, pg_conf=self.pg_conf))
+        sudo('sed -i.bak -r -e "s/{before}/{after}/g" {file_}'
+             ''.format(before=before, after=after, file_=file_))
+
+    @uses_fabric
+    def pg_set_str(self, setting, value):
+        self.sed('#? ?{setting} = \'.+\''.format(setting=setting),
+                 '{setting} = \'{value}\''.format(setting=setting, value=value),
+                 self.pg_conf)
 
     @uses_fabric
     def pg_set(self, setting, value):
-        sudo('sed -i.bak -r -e "s/#? ?{setting} = \w+/{setting} = {value}/g" '
-             '{pg_conf}'.format(setting=setting, value=value, pg_conf=self.pg_conf))
+        self.sed('#? ?{setting} = \w+'.format(setting=setting),
+                 '{setting} = {value}'.format(setting=setting, value=value),
+                 self.pg_conf)
 
     @uses_fabric
     def pg_cmd(self, action):
@@ -112,18 +119,18 @@ class PostgresMixin(AptMixin):
             files.append(self.pg_hba, hostssl_line, use_sudo=True)
         if restart:
             sudo('service postgresql restart')
-        
+
     @uses_fabric
     def pg_copy_master(self, master_db, user, password):
         """Replaces this database host with a copy of the data at master_host."""
 
+        self.pg_cmd('stop')
         with master_db:
             now = datetime.datetime.today().strftime('%m-%d-%Y_%H-%M-%S')
             backup_dir = '/tmp/pg_basebackup_{0}'.format(now)
             sudo('{pg_bin}/pg_basebackup -F t -z -x -D {backup_dir}'
                  ''.format(pg_bin=self.pg_bin, backup_dir=backup_dir), user='postgres')
             sudo('chmod -R a+rx {0}'.format(backup_dir))
-        self.pg_cmd('stop')
         sshagent_run('scp -o StrictHostKeyChecking=no '
                      '{user}@{master}:{backup_dir}/base.tar.gz '
                      '{backup_dir}.tar.gz'
@@ -141,6 +148,11 @@ class PostgresMixin(AptMixin):
         self.pg_cmd('start')
         with master_db:
             sudo('rm -rf %s' % backup_dir)
+
+    @uses_fabric
+    def pg_promote(self):
+        sudo('{0}/pg_ctl -D {1} promote'.format(self.pg_bin, self.pg_data),
+             user='postgres')
 
     def setup(self):
         """Postgres mixin"""
