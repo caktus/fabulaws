@@ -1,3 +1,4 @@
+from fabulaws.decorators import *
 from fabulaws.ubuntu.packages.base import AptMixin
 
 
