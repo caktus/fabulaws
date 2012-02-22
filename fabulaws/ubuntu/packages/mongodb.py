@@ -9,6 +9,15 @@ class MongoDbMixin(AptMixin):
     package_name = 'mongodb'
     mongodb_packages = ['mongodb-server']
 
+    @uses_fabric
+    def mongodb_service(self, cmd):
+        sudo('service mongodb {0}'.format(cmd))
+
+    def secure_directories(self, *args, **kwargs):
+        super(MongoDbMixin, self).secure_directories(*args, **kwargs)
+        # make sure we restart in case we've been moved to a secure directory
+        self.mongodb_service('restart')
+
 
 class MongoDb10genMixin(MongoDbMixin):
     """

@@ -18,7 +18,11 @@ class RedisMixin(AptMixin):
     redis_loglevel_pattern = '#?\s*loglevel \w+'
 
     @uses_fabric
-    def _redis_configure(self, bind=None, loglevel=None):
+    def redis_service(self, cmd):
+        sudo('service redis-server {0}'.format(cmd), pty=False) # must pass pty=False
+
+    @uses_fabric
+    def redis_configure(self, bind=None, loglevel=None):
         if bind is None:
             bind = self.redis_bind
         if loglevel is None:
@@ -32,13 +36,18 @@ class RedisMixin(AptMixin):
         loglevel = 'loglevel {0}'.format(loglevel)
         files.sed(self.redis_conf, self.redis_loglevel_pattern, loglevel,
                   use_sudo=True)
-        sudo('service redis-server restart', pty=False) # must pass pty=False
+        self.redis_service('restart')
+
+    def secure_directories(self, *args, **kwargs):
+        super(RedisMixin, self).secure_directories(*args, **kwargs)
+        # make sure we restart in case we've been moved to a secure directory
+        self.redis_service('restart')
 
     def setup(self):
         """Redis mixin"""
 
         super(RedisMixin, self).setup()
-        self._redis_configure()
+        self.redis_configure()
 
 
 class RedisPpaMixin(RedisMixin):

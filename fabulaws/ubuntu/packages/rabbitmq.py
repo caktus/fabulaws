@@ -14,6 +14,15 @@ class RabbitMqMixin(AptMixin):
     rabbitmq_packages = ['rabbitmq-server']
 
     @uses_fabric
+    def rabbitmq_service(self, cmd):
+        sudo('service rabbitmq-server {0}'.format(cmd))
+
+    def secure_directories(self, *args, **kwargs):
+        super(RabbitMqMixin, self).secure_directories(*args, **kwargs)
+        # make sure we restart in case we've been moved to a secure directory
+        self.rabbitmq_service('restart')
+
+    @uses_fabric
     def rabbitmq_command(self, command):
         """Run a rabbitmqctl command."""
 
@@ -40,5 +49,5 @@ class RabbitMqOfficialMixin(RabbitMqMixin):
     Installs RabbitMQ from the official upstream APT repository.
     """
 
-    rabbitmq_aptrepo = ('http://www.rabbitmq.com/debian/', 'testing', 'main', '056E8E56', 'pgp.mit.edu')
+    rabbitmq_aptrepo = ('http://www.rabbitmq.com/debian/', 'testing', 'main', '056E8E56')
     rabbitmq_packages = ['rabbitmq-server']
