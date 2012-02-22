@@ -286,6 +286,36 @@ class EC2Instance(object):
         """
         return self.elb_conn.register_instances(elb_name, [self.instance.id])
 
+    def remove_from_elb(self, elb_name):
+        """
+        Removes this instance from the specified load balancer.
+        """
+        return self.elb_conn.deregister_instances(elb_name, [self.instance.id])
+
+    def elb_state(self, elb_name):
+        """
+        Returns the InstanceState for this instance in the specified load balancer.
+        """
+        return self.elb_conn.describe_instance_health(elb_name, [self.instance.id])[0].state
+
+    def wait_for_elb_state(self, elb_name, state, max_wait=30):
+        """
+        Waits for this instance to enter the given state in the given load balancer.
+        """
+        curr_state = self.elb_state(elb_name)
+        waited = 0
+        wait = 1
+        while curr_state != state:
+            if waited > max_wait:
+                raise Exception('Instance {inst} did not enter {state} state in '
+                                ' LB {elb} after waiting {secs} seconds'
+                                ''.format(inst=self.instance.id, state=state,
+                                          elb=elb_name, secs=max_wait))
+            time.sleep(wait)
+            waited += wait
+            curr_state = self.elb_state(elb_name)
+        return curr_state
+
     def _image_name(self):
         if 'Name' in self.tags:
             return self.tags['Name']
