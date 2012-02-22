@@ -32,7 +32,7 @@ class EC2Service(object):
         self.setup()
 
     def _connect_ec2(self):
-        logger.info('Connecting to EC2')
+        logger.debug('Connecting to EC2')
         return EC2Connection(self._key_id, self._secret)
 
     def setup(self):
@@ -110,11 +110,11 @@ class EC2Instance(object):
         self.elb_conn = self._connect_elb()
 
     def _connect_ec2(self):
-        logger.info('Connecting to EC2')
+        logger.debug('Connecting to EC2')
         return EC2Connection(self._key_id, self._secret)
 
     def _connect_elb(self):
-        logger.info('Connecting to ELB')
+        logger.debug('Connecting to ELB')
         return elb.ELBConnection(self._key_id, self._secret)
 
     def _create_key_pair(self):
@@ -239,6 +239,11 @@ class EC2Instance(object):
         context = self._saved_contexts.pop()
         for key, value in context.items():
             setattr(env, key, value)
+
+    @property
+    def region(self):
+        if self._placement:
+            return self._placement[:-1]
 
     @property
     def tags(self):

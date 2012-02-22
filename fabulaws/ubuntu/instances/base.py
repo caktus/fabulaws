@@ -24,6 +24,7 @@ class UbuntuInstance(BaseAptMixin, EC2Instance):
     volume_info = [] # tuples of (device, mount_point, size_in_GB)
     fs_type = 'ext3'
     fs_encrypt = True
+    ubuntu_mirror = None
 
     def __init__(self, *args, **kwargs):
         self.volumes = []
@@ -120,6 +121,15 @@ class UbuntuInstance(BaseAptMixin, EC2Instance):
         logger.debug('Deleting volume {0}'.format(vol.id))
         vol.delete()
 
+    @uses_fabric
+    def setup_mirror(self, mirror=None):
+        if not mirror:
+            mirror = self.ubuntu_mirror
+        if mirror:
+            orig = '{region}.ec2.archive.ubuntu.com'.format(region=self.region)
+            mirror = mirror.format(region=self.region)
+            files.sed('/etc/apt/sources.list', orig, mirror, use_sudo=True)
+
     def setup(self):
         """
         Extends the base EC2Instance ``setup()`` method with routines to
@@ -127,6 +137,7 @@ class UbuntuInstance(BaseAptMixin, EC2Instance):
         the ``volume_info`` list on this instance.
         """
         super(UbuntuInstance, self).setup()
+        self.setup_mirror()
         # this is required because we may need to install cryptsetup when
         # creating volumes
         self.update_apt_sources()
