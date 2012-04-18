@@ -12,6 +12,7 @@ import traceback
 import paramiko
 from boto.ec2.connection import EC2Connection
 from boto.ec2 import elb
+from boto.exception import BotoServerError
 from fabric.api import *
 from fabric.contrib import files
 from fabulaws.api import *
@@ -296,7 +297,11 @@ class EC2Instance(object):
         """
         Returns the InstanceState for this instance in the specified load balancer.
         """
-        return self.elb_conn.describe_instance_health(elb_name, [self.instance.id])[0].state
+        try:
+            return self.elb_conn.describe_instance_health(elb_name, [self.instance.id])[0].state
+        except BotoServerError:
+            logger.exception('Failed to get instance health, assuming OutOfService')
+            return 'OutOfService'
 
     def wait_for_elb_state(self, elb_name, state, max_wait=30):
         """
