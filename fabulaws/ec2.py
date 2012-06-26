@@ -285,6 +285,8 @@ class EC2Instance(object):
         """
         Adds this instance to the specified load balancer.
         """
+        # ensure that the load balancer accepts traffic to this AV
+        self.elb_conn.enable_availability_zones(elb_name, [self._placement])
         return self.elb_conn.register_instances(elb_name, [self.instance.id])
 
     def remove_from_elb(self, elb_name):
@@ -303,13 +305,13 @@ class EC2Instance(object):
             logger.exception('Failed to get instance health, assuming OutOfService')
             return 'OutOfService'
 
-    def wait_for_elb_state(self, elb_name, state, max_wait=30):
+    def wait_for_elb_state(self, elb_name, state, max_wait=300):
         """
         Waits for this instance to enter the given state in the given load balancer.
         """
         curr_state = self.elb_state(elb_name)
         waited = 0
-        wait = 1
+        wait = 5
         while curr_state != state:
             if waited > max_wait:
                 raise Exception('Instance {inst} did not enter {state} state in '
@@ -320,6 +322,10 @@ class EC2Instance(object):
             waited += wait
             curr_state = self.elb_state(elb_name)
         return curr_state
+
+    def reboot(self):
+        """Reboots this server."""
+        self.conn.reboot_instances([self.instance.id])
 
     def _image_name(self):
         if 'Name' in self.tags:
