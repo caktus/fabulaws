@@ -50,24 +50,24 @@ class UbuntuInstance(BaseAptMixin, EC2Instance):
     def _encrypt_device(self, device, passwd=None):
         """
         Encrypts the given device.  If a password is not specified,
-        cryptsetup will prompt for one as usual.
+        a prompt will be issued.
         """
+        if not passwd:
+            passwd = getpass.getpass('Enter LUKS passphrase for cryptsetup: ')
         self.install_packages(['cryptsetup'])
         crypt = 'crypt-{0}'.format(device.split('/')[-1])
-        answers = []
-        if passwd:
+        with hide('stdout'):
             answers = [
                 (r'Are you sure\? \(Type uppercase yes\):', 'YES'),
                 ('Enter LUKS passphrase:', passwd),
                 ('Verify passphrase:', passwd),
             ]
-        answer_sudo('cryptsetup -y luksFormat {device}'.format(device=device),
-                    answers=answers)
-        if passwd:
+            answer_sudo('cryptsetup -y luksFormat {device}'.format(device=device),
+                        answers=answers)
             answers = [('Enter passphrase for .+:', passwd)]
-        answer_sudo('cryptsetup luksOpen {device} {crypt}'
-                    ''.format(device=device, crypt=crypt),
-                    answers=answers)
+            answer_sudo('cryptsetup luksOpen {device} {crypt}'
+                        ''.format(device=device, crypt=crypt),
+                        answers=answers)
         device = '/dev/mapper/{0}'.format(crypt)
         return device
 
