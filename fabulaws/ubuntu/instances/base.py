@@ -54,7 +54,7 @@ class UbuntuInstance(BaseAptMixin, EC2Instance):
         """
         if not passwd:
             passwd = getpass.getpass('Enter LUKS passphrase for cryptsetup: ')
-        self.install_packages(['cryptsetup'])
+        self.install_packages(['python-pexpect', 'cryptsetup'])
         crypt = 'crypt-{0}'.format(device.split('/')[-1])
         with hide('stdout'):
             answers = [
