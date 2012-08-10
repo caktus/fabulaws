@@ -12,6 +12,7 @@ class ShorewallMixin(AptMixin):
     shorewall_packages = ['shorewall']
     shorewall_open_ports = ['SSH']
     shorewall_custom = []
+    shorewall_allow_icmp = False
 
     def _get_rules(self, ports):
         for p in ports:
@@ -35,6 +36,9 @@ class ShorewallMixin(AptMixin):
                 sudo('gunzip -f shorewall.conf.gz')
             files.append('rules', '\n'.join(rules), use_sudo=True)
             sudo('sed -i "s/STARTUP_ENABLED=No/STARTUP_ENABLED=Yes/" shorewall.conf')
+        if self.shorewall_allow_icmp:
+            files.sed('/etc/shorewall/rules', r'Ping\(DROP\)',
+                      'Ping(ACCEPT)', use_sudo=True)
         sudo('shorewall start')
 
     def setup(self):
