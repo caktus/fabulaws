@@ -20,7 +20,10 @@ class RabbitMqMixin(AptMixin):
     def secure_directories(self, *args, **kwargs):
         super(RabbitMqMixin, self).secure_directories(*args, **kwargs)
         # make sure we restart in case we've been moved to a secure directory
-        self.rabbitmq_service('restart')
+        # this fails occassionally for unknown reasons, so just raise a warning
+        # if so
+        with settings(warn_only=True):
+            self.rabbitmq_service('restart')
 
     @uses_fabric
     def rabbitmq_command(self, command):
