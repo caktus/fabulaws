@@ -72,6 +72,19 @@ class UbuntuInstance(BaseAptMixin, EC2Instance):
         return device
 
     @uses_fabric
+    def _format_volume(self, device, mount_point, passwd=None):
+        """
+        Creates an EBS volume of size ``vol_size``, manifests the device at
+        ``device`` in this instance, and mounts it at ``mount_point``.
+        """
+        logger.info('Formatting {0}'.format(device))
+        if self.fs_encrypt:
+            device = self._encrypt_device(device, passwd)
+        sudo('mkfs.{0} {1}'.format(self.fs_type, device))
+        sudo('mkdir {0}'.format(mount_point))
+        sudo('mount {0} {1}'.format(device, mount_point))
+
+    @uses_fabric
     def _create_volume(self, device, mount_point, vol_size, passwd=None):
         """
         Creates an EBS volume of size ``vol_size``, manifests the device at
@@ -95,12 +108,6 @@ class UbuntuInstance(BaseAptMixin, EC2Instance):
             while vol.volume_state() != 'in-use':
                 time.sleep(1)
                 vol.update()
-            device = self._wait_for_device(device)
-            if self.fs_encrypt:
-                device = self._encrypt_device(device, passwd)
-            sudo('mkfs.{0} {1}'.format(self.fs_type, device))
-            sudo('mkdir {0}'.format(mount_point))
-            sudo('mount {0} {1}'.format(device, mount_point))
         except:
             self._destroy_volume(vol)
             raise
@@ -144,7 +151,20 @@ class UbuntuInstance(BaseAptMixin, EC2Instance):
         # the first apt-get update may update sources.list, so re-run it here
         self.update_apt_sources()
         for vol in self.volume_info:
-            self.volumes.append(self._create_volume(*vol))
+            if len(vol) == 4:
+                device, mount_point, vol_size, passwd = vol
+            else:
+                raise Exception('volume_info must be populated with tuples of '
+                                '(device, mount_point, vol_size, passwd)')
+            if device == 'instance-store':
+                device = '/dev/xvdb'
+                with self:
+                    sudo('umount {0}'.format(device))
+            else:
+                self.volumes.append(self._create_volume(device, mount_point,
+                                                        vol_size, passwd))
+            device = self._wait_for_device(device)
+            self._format_volume(device, mount_point, passwd)
 
     @uses_fabric
     def create_users(self, users, ignore_existing=True):
