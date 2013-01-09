@@ -157,8 +157,8 @@ class UbuntuInstance(BaseAptMixin, EC2Instance):
                 raise Exception('volume_info must be populated with tuples of '
                                 '(device, mount_point, vol_size, passwd)')
             if device == 'instance-store':
-                device = '/dev/xvdb'
                 with self:
+                    device = run("mount|grep /mnt|cut -d' ' -f1").strip()
                     sudo('umount {0}'.format(device))
             else:
                 self.volumes.append(self._create_volume(device, mount_point,
