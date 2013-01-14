@@ -162,7 +162,7 @@ class EC2Instance(object):
                             instance_type=self.instance_type,
                             placement=placement,
                             min_count=count, max_count=count)
-            time.sleep(1) # wait for AWS to catch up
+            time.sleep(5) # wait for AWS to catch up
             created = True
         for inst in res.instances:
             if self._tags:
