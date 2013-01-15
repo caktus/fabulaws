@@ -155,9 +155,10 @@ class PostgresMixin(AptMixin):
              user='postgres')
 
     def secure_directories(self, *args, **kwargs):
+        # make sure we stop first in case we're being moved to a secure directory
+        self.pg_cmd('stop')
         super(PostgresMixin, self).secure_directories(*args, **kwargs)
-        # make sure we restart in case we've been moved to a secure directory
-        self.pg_cmd('restart')
+        self.pg_cmd('start')
 
     def setup(self):
         """Postgres mixin"""

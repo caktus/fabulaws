@@ -17,9 +17,10 @@ class MongoDbMixin(AptMixin):
         sudo('service mongodb {0}'.format(cmd))
 
     def secure_directories(self, *args, **kwargs):
+        # make sure we stop first in case we're being moved to a secure directory
+        self.mongodb_service('stop')
         super(MongoDbMixin, self).secure_directories(*args, **kwargs)
-        # make sure we restart in case we've been moved to a secure directory
-        self.mongodb_service('restart')
+        self.mongodb_service('start')
 
 
 class MongoDb10genMixin(MongoDbMixin):

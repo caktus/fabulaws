@@ -39,9 +39,10 @@ class RedisMixin(AptMixin):
         self.redis_service('restart')
 
     def secure_directories(self, *args, **kwargs):
+        # make sure we stop first in case we're being moved to a secure directory
+        self.redis_service('stop')
         super(RedisMixin, self).secure_directories(*args, **kwargs)
-        # make sure we restart in case we've been moved to a secure directory
-        self.redis_service('restart')
+        self.redis_service('start')
 
     def setup(self):
         """Redis mixin"""

@@ -1,3 +1,5 @@
+import time
+
 from fabric.api import *
 from fabric.contrib import files
 
@@ -15,15 +17,29 @@ class RabbitMqMixin(AptMixin):
 
     @uses_fabric
     def rabbitmq_service(self, cmd):
-        sudo('service rabbitmq-server {0}'.format(cmd))
+        return sudo('service rabbitmq-server {0}'.format(cmd))
 
     def secure_directories(self, *args, **kwargs):
+        tries = kwargs.pop('rabbitmq_tries', 10)
+        sleep = kwargs.pop('rabbitmq_sleep', 2)
+        # make sure we stop before proceeding in case we get moved to a secure directory
+        self.rabbitmq_service('stop') 
         super(RabbitMqMixin, self).secure_directories(*args, **kwargs)
-        # make sure we restart in case we've been moved to a secure directory
-        # this fails occassionally for unknown reasons, so just raise a warning
-        # if so
-        with settings(warn_only=True):
-            self.rabbitmq_service('restart')
+        # try starting a number of times with warn_only=True, as rabbitmq
+        # fails to restart occassionally for unknown reasons
+        restarted = False
+        for i in range(tries-1):
+            with settings(warn_only=True):
+                result = self.rabbitmq_service('start')
+                if result.return_code == 0:
+                    restarted = True
+                    break
+                else:
+                    time.sleep(sleep)
+        # if we haven't succeeded yet, start again without warn_only=True
+        # and let the failure be handled as usual by Fabric
+        if not restarted:
+            self.rabbitmq_service('start') 
 
     @uses_fabric
     def rabbitmq_command(self, command):
