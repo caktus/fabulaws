@@ -14,6 +14,7 @@ class RabbitMqMixin(AptMixin):
 
     package_name = 'rabbitmq'
     rabbitmq_packages = ['rabbitmq-server']
+    rabbitmq_ulimit = 20000
 
     @uses_fabric
     def rabbitmq_service(self, cmd):
@@ -61,6 +62,15 @@ class RabbitMqMixin(AptMixin):
         """Set permssions for a user on a given vhost."""
 
         self.rabbitmq_command(u'set_permissions -p %s %s %s' % (vhost, username, permissions))
+   
+    def rabbitmq_configure():
+        files.append('/etc/default/rabbitmq', 'ulimit -n %s' % self.rabbitmq_ulimit)
+
+    def setup(self):
+        """Redis mixin"""
+
+        super(RabbitMqMixin, self).setup()
+        self.rabbitmq_configure()
 
 
 class RabbitMqOfficialMixin(RabbitMqMixin):
