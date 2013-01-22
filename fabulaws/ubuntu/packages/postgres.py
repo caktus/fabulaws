@@ -18,7 +18,9 @@ class PostgresMixin(AptMixin):
     postgresql_tune = False
     postgresql_tune_type = 'Web'
     postgresql_shmmax = 536870912 # 512 MB
+    postgresql_shmall = 2097152
     postgresql_settings = {}
+    postgresql_disable_oom = True
 
     @cached_property()
     @uses_fabric
@@ -65,10 +67,11 @@ class PostgresMixin(AptMixin):
                  self.pg_conf)
 
     @uses_fabric
-    def pg_cmd(self, action):
+    def pg_cmd(self, action, fail=True):
         """Run the specified action (e.g., start, stop, restart) on the postgresql server."""
 
-        sudo('service postgresql %s' % action)
+        if fail or files.exists('/etc/init/postgresql.conf'):
+            sudo('service postgresql %s' % action)
 
     @uses_fabric
     def pg_tune_config(self, restart=True):
@@ -81,9 +84,16 @@ class PostgresMixin(AptMixin):
         sudo('pgtune -T %s -i %s -o %s' % (db_type, self.pg_conf, new))
         sudo('mv %s %s' % (self.pg_conf, old))
         sudo('mv %s %s' % (new, self.pg_conf))
-        shmmax = self.postgresql_shmmax
-        sudo('sysctl -w kernel.shmmax=%s' % shmmax)
-        files.append('/etc/sysctl.conf', 'kernel.shmmax=%s' % shmmax, use_sudo=True)
+        sudo('sysctl -w kernel.shmmax=%s' % self.postgresql_shmmax)
+        files.append('/etc/sysctl.conf', 'kernel.shmmax=%s'
+                     '' % self.postgresql_shmmax, use_sudo=True)
+        sudo('sysctl -w kernel.shmall=%s' % self.postgresql_shmall)
+        files.append('/etc/sysctl.conf', 'kernel.shmall=%s'
+                     '' % self.postgresql_shmall, use_sudo=True)
+        if self.postgresql_disable_oom:
+            sudo('sysctl -w vm.overcommit_memory=2')
+            files.append('/etc/sysctl.conf', 'vm.overcommit_memory=2',
+                         use_sudo=True)
         if restart:
             self.pg_cmd('restart')
 
@@ -156,9 +166,9 @@ class PostgresMixin(AptMixin):
 
     def secure_directories(self, *args, **kwargs):
         # make sure we stop first in case we're being moved to a secure directory
-        self.pg_cmd('stop')
+        self.pg_cmd('stop', fail=False)
         super(PostgresMixin, self).secure_directories(*args, **kwargs)
-        self.pg_cmd('start')
+        self.pg_cmd('start', fail=False)
 
     def setup(self):
         """Postgres mixin"""
