@@ -56,13 +56,13 @@ class PostgresMixin(AptMixin):
 
     @uses_fabric
     def pg_set_str(self, setting, value):
-        self.sed('#? ?{setting} = \'.+\''.format(setting=setting),
+        self.sed('^#? ?{setting} = \'.+\''.format(setting=setting),
                  '{setting} = \'{value}\''.format(setting=setting, value=value),
                  self.pg_conf)
 
     @uses_fabric
     def pg_set(self, setting, value):
-        self.sed('#? ?{setting} = \w+'.format(setting=setting),
+        self.sed('^#? ?{setting} = \S+'.format(setting=setting),
                  '{setting} = {value}'.format(setting=setting, value=value),
                  self.pg_conf)
 
@@ -84,6 +84,11 @@ class PostgresMixin(AptMixin):
         sudo('pgtune -T %s -i %s -o %s' % (db_type, self.pg_conf, new))
         sudo('mv %s %s' % (self.pg_conf, old))
         sudo('mv %s %s' % (new, self.pg_conf))
+        if restart:
+            self.pg_cmd('restart')
+
+    @uses_fabric
+    def pg_set_sysctl_params(self, restart=True):
         sudo('sysctl -w kernel.shmmax=%s' % self.postgresql_shmmax)
         files.append('/etc/sysctl.conf', 'kernel.shmmax=%s'
                      '' % self.postgresql_shmmax, use_sudo=True)
@@ -176,6 +181,7 @@ class PostgresMixin(AptMixin):
         super(PostgresMixin, self).setup()
         if self.postgresql_tune:
             self.pg_tune_config(restart=False)
+        self.pg_set_sysctl_params(restart=False)
         self.pg_allow_from(self.postgresql_networks, restart=False)
         self.pg_update_settings(self.postgresql_settings, restart=False)
         self.pg_cmd('restart')

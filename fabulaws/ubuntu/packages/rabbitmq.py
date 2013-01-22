@@ -62,9 +62,12 @@ class RabbitMqMixin(AptMixin):
         """Set permssions for a user on a given vhost."""
 
         self.rabbitmq_command(u'set_permissions -p %s %s %s' % (vhost, username, permissions))
-   
-    def rabbitmq_configure():
-        files.append('/etc/default/rabbitmq', 'ulimit -n %s' % self.rabbitmq_ulimit)
+
+    @uses_fabric
+    def rabbitmq_configure(self):
+        files.append('/etc/default/rabbitmq-server',
+                     'ulimit -n %s' % self.rabbitmq_ulimit, use_sudo=True)
+        self.rabbitmq_service('restart')
 
     def setup(self):
         """Redis mixin"""
