@@ -20,13 +20,17 @@ def sshagent_run(cmd, user=None):
     wrapped_cmd = _prefix_commands(_prefix_env_vars(cmd), 'remote')
     if user is None:
         user = env.user
+    opts = ['-A']
+    if env.disable_known_hosts:
+        opts += ['-o StrictHostKeyChecking=no',
+                 '-o UserKnownHostsFile=/dev/null']
     try:
         host, port = env.host_string.split(':')
-        return local("ssh -o StrictHostKeyChecking=no -p "
-                     "%s -A %s@%s '%s'" % (port, user, host, wrapped_cmd))
+        opts.append('-p %s' % port)
     except ValueError:
-        return local("ssh -o StrictHostKeyChecking=no -A "
-                     "%s@%s '%s'" % (user, env.host_string, wrapped_cmd))
+        host = env.host_string
+    opts = ' '.join(opts)
+    return local("ssh %s %s@%s '%s'" % (opts, user, host, wrapped_cmd))
 
 
 def call_python(method, *args):
