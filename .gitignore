@@ -1,0 +1,6 @@
+*.pyc
+config.py
+build/
+dist/
+fabulaws.egg-info/
+*~
