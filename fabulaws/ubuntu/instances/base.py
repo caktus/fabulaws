@@ -3,6 +3,8 @@ import time
 import copy
 import logging
 
+import boto.exception
+
 from fabric.api import *
 from fabric.contrib import files
 
@@ -102,12 +104,19 @@ class UbuntuInstance(BaseAptMixin, EC2Instance):
         tags['device'] = device
         self.conn.create_tags([vol.id], tags)
         try:
+            logger.debug('Waiting for volume {0} to become AVAILABLE '
+                         '(current state={1})'.format(vol.id, vol.volume_state()))
+            while vol.volume_state() != 'available':
+                time.sleep(1)
+                vol.update()
+                logger.debug('  current state: {0}'.format(vol.volume_state()))
             vol.attach(inst.id, device)
-            logger.debug('Waiting for volume {0} to become '
-                         'attached'.format(vol.id))
+            logger.debug('Waiting for volume {0} to become ATTACHED '
+                         '(current state={1})'.format(vol.id, vol.volume_state()))
             while vol.volume_state() != 'in-use':
                 time.sleep(1)
                 vol.update()
+                logger.debug('  current state: {0}'.format(vol.volume_state()))
         except:
             self._destroy_volume(vol)
             raise
@@ -119,7 +128,10 @@ class UbuntuInstance(BaseAptMixin, EC2Instance):
         instance of ``boto.ec2.volume``.
         """
         logger.debug('Detaching volume {0}'.format(vol.id))
-        vol.detach(force=True)
+        try:
+            vol.detach(force=True)
+        except boto.exception.EC2ResponseError:
+            logger.exception('Failed to detach volume; continuing anyway.')
         logger.debug('Waiting for volume {0} to become '
                      'available'.format(vol.id))
         while vol.volume_state() == 'in-use':
