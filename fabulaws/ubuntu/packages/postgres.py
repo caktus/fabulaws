@@ -81,7 +81,10 @@ class PostgresMixin(AptMixin):
         old = '%s.bak' % self.pg_conf
         new = '%s.new' % self.pg_conf
         db_type = self.postgresql_tune_type
-        sudo('pgtune -T %s -i %s -o %s' % (db_type, self.pg_conf, new))
+        conns = ''
+        if 'max_connections' in self.postgresql_settings:
+            conns = '-c %s' % self.postgresql_settings['max_connections']
+        sudo('pgtune -T %s -i %s -o %s %s' % (db_type, self.pg_conf, new, conns))
         sudo('mv %s %s' % (self.pg_conf, old))
         sudo('mv %s %s' % (new, self.pg_conf))
         if restart:
