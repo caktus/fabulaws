@@ -192,10 +192,10 @@ class UbuntuInstance(BaseAptMixin, EC2Instance):
         for name, keyfile in users:
             if ignore_existing and files.exists('/home/{0}'.format(name)):
                 logger.info('Not creating existing user {0}'.format(name))
-                continue
-            sudo('useradd -m {0} -s /bin/bash {1}'.format(groups, name))
-            sudo('passwd -d {0}'.format(name))
-            sudo('mkdir /home/{0}/.ssh'.format(name))
+            else:
+                sudo('useradd -m {0} -s /bin/bash {1}'.format(groups, name))
+                sudo('passwd -d {0}'.format(name))
+                sudo('mkdir /home/{0}/.ssh'.format(name))
             put(keyfile, '/home/{0}/.ssh/authorized_keys2'.format(name),
                 use_sudo=True, mode=0600)
             sudo('chown -R {0} /home/{0}/.ssh'.format(name))
