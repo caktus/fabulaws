@@ -216,8 +216,8 @@ class EC2Instance(object):
         """
         logger.info('Setting up context')
         context = {}
-        for attr in 'key_filename', 'user', 'host_string':
-            context[attr] = getattr(env, attr)
+        for attr in 'key_filename', 'user', 'host_string', 'current_server':
+            context[attr] = getattr(env, attr, None)
         self._saved_contexts.append(context)
         if self.key_file:
             logger.debug('Setting env.key_filename = "{0}"'
@@ -231,6 +231,7 @@ class EC2Instance(object):
         logger.debug('Setting env.host_string = "{0}"'
                      ''.format(self.instance.public_dns_name))
         env.host_string = self.instance.public_dns_name
+        env.current_server = self
 
     def _restore_context(self):
         """
