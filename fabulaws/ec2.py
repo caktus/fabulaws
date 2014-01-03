@@ -105,7 +105,7 @@ class EC2Instance(object):
             self.conn = self._connect_ec2()
             # attach to an existing instance
             self.attach_to(instance_id)
-            self._placement = instance.placement
+            self._placement = self.instance.placement
         else:
             self.conn = self._connect_ec2()
         self.elb_conn = self._connect_elb()
