@@ -156,11 +156,12 @@ class UbuntuInstance(BaseAptMixin, EC2Instance):
         the ``volume_info`` list on this instance.
         """
         super(UbuntuInstance, self).setup()
-        self.setup_mirror()
         # this is required because we may need to install cryptsetup when
         # creating volumes
+        self.setup_mirror()
         self.update_apt_sources()
         # the first apt-get update may update sources.list, so re-run it here
+        self.setup_mirror()
         self.update_apt_sources()
         for vol in self.volume_info:
             if len(vol) == 4:
