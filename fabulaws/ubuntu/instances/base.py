@@ -86,6 +86,26 @@ class UbuntuInstance(BaseAptMixin, EC2Instance):
         sudo('mkdir {0}'.format(mount_point))
         sudo('mount {0} {1}'.format(device, mount_point))
 
+    def _set_volume_tags(self, vol, device, tags=None):
+        if tags is None:
+            tags = copy.copy(self._tags) or {}
+        if 'Name' in tags:
+            tags['Name'] = '_'.join([tags['Name'], os.path.basename(device)])
+        else:
+            tags['Name'] = '_'.join([inst.id, os.path.basename(device)])
+        tags['device'] = device
+        self.conn.create_tags([vol.id], tags)
+
+    def add_tags(self, tags):
+        """
+        Propagate any tag updates on the instance to the associated volumes
+        (e.g., for name changes).
+        """
+        super(UbuntuInstance, self).add_tags(tags)
+        # allow super class to update self._tags and use that in _set_volume_tags
+        for vol, (device, _, _, _)  in zip(self.volumes, self.volume_info):
+            self._set_volume_tags(vol, device)
+
     @uses_fabric
     def _create_volume(self, device, mount_point, vol_size, passwd=None):
         """
@@ -96,13 +116,7 @@ class UbuntuInstance(BaseAptMixin, EC2Instance):
         inst = self.instance
         # the placement is the availability zone
         vol = self.conn.create_volume(vol_size, inst.placement)
-        tags = copy.copy(self._tags) or {}
-        if 'Name' in tags:
-            tags['Name'] = '_'.join([tags['Name'], os.path.basename(device)])
-        else:
-            tags['Name'] = '_'.join([inst.id, os.path.basename(device)])
-        tags['device'] = device
-        self.conn.create_tags([vol.id], tags)
+        self._set_volume_tags(vol, device)
         try:
             logger.debug('Waiting for volume {0} to become AVAILABLE '
                          '(current state={1})'.format(vol.id, vol.volume_state()))
