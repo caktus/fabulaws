@@ -396,7 +396,8 @@ class EC2Instance(object):
         """
         Associate specified tags with instance
         """
-        self._tags.update(tags)
+        if self._tags:
+            self._tags.update(tags)
         self.conn.create_tags([self.instance.id], tags)
 
     @property
