@@ -21,12 +21,7 @@ class PythonMixin(AptMixin):
     python_pip_version = None # install the latest version
     python_virtualenv_version = None # install the latest version
     python_pypi_mirrors = [
-        'http://pypi.python.org',
-        #'http://b.pypi.python.org', # as of 1/5/12, doesn't have virtualenv==1.7
-        'http://c.pypi.python.org',
-        'http://d.pypi.python.org',
-        'http://e.pypi.python.org',
-        'http://f.pypi.python.org',
+        'https://pypi.python.org',
     ]
 
     def _find_mirror(self):
