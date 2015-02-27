@@ -22,6 +22,10 @@ class PostgresMixin(AptMixin):
     postgresql_settings = {}
     postgresql_disable_oom = True
 
+    @property
+    def pgpass(self):
+        return '/var/lib/postgresql/.pgpass'
+
     @cached_property()
     @uses_fabric
     def pg_version(self):
@@ -143,17 +147,15 @@ class PostgresMixin(AptMixin):
         """Replaces this database host with a copy of the data at master_host."""
 
         self.pg_cmd('stop')
-        with master_db:
-            now = datetime.datetime.today().strftime('%m-%d-%Y_%H-%M-%S')
-            backup_dir = '/tmp/pg_basebackup_{0}'.format(now)
-            sudo('{pg_bin}/pg_basebackup -F t -z -x -D {backup_dir}'
-                 ''.format(pg_bin=self.pg_bin, backup_dir=backup_dir), user='postgres')
-            sudo('chmod -R a+rx {0}'.format(backup_dir))
-        sshagent_run('scp -o StrictHostKeyChecking=no '
-                     '{user}@{master}:{backup_dir}/base.tar.gz '
-                     '{backup_dir}.tar.gz'
-                     ''.format(master=master_db.internal_ip, user=env.user,
-                               backup_dir=backup_dir))
+        sudo('rm -rf {0}'.format(self.pg_data))
+        pgpass_line = ':'.join([master_db.internal_ip, '*', 'replication', user, password])
+        sudo('echo "{line}" > {file_}'
+             ''.format(file_=self.pgpass, line=pgpass_line), user='postgres')
+        sudo('chmod 600 {0}'.format(self.pgpass), user='postgres')
+        sudo('{pg_bin}/pg_basebackup -x -D {pg_data} -P -h {host} -U {user}'
+             ''.format(pg_bin=self.pg_bin, pg_data=self.pg_data,
+                       host=master_db.internal_ip, user=user),
+             user='postgres')
         with cd(self.pg_data):
             recovery = 'recovery.conf'
             sudo('echo "standby_mode = \'on\'" > {file_}'
@@ -162,10 +164,9 @@ class PostgresMixin(AptMixin):
                  'password={password}\'" >> {file_}'
                  ''.format(host=master_db.internal_ip, file_=recovery,
                            user=user, password=password), user='postgres')
-            sudo('tar xzf {0}.tar.gz'.format(backup_dir), user='postgres')
+            sudo('ln -s /etc/ssl/certs/ssl-cert-snakeoil.pem server.crt')
+            sudo('ln -s /etc/ssl/private/ssl-cert-snakeoil.key server.key')
         self.pg_cmd('start')
-        with master_db:
-            sudo('rm -rf %s' % backup_dir)
 
     @uses_fabric
     def pg_promote(self):
