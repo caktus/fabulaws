@@ -20,7 +20,7 @@ def sshagent_run(cmd, user=None):
     wrapped_cmd = _prefix_commands(_prefix_env_vars(cmd), 'remote')
     if user is None:
         user = env.user
-    opts = ['-A']
+    opts = ['-A', '-o ServerAliveInterval=60']
     if env.disable_known_hosts:
         opts += ['-o StrictHostKeyChecking=no',
                  '-o UserKnownHostsFile=/dev/null']
