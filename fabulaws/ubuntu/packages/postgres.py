@@ -164,6 +164,7 @@ class PostgresMixin(AptMixin):
                  'password={password}\'" >> {file_}'
                  ''.format(host=master_db.internal_ip, file_=recovery,
                            user=user, password=password), user='postgres')
+            sudo('chmod 600 {0}'.format(recovery), user='postgres')
             sudo('ln -s /etc/ssl/certs/ssl-cert-snakeoil.pem server.crt')
             sudo('ln -s /etc/ssl/private/ssl-cert-snakeoil.key server.key')
         self.pg_cmd('start')
