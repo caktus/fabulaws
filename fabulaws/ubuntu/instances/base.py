@@ -107,7 +107,7 @@ class UbuntuInstance(BaseAptMixin, EC2Instance):
             self._set_volume_tags(vol, device)
 
     @uses_fabric
-    def _create_volume(self, device, mount_point, vol_size, passwd=None):
+    def _create_volume(self, device, mount_point, vol_size, vol_type, passwd=None):
         """
         Creates an EBS volume of size ``vol_size``, manifests the device at
         ``device`` in this instance, and mounts it at ``mount_point``.
@@ -115,7 +115,7 @@ class UbuntuInstance(BaseAptMixin, EC2Instance):
         logger.info('Attaching {0}'.format(device))
         inst = self.instance
         # the placement is the availability zone
-        vol = self.conn.create_volume(vol_size, inst.placement)
+        vol = self.conn.create_volume(vol_size, inst.placement, volume_type=vol_type)
         self._set_volume_tags(vol, device)
         try:
             logger.debug('Waiting for volume {0} to become AVAILABLE '
@@ -178,18 +178,18 @@ class UbuntuInstance(BaseAptMixin, EC2Instance):
         self.setup_mirror()
         self.update_apt_sources()
         for vol in self.volume_info:
-            if len(vol) == 4:
-                device, mount_point, vol_size, passwd = vol
+            if len(vol) == 5:
+                device, mount_point, vol_size, vol_type, passwd = vol
             else:
                 raise Exception('volume_info must be populated with tuples of '
-                                '(device, mount_point, vol_size, passwd)')
+                                '(device, mount_point, vol_size, vol_type, passwd)')
             if device == 'instance-store':
                 with self:
                     device = run("mount|grep /mnt|cut -d' ' -f1").strip()
                     sudo('umount {0}'.format(device))
             else:
                 self.volumes.append(self._create_volume(device, mount_point,
-                                                        vol_size, passwd))
+                                                        vol_size, vol_type, passwd))
             device = self._wait_for_device(device)
             self._format_volume(device, mount_point, passwd)
 
