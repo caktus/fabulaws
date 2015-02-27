@@ -23,7 +23,7 @@ class UbuntuInstance(BaseAptMixin, EC2Instance):
     """
     user = 'ubuntu'
     admin_groups = ['admin']
-    volume_info = [] # tuples of (device, mount_point, size_in_GB)
+    volume_info = [] # tuples of (device, mount_point, size_in_GB, type, passwd)
     fs_type = 'ext3'
     fs_encrypt = True
     ubuntu_mirror = None
@@ -103,7 +103,7 @@ class UbuntuInstance(BaseAptMixin, EC2Instance):
         """
         super(UbuntuInstance, self).add_tags(tags)
         # allow super class to update self._tags and use that in _set_volume_tags
-        for vol, (device, _, _, _)  in zip(self.volumes, self.volume_info):
+        for vol, (device, _, _, _, _)  in zip(self.volumes, self.volume_info):
             self._set_volume_tags(vol, device)
 
     @uses_fabric
