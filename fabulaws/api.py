@@ -1,3 +1,4 @@
+import os
 import json
 import tempfile
 
@@ -75,7 +76,8 @@ def answer_sudo(cmd, *args, **kwargs):
     if answers:
         # use shared memory rather than potentially writing passwords to the
         # most likely unencrypted disk
-        script = tempfile.NamedTemporaryFile(dir='/dev/shm')
+        tmpdir = os.path.exists('/dev/shm') and '/dev/shm' or None
+        script = tempfile.NamedTemporaryFile(dir=tmpdir)
         script.writelines([
             "import pexpect, sys\n",
             "child = pexpect.spawn('{0}')\n".format(cmd),
@@ -90,9 +92,10 @@ def answer_sudo(cmd, *args, **kwargs):
         # finished
         script.writelines(["child.wait()\n"])
         script.flush()
-        put(script.name, script.name, mirror_local_mode=True)
-        cmd = 'python {0}'.format(script.name)
+        remote_file = '/dev/shm/{0}'.format(os.path.basename(script.name))
+        put(script.name, remote_file, mirror_local_mode=True)
+        cmd = 'python {0}'.format(remote_file)
     result = sudo(cmd, *args, **kwargs)
     if answers:
-        run('rm {0}'.format(script.name))
+        run('rm {0}'.format(remote_file))
     return result
