@@ -156,6 +156,8 @@ class EC2Instance(object):
         else:
             logger.info('Creating EC2 instances')
             image = self.conn.get_image(ami)
+            if image is None:
+                raise ValueError('AMI {0} not found'.format(ami))
             key_name = self.key and self.key.name or None
             res = image.run(key_name=key_name,
                             security_groups=self.security_groups,
