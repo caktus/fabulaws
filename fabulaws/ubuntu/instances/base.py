@@ -61,7 +61,7 @@ class UbuntuInstance(BaseAptMixin, EC2Instance):
         with hide('stdout'):
             answers = [
                 (r'Are you sure\? \(Type uppercase yes\):', 'YES'),
-                ('Enter LUKS passphrase:', passwd),
+                ('Enter .*passphrase:', passwd),
                 ('Verify passphrase:', passwd),
             ]
             answer_sudo('cryptsetup -y luksFormat {device}'.format(device=device),
