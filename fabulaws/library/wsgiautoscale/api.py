@@ -1606,9 +1606,9 @@ def deploy_full(deployment_tag, environment, launch_config_name=None):
                    "more.".format(waited, count, curr_minimum - count))
 
     # Wait to make sure that the encrypted drive is mounted.
-    print ("Waiting 90 seconds to make sure that the encrypted drive is "
+    print ("Waiting 120 seconds to make sure that the encrypted drive is "
            "mounted on all new instances.")
-    time.sleep(90)
+    time.sleep(120)
 
     # Reload the environment to add the new web servers.
     executel(environment, deployment_tag)
