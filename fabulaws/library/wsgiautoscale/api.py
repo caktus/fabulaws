@@ -760,7 +760,7 @@ def migrate():
     require('environment', provided_by=env.environments)
     cmd = 'migrate --noinput'
     if env.settings_migrations:
-        cmd += ' ' + env.settings_migrations
+        cmd += ' --settings=' + env.settings_migrations
     _call_managepy(cmd)
 
 
@@ -1453,7 +1453,6 @@ def upload_newrelic_sysmon_conf():
     # main, official monitoring agent
     template = 'nrsysmond.cfg'
     destination = '/etc/newrelic/%s' % template
-    print env.templates_dir
     upload_template(template, destination, context=context, use_sudo=True,
                     use_jinja=True, template_dir=env.templates_dir)
     # leave the hostname the same for the system monitoring so the servers
