@@ -104,7 +104,6 @@ class BaseInstance(FirewallMixin, UbuntuInstance):
             files.comment('/etc/fstab', dev, use_sudo=True)
             self._add_swap('/dev/mapper/{0}'.format(crypt_name))
         if swap_mb > 0:
-            print self.secure_root
             if not files.exists(self.default_swap_file):
                 sudo('dd if=/dev/zero of={0} bs=1M count={1}'.format(self.default_swap_file, swap_mb))
                 sudo('chown root:root {0}'.format(self.default_swap_file))
