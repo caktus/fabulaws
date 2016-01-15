@@ -797,32 +797,35 @@ def dbrestore(filepath):
                     'BACKUP.**'.format(env.environment.upper(), filepath), default='n')
     if answer != 'y':
         abort('Aborted.')
-    executel(begin_upgrade)
-    executel(supervisor, 'stop', 'web', roles=['web'])
-    executel(supervisor, 'stop', 'celery', roles=['worker'])
-    executel(supervisor, 'stop', 'pgbouncer')
-    with env.master_database:
-        sudo('dropdb {0}'.format(env.database_name), user='postgres')
-    env.servers['db-master'][0].create_db(env.database_name, owner=env.database_user)
-    executel(supervisor, 'start', 'pgbouncer')
+    # make sure we have the key before taking down the servers
     dest = '/tmp'
-    local('gpg --export-secret-keys --armor Caktus > {0}'.format(os.path.join(dest,'caktus_admin-private.asc')))
     private_key = os.path.join(dest, 'caktus_admin-private.asc')
-    backup_dir = 'django-dbbackups/'
-    with cd(dest):
-        put(private_key, dest)
-        with settings(warn_only=True):
+    local('gpg --export-secret-keys --armor Caktus > {0}'.format(os.path.join(dest,'caktus_admin-private.asc')))
+    try:
+        executel(begin_upgrade)
+        executel(supervisor, 'stop', 'web', roles=['web'])
+        executel(supervisor, 'stop', 'celery', roles=['worker'])
+        executel(supervisor, 'stop', 'pgbouncer')
+        with env.master_database:
+            sudo('dropdb {0}'.format(env.database_name), user='postgres')
+        env.servers['db-master'][0].create_db(env.database_name, owner=env.database_user)
+        executel(supervisor, 'start', 'pgbouncer')
+        backup_dir = 'django-dbbackups/'
+        with cd(dest):
+            put(private_key, dest)
+            with settings(warn_only=True):
+                sudo('gpg --homedir {0} --batch --delete-secret-keys "{1}"'.format(env.gpg_dir, env.backup_key_fingerprint), user=env.webserver_user)
+            sudo('gpg --homedir {0} --import {1}'.format(env.gpg_dir, os.path.split(private_key)[1]), user=env.webserver_user)
+            _call_managepy('dbrestore --database=default --filepath={0}'.format(backup_dir+filepath), pty=True)
             sudo('gpg --homedir {0} --batch --delete-secret-keys "{1}"'.format(env.gpg_dir, env.backup_key_fingerprint), user=env.webserver_user)
-        sudo('gpg --homedir {0} --import {1}'.format(env.gpg_dir, os.path.split(private_key)[1]), user=env.webserver_user)
-        _call_managepy('dbrestore --database=default --filepath={0}'.format(backup_dir+filepath), pty=True)
-        sudo('gpg --homedir {0} --batch --delete-secret-keys "{1}"'.format(env.gpg_dir, env.backup_key_fingerprint), user=env.webserver_user)
-        sudo('gpg --homedir {0} -K'.format(env.gpg_dir), user=env.webserver_user)
-        sudo('rm {0}'.format(os.path.join(dest, os.path.split(private_key)[1])))
+            sudo('gpg --homedir {0} -K'.format(env.gpg_dir), user=env.webserver_user)
+            sudo('rm {0}'.format(os.path.join(dest, os.path.split(private_key)[1])))
+        executel(migrate)
+        executel(supervisor, 'start', 'celery', roles=['worker'])
+        executel(supervisor, 'start', 'web', roles=['web'])
+        executel(end_upgrade)
+    finally:
         local('rm {0}'.format(private_key))
-    executel(migrate)
-    executel(supervisor, 'start', 'celery', roles=['worker'])
-    executel(supervisor, 'start', 'web', roles=['web'])
-    executel(end_upgrade)
 
 
 @task
@@ -1220,13 +1223,15 @@ def create_environment(deployment_tag, environment, num_web=2):
     executel(environment, deployment_tag)
     # if we create all servers at once, the slave won't be sync'ed yet
     executel(reset_slaves)
-
+    
+    print 'Waiting for launch config creation to complete...'
     # wait for the launch config to finish creating if needed
     lc_creator.join()
     # make sure all the web servers get re-created using auto-scaling
     lc_name = lc_creator.result().name
+    print 'Running deploy_full...'
     # run the initial deployment with the new AMI containing the latest code
-    deploy_serial(deployment_tag, environment, launch_config_name=lc_name)
+    deploy_full(deployment_tag, environment, launch_config_name=lc_name)
 
     print 'The non-web servers have been created and the autoscaling group has been updated '\
           'with a new launch configuration. To finish creating the environment, '\
