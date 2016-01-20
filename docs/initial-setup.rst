@@ -529,7 +529,7 @@ Python Requirements
 +++++++++++++++++++
 
 The following are the minimum Python requirements for deploying a web application
-using FabulAWS:
+using FabulAWS (update version numbers as needed):
 
 .. code-block:: text
 
