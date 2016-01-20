@@ -458,10 +458,10 @@ def vcs(cmd, args=None):
         if env.vcs_cmd.endswith('hg'):
             parts.append('-e "%s"' % ssh_cmd)
         elif env.vcs_cmd.endswith('git'):
-            sudo('mkdir -p .ssh', user=env.deploy_user)
-            sudo('touch .ssh/options', user=env.deploy_user)
-            append('%s/.ssh/config' % env.home, 'UserKnownHostsFile=/dev/null')
-            append('%s/.ssh/config' % env.home, 'StrictHostKeyChecking=no')
+            sudo('mkdir -p %s/.ssh' % env.home, user=env.deploy_user)
+            sudo('touch %s/.ssh/options' % env.home, user=env.deploy_user)
+            append('%s/.ssh/config' % env.home, 'UserKnownHostsFile=/dev/null', use_sudo=True)
+            append('%s/.ssh/config' % env.home, 'StrictHostKeyChecking=no', use_sudo=True)
             #parts.insert(0, 'GIT_SSH_COMMAND="%s"' % ssh_cmd)
     sshagent_run(' '.join(parts), user=env.deploy_user)
 
@@ -1222,11 +1222,13 @@ def create_environment(deployment_tag, environment, num_web=2):
     disconnect_all()
     lc_creator = BackgroundCommand(_create_launch_config, capture_result=True)
     lc_creator.start()
+    az_1 = env.avail_zones[0]
+    az_2 = env.avail_zones[1]
     servers = [
-        (deployment_tag, environment, 'db-master', 'd'),
-        (deployment_tag, environment, 'db-slave', 'a'),
-        (deployment_tag, environment, 'cache', 'a'),
-        (deployment_tag, environment, 'worker', 'd'),
+        (deployment_tag, environment, 'db-master', az_1),
+        (deployment_tag, environment, 'db-slave', az_2),
+        (deployment_tag, environment, 'cache', az_2),
+        (deployment_tag, environment, 'worker', ax_1),
     ]
     _create_many(servers)
     env.roles = []
@@ -1840,7 +1842,8 @@ def _create_server_and_image(type_=None):
     # with terminate=True, the instance will be terminated when the
     # variable is garbage collected or when .cleanup() is called
     server = _new(env.deployment_tag, env.environment, 'web',
-                  avail_zone='d', type_=type_, terminate=True)[0]
+                  avail_zone=env.avail_zones[0], type_=type_,
+                  terminate=True)[0]
     # reload the environment WITH the new server
     _setup_env(env.deployment_tag, env.environment)
     try:
