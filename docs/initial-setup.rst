@@ -71,6 +71,11 @@ following parameters:
 * Choose the same availability zones as for your load balancer
 * You don't need to configure scaling policies yet, but these will need to be
   set eventually based on experience
+* You must configure the auto scaling group to tag instances like so:
+   * **Name:** myproject_<environment>_web
+   * **deployment:** myproject
+   * **environment:** <environment>
+   * **role:** web
 
 Local Machine
 -------------
