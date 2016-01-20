@@ -21,8 +21,8 @@ project and updated in `fabulaws-config.yml`.
 * **myproject-sg**
    * TCP port 22 from 0.0.0.0/0
 * **myproject-cache-sg**
-   * TCP port 6379 from myproject-web-sg
-   * TCP port 6379 from myproject-worker-sg
+   * TCP port 11211 from myproject-web-sg
+   * TCP port 11211 from myproject-worker-sg
 * **myproject-db-sg**
    * TCP port 5432 from myproject-web-sg
    * TCP port 5432 from myproject-worker-sg
@@ -30,6 +30,9 @@ project and updated in `fabulaws-config.yml`.
 * **myproject-queue-sg**
    * TCP port 5672 from myproject-web-sg
    * TCP port 5672 from myproject-worker-sg
+* **myproject-session-sg**
+   * TCP port 6379 from myproject-web-sg
+   * TCP port 6379 from myproject-worker-sg
 * **myproject-web-sg**
    * TCP port 80 from amazon-elb-sg
    * TCP port 443 from amazon-elb-sg
