@@ -6,10 +6,8 @@
 FabulAWS
 ========
 
-`FabulAWS <https://github.com/caktus/fabulaws>`_ is a tool that lets you simply
-and easily create new servers, from scratch.  You can do this in an existing
-`Fabric <http://www.fabfile.org/>`_ file, or separately in your own
-application.
+`FabulAWS <https://github.com/caktus/fabulaws>`_ is a tool for deploying Python
+web applications to autoscaling-enabled AWS EC2 environments.
 
 Simple example
 --------------
@@ -32,7 +30,12 @@ Contents
 .. toctree::
    :maxdepth: 2
 
-   using
+   basics
+   architecture
+   initial-setup
+   deployment
+   maintenance
+   troubleshooting
 
 Indices and tables
 ==================
