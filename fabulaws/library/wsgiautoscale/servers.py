@@ -318,8 +318,8 @@ class AppMixin(PythonMixin):
     """
 
     python_packages = ['python2.7', 'python2.7-dev']
-    python_pip_version = '1.5.2'
-    python_virtualenv_version = '1.11.2'
+    python_pip_version = '8.0.0'
+    python_virtualenv_version = '14.0.0'
 
     @uses_fabric
     def update_meld3(self):
@@ -328,8 +328,8 @@ class AppMixin(PythonMixin):
         11.04: http://vandahm.com/articles/how-fix-supervisor-ubuntu-1104/
         """
 
-        self.install_packages(['python-meld3'])
-        sudo('pip install -U meld3==0.6.7')
+        #self.install_packages(['python-meld3'])
+        #sudo('pip install -U meld3==0.6.7')
 
     @uses_fabric
     def install_less(self):
