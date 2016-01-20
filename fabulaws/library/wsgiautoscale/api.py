@@ -16,7 +16,7 @@ from boto.exception import BotoServerError
 
 from fabric.api import (abort, cd, env, execute, hide, hosts, local, parallel,
     prompt, put, roles, require, run, runs_once, settings, sudo, task)
-from fabric.contrib.files import exists, upload_template, append
+from fabric.contrib.files import exists, upload_template, append, uncomment, sed
 from fabric.network import disconnect_all
 
 from argyle import system
@@ -447,16 +447,23 @@ def new(deployment, environment, role, avail_zone=None, count=1, type_=None):
 
 
 def vcs(cmd, args=None):
-    if args is None:
-        args = []
-    if cmd in ('pull', 'clone'):
-        args.append('-e "ssh -o UserKnownHostsFile=/dev/null '
-                    '-o StrictHostKeyChecking=no"')
     # vcs commands assume hg, so convert 'update' to 'checkout' if needed
     if cmd == 'update' and env.vcs_cmd.endswith('git'):
         cmd = 'checkout'
-    sshagent_run('%s %s %s' % (env.vcs_cmd, cmd, ' '.join(args)),
-                 user=env.deploy_user)
+    if args is None:
+        args = []
+    parts = [env.vcs_cmd, cmd] + args
+    if cmd in ('pull', 'clone'):
+        ssh_cmd = 'ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no'
+        if env.vcs_cmd.endswith('hg'):
+            parts.append('-e "%s"' % ssh_cmd)
+        elif env.vcs_cmd.endswith('git'):
+            sudo('mkdir -p .ssh', user=env.deploy_user)
+            sudo('touch .ssh/options', user=env.deploy_user)
+            append('%s/.ssh/config' % env.home, 'UserKnownHostsFile=/dev/null')
+            append('%s/.ssh/config' % env.home, 'StrictHostKeyChecking=no')
+            #parts.insert(0, 'GIT_SSH_COMMAND="%s"' % ssh_cmd)
+    sshagent_run(' '.join(parts), user=env.deploy_user)
 
 
 @task
@@ -596,6 +603,8 @@ def upload_nginx_conf():
         sudo('rm -f /etc/nginx/sites-enabled/default')
         sudo('rm -f /etc/nginx/sites-enabled/%(project)s-*.conf' % env)
     sudo('ln -s /%(home)s/services/nginx/%(environment)s.conf /etc/nginx/sites-enabled/%(project)s-%(environment)s.conf' % env)
+    uncomment('/etc/nginx/nginx.conf', 'server_names_hash_bucket_size', use_sudo=True)
+    sed('/etc/nginx/nginx.conf', 'server_names_hash_bucket_size .+', 'server_names_hash_bucket_size 128;', use_sudo=True)
     restart_nginx()
 
 
@@ -651,13 +660,14 @@ def update_requirements():
     """ update external dependencies on remote host """
 
     require('code_root', provided_by=env.environments)
-    requirements = os.path.join(env.code_root, 'requirements')
-    sdists = os.path.join(requirements, 'sdists')
-    apps = os.path.join(requirements, 'apps.txt')
     # add HOME= so if there's an error, pip can save the log (Fabric doesn't
     # pass -H to sudo)
     cmd = ['HOME=%(home)s %(virtualenv_root)s/bin/pip install -q' % env]
-    cmd += [' --use-wheel --no-index --find-links=file://%s' % sdists]
+    cmd += [' --use-wheel']
+    if env.requirements_sdists:
+        sdists = os.path.join(env.code_root, env.requirements_sdists)
+        cmd += [' --no-index --find-links=file://%s' % sdists]
+    apps = os.path.join(env.code_root, env.requirements_file)
     cmd += ['--requirement %s' % apps]
     sudo(' '.join(cmd), user=env.deploy_user)
 
