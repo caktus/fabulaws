@@ -124,6 +124,8 @@ def _setup_env(deployment_tag=None, environment=None, override_servers={}):
     env.media_root = os.path.join(env.root, 'uploaded_media')
     env.static_root = os.path.join(env.root, 'static_media')
     env.services = os.path.join(env.home, 'services')
+    env.nginx_conf = os.path.join(env.services, 'nginx', '%s.conf' % env.environment)
+    env.local_settings_py = os.path.join(env.project_root, 'local_settings.py')
     env.database_name = '%s_%s' % (env.project, env.environment)
     env.staticfiles_s3_bucket = '-'.join([env.deployment_tag, env.environment, 'static', 'files'])
     env.site_domains = env.site_domains_map[env.environment]
@@ -581,7 +583,6 @@ def upload_nginx_conf():
     """Upload Nginx configuration from the template."""
 
     require('environment', provided_by=env.environments)
-    destination = os.path.join(env.services, 'nginx', '%(environment)s.conf' % env)
     context = dict(env)
     context['allowed_hosts'] = []
     # transform Django's ALLOWED_HOSTS into a format acceptable by Nginx (see
@@ -597,12 +598,14 @@ def upload_nginx_conf():
             # Specifying a regular expression instead prevents that.
             sn = r'"~[a-zA-Z0-9-]+%s$"' % sn.replace('.', r'\.')
         context['allowed_hosts'].append(sn)
-    _upload_template('nginx.conf', destination, context=context, user=env.deploy_user,
+    _upload_template('nginx.conf', env.nginx_conf, context=context, user=env.deploy_user,
                      use_jinja=True, template_dir=env.templates_dir)
+    _upload_template('web-first-boot.sh', '/fabulaws-first-boot.sh', context=context,
+                     user='root', use_jinja=True, template_dir=env.templates_dir)
     with settings(warn_only=True):
         sudo('rm -f /etc/nginx/sites-enabled/default')
         sudo('rm -f /etc/nginx/sites-enabled/%(project)s-*.conf' % env)
-    sudo('ln -s /%(home)s/services/nginx/%(environment)s.conf /etc/nginx/sites-enabled/%(project)s-%(environment)s.conf' % env)
+    sudo('ln -s %(nginx_conf)s /etc/nginx/sites-enabled/%(project)s-%(environment)s.conf' % env)
     uncomment('/etc/nginx/nginx.conf', 'server_names_hash_bucket_size', use_sudo=True)
     sed('/etc/nginx/nginx.conf', 'server_names_hash_bucket_size .+', 'server_names_hash_bucket_size 128;', use_sudo=True)
     restart_nginx()
@@ -680,7 +683,6 @@ def update_local_settings():
 
     require('environment', provided_by=env.environments)
     _load_passwords(env.password_names)
-    destination = os.path.join(env.project_root, 'local_settings.py')
     assert env.master_database, 'Master database missing'
     assert env.cache_server, 'Cache server missing'
     # must update pgbouncer configuration at the same time to ensure ports stay
@@ -694,7 +696,7 @@ def update_local_settings():
     context['current_role'] = _current_roles()[0]
     context['allowed_hosts'] = _allowed_hosts()
     _upload_template(os.path.basename(env.localsettings_template),
-                     destination, context=context,
+                     env.local_settings_py, context=context,
                      user=env.deploy_user, use_jinja=True,
                      template_dir=os.path.dirname(env.localsettings_template))
 
