@@ -491,3 +491,71 @@ Before attempting to deploy for the first time, you should add your SSH public k
 to a file named ``deployment/users/<yourusername>`` in the repository. This path
 can also be configured in ``fabulaws-config.yml``. Multiple SSH keys are permitted
 per file, and additional files can be added for each username (developer).
+
+Django Settings
++++++++++++++++
+
+FabulAWS uses django_compressor and django-storages to store media on S3. The following
+settings changes are required in your base ``settings.py``:
+
+#. 'compressor' and 'storages' should be added to your ``INSTALLED_APPS``.
+#. Add the following to the end of your ``settings.py``, modifying as needed:
+
+  .. code-block:: python
+
+    # List of finder classes that know how to find static files in
+    # various locations.
+    STATICFILES_FINDERS = (
+        'django.contrib.staticfiles.finders.FileSystemFinder',
+        'django.contrib.staticfiles.finders.AppDirectoriesFinder',
+        'compressor.finders.CompressorFinder',
+    )
+
+    STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+
+    COMPRESS_ENABLED = False # enable in local_settings.py if needed
+    COMPRESS_CSS_HASHING_METHOD = 'hash'
+    COMPRESS_PRECOMPILERS = (
+        ('text/less', 'lessc {infile} {outfile}'),
+    )
+
+wsgi.py
++++++++
+
+You'll need to change the default ``DJANGO_SETTINGS_MODULE`` in your project's
+``wsgi.py`` to ``myproject.local_settings``.
+
+Python Requirements
++++++++++++++++++++
+
+The following are the minimum Python requirements for deploying a web application
+using FabulAWS:
+
+.. code-block:: text
+
+  Django==1.8.8
+  psycopg2==2.6.1
+  pytz==2015.2
+  django-celery==3.1.16
+  Celery==3.1.18
+  kombu==3.0.26
+  amqp==1.4.6
+  gunicorn==0.17.4
+  django-balancer==0.4
+  boto==2.39.0
+  django-storages==1.1.8
+  django_compressor==1.5
+  python-memcached==1.52
+  redis==2.10.3
+  django-redis-cache==1.3.0
+  django-cache-machine==0.9.1
+  newrelic==2.44.0.36
+
+In addition, the following requirements are needed for deployment:
+
+
+.. code-block:: text
+
+  pyyaml==3.11
+  fabric==1.10.2
+  argyle==0.2.1
