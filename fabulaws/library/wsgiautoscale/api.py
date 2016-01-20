@@ -745,6 +745,8 @@ def current_changeset():
 def _call_managepy(cmd, pty=False):
     """Calls the given management command."""
     env.managepy_cmd = cmd
+    if env.settings_managepy:
+        env.managepy_cmd += ' --settings=%s' % env.settings_managepy
     with cd(env.code_root):
         # cd to project_root to ensure local_settings is on the path
         sudo('%(virtualenv_root)s/bin/python '
@@ -769,8 +771,6 @@ def migrate():
 
     require('environment', provided_by=env.environments)
     cmd = 'migrate --noinput'
-    if env.settings_migrations:
-        cmd += ' --settings=' + env.settings_migrations
     _call_managepy(cmd)
 
 
@@ -948,7 +948,8 @@ def deploy_worker(changeset=None):
     supervisor('start', 'pgbouncer')
     migrate()
     collectstatic()
-    _call_managepy('compress')
+    with settings(warn_only=True):
+        _call_managepy('compress')
     supervisor('start', 'celery')
     flag_deployment()
 
