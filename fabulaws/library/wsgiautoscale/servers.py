@@ -41,7 +41,7 @@ class BaseInstance(FirewallMixin, UbuntuInstance):
                     'secure_root', 'secure_home', 'fs_type', 'fs_encrypt',
                     'ubuntu_mirror', 'swap_multiplier', 'instance_type',
                     'deploy_user', 'volume_size', 'volume_type',
-                    'security_groups']:
+                    'security_groups', 'home']:
             setattr(self, key, kwargs.pop(key))
         if 'terminate' not in kwargs:
             kwargs['terminate'] = False
@@ -50,9 +50,10 @@ class BaseInstance(FirewallMixin, UbuntuInstance):
                              self.volume_type, passwd)]
         if self.secure_root:
             self.default_swap_file = '%s/swapfile' % self.secure_root
+        else:
+            self.default_swap_file = '/swapfile'
         super(BaseInstance, self).__init__(*args, **kwargs)
-        self.home = '%s/%s' % (self.secure_home, self.deploy_user)
-        if self.secure_home:
+        if self.fs_encrypt:
             self.secure_dirs = ['/tmp', self.secure_home] # mixins add other dirs
 
     def _get_users(self):
@@ -173,7 +174,8 @@ class BaseInstance(FirewallMixin, UbuntuInstance):
         self.setup_sudoers()
         # needed for SSH agent forwarding during replication setup:
         self.reset_authentication()
-        self.secure_directories(self.secure_dirs, self.secure_root)
+        if self.fs_encrypt:
+            self.secure_directories(self.secure_dirs, self.secure_root)
         self.setup_swap() # after secure partition is created
         self.create_deployer()
         self.update_deployer_keys()
@@ -188,7 +190,8 @@ class SessionMixin(RedisPpaMixin):
 
     def __init__(self, *args, **kwargs):
         super(SessionMixin, self).__init__(*args, **kwargs)
-        self.secure_dirs.append('/var/lib/redis')
+        if self.fs_encrypt:
+            self.secure_dirs.append('/var/lib/redis')
 
 
 class CacheMixin(MemcachedMixin):
@@ -214,7 +217,8 @@ class QueueMixin(RabbitMqMixin):
 
     def __init__(self, *args, **kwargs):
         super(QueueMixin, self).__init__(*args, **kwargs)
-        self.secure_dirs.append('/var/lib/rabbitmq')
+        if self.fs_encrypt:
+            self.secure_dirs.append('/var/lib/rabbitmq')
 
     def setup(self):
         """Create the RabbitMQ user and vhost."""
@@ -228,10 +232,8 @@ class QueueMixin(RabbitMqMixin):
 class DbMixin(PostgresMixin):
     """Mixin that creates a database based on the Fabric env."""
 
-    # use the PPA so we get PostgreSQL 9.1
-    #in 12.04 postgres 9.1 is the base
-    #postgresql_ppa = 'ppa:pitti/postgresql'
-    postgresql_packages = ['postgresql-9.1', 'libpq-dev']
+    # use the default version in this Ubuntu distro
+    postgresql_packages = ['postgresql', 'libpq-dev']
     postgresql_tune = True
     postgresql_shmmax = 107374182400 # 100 GB
     postgresql_shmall = 26214400 # 100 GB / PAGE_SIZE (4096)
@@ -273,7 +275,8 @@ class DbMixin(PostgresMixin):
 
     def __init__(self, *args, **kwargs):
         super(DbMixin, self).__init__(*args, **kwargs)
-        self.secure_dirs.append('/var/lib/postgresql')
+        if self.fs_encrypt:
+            self.secure_dirs.append('/var/lib/postgresql')
 
     def setup(self):
         """Create the Postgres user and database based on the Fabric env."""

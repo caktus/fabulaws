@@ -42,9 +42,6 @@ def _reset_hosts():
     env.roledefs = dict((role, []) for role in env.valid_roles)
     env.servers = dict((role, []) for role in env.valid_roles)
 
-env.password_names = ['database_password', 'broker_password', 'sendgrid_password',
-                      'ses_secret', 'desk_app_secret', 'desk_token_secret',
-                      'newrelic_license_key', 'newrelic_api_key']
 # Mapping of Fabric roles to FabulAWS server class names
 env.role_class_map = {
     'cache': CacheInstance,
@@ -67,7 +64,6 @@ for key, value in env.static_html.items():
     env.static_html[key] = os.path.join(os.path.abspath(os.path.dirname(config_file)), value)
 for key in ['ssh_keys', 'localsettings_template']:
     new_path = os.path.join(os.path.abspath(os.path.dirname(config_file)), getattr(env, key))
-    print new_path
     setattr(env, key, new_path)
 
 def _get_servers(deployment, environment, role):
@@ -84,6 +80,7 @@ def _get_servers(deployment, environment, role):
         'volume_type': _find(env.volume_types, environment, role),
         'security_groups': _find(env.security_groups, environment, role),
         'deploy_user': env.deploy_user,
+        'home': env.home,
     }
     inst_kwargs.update(env.instance_settings)
     return ec2_instances(filters=env.filters, cls=env.role_class_map[role],
@@ -347,7 +344,10 @@ def _new(deployment, environment, role, avail_zone=None, count=1, type_=None,
         print 'Note: Assigning random availability zone "{0}"'.format(avail_zone)
     placement = ''.join([env.region, avail_zone])
     _setup_env()
-    _load_passwords(env.password_names + ['luks_passphrase'])
+    password_names = env.password_names
+    if env.instance_settings['fs_encrypt']:
+        password_names.append('luks_passphrase')
+    _load_passwords(password_names)
     servers = []
     for x in range(count):
         if type_ is None:
@@ -358,10 +358,10 @@ def _new(deployment, environment, role, avail_zone=None, count=1, type_=None,
         sec_grps = _find(env.security_groups, environment, role)
         extra_args = kwargs.copy()
         extra_args.update(env.instance_settings)
-        server = cls(instance_type=type_, placement=placement,
-                       tags=tags, volume_size=vol_size, volume_type=vol_type,
-                       deploy_user=env.deploy_user, security_groups=sec_grps,
-                       **extra_args)
+        server = cls(instance_type=type_, placement=placement, home=env.home,
+                     tags=tags, volume_size=vol_size, volume_type=vol_type,
+                     deploy_user=env.deploy_user, security_groups=sec_grps,
+                     **extra_args)
         server.setup()
         servers.append(server)
     # the methods below should only be run on the created server(s), so

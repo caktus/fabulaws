@@ -4,3 +4,4 @@ build/
 dist/
 fabulaws.egg-info/
 *~
+docs/_build/
