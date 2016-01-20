@@ -77,7 +77,7 @@ replication from the master database server.  This results in very fast
 * Sample security groups: myproject-sg, myproject-db-sg
 
 Autoscaling
-===========
+-----------
 
 Each server environment uses EC2 Auto Scaling (AS) to bring up and down new
 instances based on current demand.  When deploying, a new AS Launch
@@ -85,5 +85,11 @@ Configuration is created for the new revision of the code.  The AS Group, which
 is created and managed largely via the EC2 console, is then updated via the API
 to point to the new Launch Configuration.
 
+SSL Certificates
+----------------
 
-
+SSL certifcates for the production and staging domains can be updated and
+managed via the Elastic Load Balancers in the AWS console.  Internally, the
+load balancer communicates with the web instances over SSL using the default
+self-signed certificate that's created on a standard Ubuntu installation 
+(``/etc/ssl/certs/ssl-cert-snakeoil.pem``).

@@ -23,7 +23,7 @@ negatively impact the primary environment for testing new features (see
 To create a new instance of the testing environment, you can use the
 ``create_environment`` command to Fabric, like so::
 
-    fab create_environment:ccsr-sam,testing
+    fab create_environment:myproject,testing
 
 Prior to running this command, be certain that all prior instances of testing
 servers have been terminated via the AWS console.  This command will create
@@ -154,11 +154,11 @@ Suspending and restarting autoscaling processes
 If for any reason autoscaling needs to be suspended, this can be accomplished
 through Fabric.  To suspend all autoscaling processes, simply run::
 
-    fab suspend_autoscaling_processes:ccsr-sam,<environment>
+    fab suspend_autoscaling_processes:myproject,<environment>
 
 To resume autoscaling once any issues have been resolved, run::
 
-    fab resume_autoscaling_processes:ccsr-sam,<environment>
+    fab resume_autoscaling_processes:myproject,<environment>
 
 A note about usernames
 ----------------------
