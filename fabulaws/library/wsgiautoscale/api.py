@@ -465,6 +465,11 @@ def vcs(cmd, args=None):
             append('%s/.ssh/config' % env.home, 'UserKnownHostsFile=/dev/null', use_sudo=True)
             append('%s/.ssh/config' % env.home, 'StrictHostKeyChecking=no', use_sudo=True)
             #parts.insert(0, 'GIT_SSH_COMMAND="%s"' % ssh_cmd)
+    if cmd == 'pull' and env.vcs_cmd.endswith('git'):
+        # git forgets which branch it was on after checking out a specific revision,
+        # so remind it here (update_source calls 'checkout' with the correct
+        # revision immediately after running 'pull')
+        parts.append('origin %s' % env.branch)
     sshagent_run(' '.join(parts), user=env.deploy_user)
 
 
@@ -600,7 +605,7 @@ def upload_nginx_conf():
         context['allowed_hosts'].append(sn)
     _upload_template('nginx.conf', env.nginx_conf, context=context, user=env.deploy_user,
                      use_jinja=True, template_dir=env.templates_dir)
-    _upload_template('web-first-boot.sh', '/fabulaws-first-boot.sh', context=context,
+    _upload_template('web-rc.local', '/etc/rc.local', context=context,
                      user='root', use_jinja=True, template_dir=env.templates_dir)
     with settings(warn_only=True):
         sudo('rm -f /etc/nginx/sites-enabled/default')
@@ -1231,7 +1236,7 @@ def create_environment(deployment_tag, environment, num_web=2):
         (deployment_tag, environment, 'db-master', az_1),
         (deployment_tag, environment, 'db-slave', az_2),
         (deployment_tag, environment, 'cache', az_2),
-        (deployment_tag, environment, 'worker', ax_1),
+        (deployment_tag, environment, 'worker', az_1),
     ]
     _create_many(servers)
     env.roles = []

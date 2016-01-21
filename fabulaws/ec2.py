@@ -159,17 +159,11 @@ class EC2Instance(object):
             if image is None:
                 raise ValueError('AMI {0} not found'.format(ami))
             key_name = self.key and self.key.name or None
-            first_boot_script = """#!/bin/sh
-if [ -e /fabulaws-first-boot.sh ]; then
-    sh /fabulaws-first-boot.sh
-fi
-"""
             res = image.run(key_name=key_name,
                             security_groups=self.security_groups,
                             instance_type=self.instance_type,
                             placement=placement,
-                            min_count=count, max_count=count,
-                            user_data=first_boot_script)
+                            min_count=count, max_count=count)
             time.sleep(5) # wait for AWS to catch up
             created = True
         for inst in res.instances:
