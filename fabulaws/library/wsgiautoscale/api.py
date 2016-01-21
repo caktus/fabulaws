@@ -609,6 +609,7 @@ def upload_nginx_conf():
                      use_jinja=True, template_dir=env.templates_dir)
     _upload_template('web-rc.local', '/etc/rc.local', context=context,
                      user='root', use_jinja=True, template_dir=env.templates_dir)
+    sudo('chmod a+x /etc/rc.local')
     with settings(warn_only=True):
         sudo('rm -f /etc/nginx/sites-enabled/default')
         sudo('rm -f /etc/nginx/sites-enabled/%(project)s-*.conf' % env)
