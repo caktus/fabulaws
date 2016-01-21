@@ -129,6 +129,8 @@ def _setup_env(deployment_tag=None, environment=None, override_servers={}):
     env.database_name = '%s_%s' % (env.project, env.environment)
     env.staticfiles_s3_bucket = '-'.join([env.deployment_tag, env.environment, 'static', 'files'])
     env.site_domains = env.site_domains_map[env.environment]
+    assert all([bool(domain) for domain in env.site_domains]) and len(env.site_domains) > 0,\
+           'need at least one site domain for %s' % env.environment
     env.vhost = '%s_%s' % (env.project, env.environment)
     env.branch = _find(env.branches, env.deployment_tag, env.environment)
     env.elb_names = _find(env.load_balancers, env.deployment_tag, env.environment)
