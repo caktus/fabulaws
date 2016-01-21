@@ -1121,7 +1121,7 @@ def update_sysadmin_users():
 def upgrade_packages():
     """ update packages on the servers """
 
-    sudo('apt-get update')
+    sudo('apt-get update -qq')
     if 'web' in _current_roles() or 'worker' in _current_roles():
         packages = env.app_server_packages
         sudo('apt-get install -y {0}'.format(' '.join(packages)))
@@ -1459,7 +1459,7 @@ def install_newrelic_sysmon():
     _load_passwords(['newrelic_license_key'])
     sudo('echo deb http://apt.newrelic.com/debian/ newrelic non-free > /etc/apt/sources.list.d/newrelic.list', shell=True)
     sudo('wget -O- https://download.newrelic.com/548C16BF.gpg | apt-key add -', shell=True)
-    sudo('apt-get update')
+    sudo('apt-get update -qq')
     sudo('apt-get install -y -o Dpkg::Options::="--force-confnew" newrelic-sysmond')
     upload_newrelic_sysmon_conf()
 
