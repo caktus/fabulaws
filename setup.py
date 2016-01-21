@@ -22,7 +22,7 @@ setup(
     long_description=open('README.rst').read(),
     install_requires=[
         'pyyaml>=3,<4',
-        'boto>=2.39,<4',
+        'boto>=2.39,<3',
         'fabric>=1.10,<2',
         'argyle>=0.2.1,<1'
     ]
