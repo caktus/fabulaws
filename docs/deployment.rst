@@ -3,7 +3,7 @@ Deployment
 
 FabulAWS uses `Fabric <http://docs.fabfile.org/>`_ for deployment, with which
 some familiarity is strongly recommended.  This page assumes that you've
-completed the necessary setup described in the :doc:`/preparing`.
+completed the necessary setup described in the :doc:`/initial-setup`.
 You will also need a local development environment setup as described in
 :doc:`/initial-setup`.
 
@@ -66,7 +66,7 @@ the autoscaling image at the same time as new code is deployed.
 Autoscaling: Updating the image
 +++++++++++++++++++++++++++++++
 
-Because AIM creation can be a time-intensive part of the process, it can be
+Because AMI creation can be a time-intensive part of the process, it can be
 done separately ahead of time to prepare for a deployment.
 
 To create an autoscaling AMI and launch configuration based on the current
