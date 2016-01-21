@@ -545,6 +545,7 @@ def upload_supervisor_conf():
     context = env.copy()
     cpu_count = int(run('cat /proc/cpuinfo|grep processor|wc -l'))
     context['worker_count'] = cpu_count * 4
+    context['current_role'] = _current_roles()[0]
     _upload_template('supervisor.conf', destination, context=context,
                      user=env.deploy_user, use_jinja=True,
                      template_dir=env.templates_dir)
