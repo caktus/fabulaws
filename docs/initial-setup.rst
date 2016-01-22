@@ -328,8 +328,5 @@ using FabulAWS (update version numbers as needed):
 In addition, the following requirements are needed for deployment:
 
 
-.. code-block:: text
+.. literalinclude:: ../requirements.txt
 
-  pyyaml==3.11
-  fabric==1.10.2
-  argyle==0.2.1

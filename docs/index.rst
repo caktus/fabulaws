@@ -30,12 +30,12 @@ Contents
 .. toctree::
    :maxdepth: 2
 
-   basics
    architecture
    initial-setup
    deployment
    maintenance
    troubleshooting
+   internals
 
 Indices and tables
 ==================
