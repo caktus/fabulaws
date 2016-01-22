@@ -1255,7 +1255,7 @@ def create_environment(deployment_tag, environment, num_web=2):
     lc_name = lc_creator.result().name
     print 'Running deploy_full...'
     # run the initial deployment with the new AMI containing the latest code
-    deploy_full(deployment_tag, environment, launch_config_name=lc_name)
+    deploy_full(deployment_tag, environment, launch_config_name=lc_name, num_web=num_web)
 
     print 'The non-web servers have been created and the autoscaling group has been updated '\
           'with a new launch configuration. To finish creating the environment, '\
@@ -1571,7 +1571,7 @@ def create_launch_config_for_deployment(deployment_tag, environment, type_=None)
 
 @task
 @runs_once
-def deploy_full(deployment_tag, environment, launch_config_name=None):
+def deploy_full(deployment_tag, environment, launch_config_name=None, num_web=2):
     """Autoscaling replacement for deploy_full_without_autoscaling.
 
     Performs a full deployment of new code. Users who visit the site during
@@ -1596,7 +1596,8 @@ def deploy_full(deployment_tag, environment, launch_config_name=None):
     # create the desired number of new instances using the updated launch
     # configuration.
     curr_minimum = group.min_size
-    curr_desired = group.desired_capacity
+    # if desired is "0", use a sane default
+    curr_desired = group.desired_capacity or num_web
     curr_servers = len(group.instances)
     group.min_size = group.desired_capacity = curr_servers + curr_desired
     group.update()
