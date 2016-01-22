@@ -49,6 +49,8 @@ wildcard SSL certificate). Use the following parameters as a guide:
 
 * Choose a name and set it in ``fabulaws-config.yml``
 * Ports 80 and 443 should be mapped to 80 and 443 on the instances
+* Setup an HTTPS health check on port 443 that monitors ``/healthcheck.html``
+  at your desired frequency (you'll setup the health check URL in your app below)
 * Backend authentication and stickiness should be disabled
 * The zones chosen should match those in ``fabulaws-config.yml`` (typically 2)
 * Until FabulAWS is upgraded to support VPC, Classic-style load balancers should
@@ -66,7 +68,8 @@ You will also need to create one auto scaling group per envrionment, with the
 following parameters:
 
 * Choose a name and set it in ``fabulaws-config.yml``
-* Choose a dummy launch config and set it to 0 instances to start
+* Choose a dummy launch config and set it with a "min" and "desired" instances
+  of 0 to start, and a "max" of at least 4 (a higher max is fine).
 * Select Advanced, choose your load balancer, and select the ELB health check
 * Choose the same availability zones as for your load balancer
 * You don't need to configure scaling policies yet, but these will need to be
@@ -330,3 +333,15 @@ In addition, the following requirements are needed for deployment:
 
 .. literalinclude:: ../requirements.txt
 
+First Deployment
+----------------
+
+Once you have your EC2 environment and project configured, it's time to create
+your initial server environment.
+
+To create a new instance of the testing environment, you can use the
+``create_environment`` command to Fabric, like so::
+
+    fab create_environment:myproject,testing
+
+For more information, please refer to the :doc:`/deployment` documentation.
