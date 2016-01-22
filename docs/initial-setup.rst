@@ -344,4 +344,7 @@ To create a new instance of the testing environment, you can use the
 
     fab create_environment:myproject,testing
 
+In addition to the console, be sure to inspect the log files generated (``*.out``
+in the current director) to troubleshoot any problems that may arise.
+
 For more information, please refer to the :doc:`/deployment` documentation.
