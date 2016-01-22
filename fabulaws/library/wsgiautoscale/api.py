@@ -1260,7 +1260,7 @@ def create_environment(deployment_tag, environment, num_web=2):
     print 'The non-web servers have been created and the autoscaling group has been updated '\
           'with a new launch configuration. To finish creating the environment, '\
           'you need to navigate to the AWS console, set the minimum and desired '\
-          'instance counts for the %(ag_name)s auto scaling group'.format(env)
+          'instance counts for the %(ag_name)s auto scaling group' % env
 
 
 @task
