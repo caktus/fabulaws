@@ -1,0 +1,194 @@
+instance_settings:
+  # http://uec-images.ubuntu.com/releases/trusty/release/
+  ami: ami-b2e3c6d8 # us-east-1 14.04.3 LTS 64-bit w/EBS-SSD root store
+  key_prefix: 'myproject-'
+  admin_groups: [admin, sudo]
+  run_upgrade: true
+  # Secure directories, volume, and filesystem info
+  secure_root: #/secure # no trailing /
+  secure_home: #/home/secure
+  fs_type: ext4
+  fs_encrypt: false
+  ubuntu_mirror: us.archive.ubuntu.com
+  # create swap of swap_multiplier * available RAM
+  swap_multiplier: 1
+
+## REMOTE SETTINGS ##
+deploy_user: myproject
+webserver_user: myproject-web
+database_host: localhost
+database_user: dbuser
+home: /home/myproject/
+python: /usr/bin/python2.7
+log_host: 
+
+## LOCAL / PROJECT SETTINGS ##
+disable_known_hosts: true
+ssh_keys: deployment/users/
+password_names: [database_password, broker_password, smtp_password,
+                 newrelic_license_key, newrelic_api_key, s3_secret]
+project: myproject
+wsgi_app: myproject.wsgi:application
+requirements_file: requirements/app.txt
+requirements_sdists:
+settings_managepy: myproject.local_settings
+static_html:
+  upgrade_message: deployment/templates/html/503.html
+  healthcheck_override: deployment/templates/html/healthcheck.html
+localsettings_template: deployment/templates/local_settings.py
+logstash_config: deployment/templates/logstash.conf
+backup_key_fingerprint: 
+vcs_cmd: git # or hg
+latest_changeset_cmd: git rev-parse HEAD # hg id -i # or git rev-parse HEAD
+repo: git@github.com:username/myproject.git
+# Mapping of Fabric deployments and environments to the Mercurial branch names
+# that should be deployed.
+branches:
+  myproject:
+    production: master
+    staging: master
+    testing: master
+
+## SERVER SETTINGS ##
+
+# Local server port for pgbouner
+pgbouncer_port: 5432
+
+# Local server ports used by Gunicorn (the Django apps server)
+server_ports:
+  staging: 8000
+  production: 8001
+  testing: 8002
+
+# Mapping of celery worker names to options
+# The worker name (key) can be any text of your choosing. The value should
+# be any additional options you'd like to pass to celeryd, such as specifying
+# the concurrency and queue name(s)
+celery_workers:
+  main: -c 10 -Q celeryd
+
+# Mapping of environment names to domain names. Used to update the
+# primary site in the database after a refresh and to set ALLOWED_HOSTS
+# Note that the first domain in the list must not be a wildcard as it
+# is used to update a Site object in the database.
+# Wildcard format used per ALLOWED_HOSTS setting
+site_domains_map:
+  production:
+  - dualstack.myproject-production-1-12345.us-east-1.elb.amazonaws.com
+  staging:
+  - dualstack.myproject-staging-1-12345.us-east-1.elb.amazonaws.com
+  testing:
+  - dualstack.myproject-testing-1-12345.us-east-1.elb.amazonaws.com
+
+## ENVIRONMENT / ROLE SETTINGS ##
+
+default_deployment: myproject
+deployments:
+- myproject
+environments:
+- staging
+- production
+- testing
+valid_roles:
+- cache
+- db-master
+- db-slave
+- web
+- worker
+
+## AWS SETTINGS ##
+
+region: us-east-1
+avail_zones:
+- e
+- c
+
+# Mapping of role to security group(s):
+security_groups:
+  db-master: [myproject-sg, myproject-db-sg]
+  db-slave: [myproject-sg, myproject-db-sg]
+  cache: [myproject-sg, myproject-session-sg, myproject-cache-sg, myproject-queue-sg]
+  worker: [myproject-sg, myproject-worker-sg]
+  web: [myproject-sg, myproject-web-sg]
+
+# Mapping of environment and role to EC2 instance types (sizes)
+instance_types:
+  production:
+    cache: c3.large
+    db-master: m3.xlarge
+    db-slave: m3.xlarge
+    web: c3.large
+    worker: m3.large
+  staging:
+    cache: t1.micro
+    db-master: m1.small
+    db-slave: m1.small
+    web: m1.small
+    worker: m3.large
+  testing:
+    cache: t1.micro
+    db-master: t1.micro
+    db-slave: t1.micro
+    web: m1.small
+    worker: m1.small
+
+# Mapping of Fabric environment names to AWS load balancer names.  Load
+# balancers can be configured in the AWS Management Console.
+load_balancers:
+  myproject:
+    production:
+    - myproject-production-1
+    staging:
+    - myproject-staging-1
+    testing:
+    - myproject-testing-1
+
+# Mapping of Fabric environment names to AWS auto scaling group names. Auto
+# scaling groups can be configured in the AWS Management Console.
+auto_scaling_groups:
+  myproject:
+    production: myproject-production-ag
+    staging: myproject-staging-ag
+    testing: myproject-testing-ag
+
+# Mapping of Fabric environment and role to Elastic Block Device sizes (in GB)
+volume_sizes:
+  production:
+    cache: 10
+    db-master: 100
+    db-slave: 100
+    web: 10
+    worker: 50
+  staging:
+    cache: 10
+    db-master: 100
+    db-slave: 100
+    web: 10
+    worker: 50
+  testing:
+    cache: 10
+    db-master: 100
+    db-slave: 100
+    web: 10
+    worker: 50
+
+# Mapping of Fabric environment and role to Elastic Block Device volume types
+# Use SSD-backed storage (gp2) for all servers. Change to 'standard' for slower
+# magnetic storage.
+volume_types:
+  cache: gp2
+  db-master: gp2
+  db-slave: gp2
+  web: gp2
+  worker: gp2
+
+app_server_packages:
+  - python2.7-dev
+  - libpq-dev
+  - libmemcached-dev
+  - supervisor
+  - mercurial
+  - git
+  - build-essential
+  - stunnel4
+  - pgbouncer

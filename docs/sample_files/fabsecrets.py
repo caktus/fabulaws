@@ -1,0 +1,6 @@
+database_password = ''
+broker_password = ''
+smtp_password = ''
+newrelic_license_key = ''
+newrelic_api_key = ''
+s3_secret = ''

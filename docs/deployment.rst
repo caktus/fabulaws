@@ -19,7 +19,6 @@ for load testing, deployment testing, or other activities that would otherwise
 negatively impact the primary environment for testing new features (see
 :ref:`staging-environment` below).
 
-
 To create a new instance of the testing environment, you can use the
 ``create_environment`` command to Fabric, like so::
 

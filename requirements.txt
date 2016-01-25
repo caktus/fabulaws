@@ -1,4 +1,4 @@
-Fabric==1.2.0
-boto==2.0b4
-paramiko==1.7.7.1
-pycrypto==2.3
+fabric==1.10.2
+boto==2.39.0
+pyyaml==3.11
+argyle==0.2.1
