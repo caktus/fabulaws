@@ -236,6 +236,8 @@ fabulaws-config.yml
   # Local server port for pgbouner
     pgbouncer_port: 5432
 
+    less_version: 2.5.3
+
   # Local server ports used by Gunicorn (the Django apps server)
     server_ports:
       staging: 8000
