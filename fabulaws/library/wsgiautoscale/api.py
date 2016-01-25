@@ -524,7 +524,10 @@ def setup_dirs():
     sudo('mkdir -p %(services)s/stunnel' % env, user=env.deploy_user)
     sudo('mkdir -p %(media_root)s' % env)
     sudo('mkdir -p %(static_root)s' % env)
-    sudo('chown %(webserver_user)s %(media_root)s %(static_root)s' % env)
+    # Web server needs to be able to create files under media
+    sudo('chown -R %(webserver_user)s %(media_root)s' % env)
+    # Project user runs collectstatic and needs to own the static tree
+    sudo('chown -R %(deploy_user)s %(static_root)s' % env)
 
 
 def _upload_template(filename, destination, **kwargs):
@@ -787,8 +790,7 @@ def migrate():
 
 
 @task
-@roles('worker')
-@runs_once
+@roles('worker', 'web')
 def collectstatic():
     """Collect static files."""
 
@@ -937,6 +939,9 @@ def deploy_web(changeset=None):
     update_requirements()
     update_local_settings()
     upload_supervisor_conf()
+    collectstatic()
+    with settings(warn_only=True):
+        _call_managepy('compress')
     supervisor('start', 'pgbouncer')
     supervisor('start', 'web')
 
