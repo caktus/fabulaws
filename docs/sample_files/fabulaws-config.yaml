@@ -51,14 +51,21 @@ branches:
 
 ## SERVER SETTINGS ##
 
-# Local server port for pgbouner
+# Local server port for pgbouncer
 pgbouncer_port: 5432
+
+# Version of Less to install
+less_version: 2.5.3
 
 # Local server ports used by Gunicorn (the Django apps server)
 server_ports:
   staging: 8000
   production: 8001
   testing: 8002
+
+# Whether we're hosting static files on our webservers ('local')
+# or somewhere else ('remote')
+static_hosting: remote
 
 # Mapping of celery worker names to options
 # The worker name (key) can be any text of your choosing. The value should
