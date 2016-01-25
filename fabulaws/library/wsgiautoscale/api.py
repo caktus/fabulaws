@@ -523,7 +523,8 @@ def setup_dirs():
     sudo('mkdir -p %(services)s/pgbouncer' % env, user=env.deploy_user)
     sudo('mkdir -p %(services)s/stunnel' % env, user=env.deploy_user)
     sudo('mkdir -p %(media_root)s' % env)
-    sudo('chown %(webserver_user)s %(media_root)s' % env)
+    sudo('mkdir -p %(static_root)s' % env)
+    sudo('chown %(webserver_user)s %(media_root)s %(static_root)s' % env)
 
 
 def _upload_template(filename, destination, **kwargs):

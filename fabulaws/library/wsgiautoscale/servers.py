@@ -332,16 +332,19 @@ class AppMixin(PythonMixin):
         #sudo('pip install -U meld3==0.6.7')
 
     @uses_fabric
-    def install_less(self):
+    def install_less_and_yuglify(self):
         """
         Adds PPAs for node.js and NPM, installs NPM, and uses NPM to globally
-        install the ``lessc`` binary used by django_compressor.
+        install the ``lessc`` binary used by django_compressor and pipeline
+        and the ``yuglify`` binary used by pipeline.
         """
 
         self.add_ppa('ppa:chris-lea/node.js')
         #In 12.04 npm is included in the chris-lea ppa in the 'nodejs' package
         self.install_packages(['nodejs'])
-        sudo('npm install -g less@1.3.3')
+        less_version = getattr(env, 'less_version', '1.3.3')
+        sudo('npm install -g less@%s' % less_version)
+        sudo('npm install -g yuglify')
 
     def install_system_packages(self):
         """Installs the required system packages."""
@@ -366,7 +369,7 @@ class AppMixin(PythonMixin):
 
         super(AppMixin, self).setup()
         self.update_meld3()
-        self.install_less()
+        self.install_less_and_yuglify()
         self.install_system_packages()
         self.create_webserver_user()
 
