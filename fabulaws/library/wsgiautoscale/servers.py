@@ -233,10 +233,10 @@ class DbMixin(PostgresMixin):
     """Mixin that creates a database based on the Fabric env."""
 
     # use the default version in this Ubuntu distro
-    postgresql_packages = getattr(env, 'postgresql_packages', ['postgresql', 'libpq-dev'])
-    postgresql_tune = getattr(env, 'postgresql_tune', True)
-    postgresql_shmmax = getattr(env, 'postgresql_shmmax', 107374182400) # 100 GB
-    postgresql_shmall = getattr(env, 'postgresql_shmall', 26214400) # 100 GB / PAGE_SIZE (4096)
+    postgresql_packages = env.get('postgresql_packages', ['postgresql', 'libpq-dev'])
+    postgresql_tune = env.get('postgresql_tune', True)
+    postgresql_shmmax = env.get('postgresql_shmmax', 107374182400) # 100 GB
+    postgresql_shmall = env.get('postgresql_shmall', 26214400) # 100 GB / PAGE_SIZE (4096)
     # for help adjusting these settings, see:
     # http://wiki.postgresql.org/wiki/Tuning_Your_PostgreSQL_Server
     # http://wiki.postgresql.org/wiki/Number_Of_Database_Connections
@@ -271,8 +271,10 @@ class DbMixin(PostgresMixin):
         # index usage optimizations
         'random_page_cost': '2', # our DB servers have a lot of RAM and may tend to prefer Seq Scans if this is too high
     }
-    postgresql_settings = getattr(env, 'postgresql_settings', default_postgresql_settings)
-    postgresql_networks = getattr(env, 'postgresql_networks', ['10.0.0.0/8'])
+    postgresql_settings = default_postgresql_settings.copy()
+    # Override default settings with whatever settings the project has specified.
+    postgresql_settings.update(env.get('postgresql_settings', {}))
+    postgresql_networks = env.get('postgresql_networks', ['10.0.0.0/8'])
 
     def __init__(self, *args, **kwargs):
         super(DbMixin, self).__init__(*args, **kwargs)
