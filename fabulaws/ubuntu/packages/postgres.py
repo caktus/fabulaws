@@ -16,11 +16,11 @@ class PostgresMixin(AptMixin):
     package_name = 'postgresql'
     postgresql_packages = ['postgresql', 'libpq-dev']
     postgresql_tune = False
-    postgresql_tune_type = 'Web'
+    postgresql_tune_type = getattr(env, 'postgresql_tune_type', 'Web')
     postgresql_shmmax = 536870912 # 512 MB
     postgresql_shmall = 2097152
     postgresql_settings = {}
-    postgresql_disable_oom = True
+    postgresql_disable_oom = getattr(env, 'postgresql_disable_oom', True)
 
     @property
     def pgpass(self):
