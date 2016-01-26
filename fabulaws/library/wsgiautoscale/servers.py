@@ -74,7 +74,7 @@ class BaseInstance(FirewallMixin, UbuntuInstance):
     def setup_swap(self):
         """Sets up swap partition"""
         swap_mb = self.server_memory * self.swap_multiplier
-        devs = ['/dev/xvdb', '/dev/xvdc']
+        devs = ['/dev/xvdg', '/dev/xvdf', '/dev/xvde', '/dev/xvdd', '/dev/xvdc', '/dev/xvdb', '/dev/xvdc']
         for dev in devs:
             print 'attempting swap creation on {0}...'.format(dev)
             if swap_mb <= 0:
@@ -90,7 +90,7 @@ class BaseInstance(FirewallMixin, UbuntuInstance):
                 print 'no size found for {0}'.format(dev)
                 continue
             # decrement size regardless of whether or not we create swap; if
-            # crypt device exists, assume we created it previously and don't 
+            # crypt device exists, assume we created it previously and don't
             # create even more swap
             swap_mb -= size
             with settings(warn_only=True):
@@ -258,7 +258,7 @@ class DbMixin(PostgresMixin):
         # checkpoint settings
         'wal_buffers': '16MB',
         'checkpoint_completion_target': '0.9',
-        'checkpoint_timeout': '10min', 
+        'checkpoint_timeout': '10min',
         'checkpoint_segments': '256', # if checkpoints are happening more often than the timeout, increase this up to 256
         # logging
         'log_min_duration_statement': '500',
@@ -420,4 +420,3 @@ class WebInstance(WebMixin, BaseInstance):
 
 class CombinedInstance(DbMasterMixin, WebMixin, BaseInstance):
     pass
-
