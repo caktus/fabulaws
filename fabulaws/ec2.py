@@ -12,6 +12,7 @@ import traceback
 import paramiko
 from boto.ec2.connection import EC2Connection
 from boto.ec2 import elb
+from boto.ec2 import blockdevicemapping
 from boto.exception import BotoServerError
 from fabric.api import *
 from fabric.contrib import files
@@ -76,6 +77,14 @@ class EC2Instance(object):
     ssh_timeout = 5
 
     _saved_contexts = []
+
+    instance_storage = {
+        'm1.small': ['/dev/xvdb'],
+        'm3.medium': ['/dev/xvdb'],
+        'm3.large': ['/dev/xvdb'],
+        'm3.xlarge': ['/dev/xvdb', '/dev/xvdc'],
+        'c3.large': ['/dev/xvdb', '/dev/xvdc'],
+    }
 
     def __init__(self, access_key_id=None, secret_access_key=None,
                  terminate=False, placement=None, tags=None, instance_id=None,
@@ -159,10 +168,15 @@ class EC2Instance(object):
             if image is None:
                 raise ValueError('AMI {0} not found'.format(ami))
             key_name = self.key and self.key.name or None
+            bdm = blockdevicemapping.BlockDeviceMapping()
+            for i, dev in enumerate(self.instance_storage.get(self.instance_type, [])):
+                eph_name = 'ephemeral{}'.format(i)
+                bdm[dev] = blockdevicemapping.BlockDeviceType(ephemeral_name=eph_name)
             res = image.run(key_name=key_name,
                             security_groups=self.security_groups,
                             instance_type=self.instance_type,
                             placement=placement,
+                            block_device_map=bdm,
                             min_count=count, max_count=count)
             time.sleep(5) # wait for AWS to catch up
             created = True
