@@ -90,7 +90,7 @@ def _get_servers(deployment, environment, role):
 def _get_server_by_id(instance_id):
     """
     Queries EC2 and returns the list of FabulAWS server instances for the given
-    ids.
+    id.
     """
     inst_kwargs = {
         'instance_type': _find(env.instance_types, environment, role),
