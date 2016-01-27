@@ -10,7 +10,10 @@ IAM User
 ++++++++
 
 First, you'll need to create credentials via IAM that have permissions to create
-servers in EC2 and manage autoscaling groups and load balancers.
+servers in EC2 and manage autoscaling groups and load balancers. Amazon will provide you with a
+credentials file which will contain ``AWS_ACCESS_KEY_ID`` and ``AWS_SECRET_ACCESS_KEY``, which you
+will need later in this document.
+
 
 Security Groups
 +++++++++++++++
@@ -49,12 +52,13 @@ wildcard SSL certificate). Use the following parameters as a guide:
 
 * Choose a name and set it in ``fabulaws-config.yml``
 * Ports 80 and 443 should be mapped to 80 and 443 on the instances
+* Until FabulAWS is upgraded to support VPC, 'EC2-Classic' load balancers should
+  be used. Note that this will cause a warning to be shown when you try to 'Assign Security Groups'.
+  That warning can be skipped.
 * Setup an HTTPS health check on port 443 that monitors ``/healthcheck.html``
   at your desired frequency (you'll setup the health check URL in your app below)
 * Backend authentication and stickiness should be disabled
 * The zones chosen should match those in ``fabulaws-config.yml`` (typically 2)
-* Until FabulAWS is upgraded to support VPC, Classic-style load balancers should
-  be used
 * Configure a custom SSL certificate, if desired.
 
 After the load balancer is created, you can set the domain name for the
@@ -68,7 +72,7 @@ You will also need to create one auto scaling group per envrionment, with the
 following parameters:
 
 * Choose a name and set it in ``fabulaws-config.yml``
-* Choose a dummy launch config and set it with a "min" and "desired" instances
+* Choose an existing dummy launch config and set it with a "min" and "desired" instances
   of 0 to start, and a "max" of at least 4 (a higher max is fine).
 * Select Advanced, choose your load balancer, and select the ELB health check
 * Choose the same availability zones as for your load balancer
@@ -120,7 +124,7 @@ prompts that need to be answered manually, you can use a file called
 If you already have a server environment setup, run the following command to
 get a local copy of fabsecrets.py::
 
-    fab <environment> update_local_fabsecrets 
+    fab <environment> update_local_fabsecrets
 
 **Note:** If applicable, this will not obtain a copy of  the ``luks_passphrase``
 secret which for security's sake is not stored directly on the servers.  If you
@@ -345,6 +349,6 @@ To create a new instance of the testing environment, you can use the
     fab create_environment:myproject,testing
 
 In addition to the console, be sure to inspect the log files generated (``*.out``
-in the current director) to troubleshoot any problems that may arise.
+in the current directory) to troubleshoot any problems that may arise.
 
 For more information, please refer to the :doc:`/deployment` documentation.
