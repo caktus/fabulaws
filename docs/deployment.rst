@@ -65,7 +65,7 @@ the autoscaling image at the same time as new code is deployed.
 Autoscaling: Updating the image
 +++++++++++++++++++++++++++++++
 
-Because AIM creation can be a time-intensive part of the process, it can be
+Because AMI creation can be a time-intensive part of the process, it can be
 done separately ahead of time to prepare for a deployment.
 
 To create an autoscaling AMI and launch configuration based on the current
@@ -166,11 +166,10 @@ If you get a prompt that looks something like this when you attempt to deploy,
 it's quite possible that you're giving the remote server the wrong username (or
 you don't have access to the servers to begin with)::
 
-    [ec2-23-22-145-188.compute-1.amazonaws.com] Passphrase for private key: 
+    [ec2-23-22-145-188.compute-1.amazonaws.com] Passphrase for private key:
 
 When deploying to any environment, if your local username is different from the
 username you use to login to the remote server, you need to give Fabric a
 username on the command line, like so::
 
     fab -u <remoteusername> <environment> <commands>
-
