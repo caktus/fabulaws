@@ -409,6 +409,13 @@ class EC2Instance(object):
             self.key_file.close()
             self.key_file = None
 
+    def terminate(self):
+        """
+        Terminates this instance in EC2.
+        """
+        self._terminate = True
+        self.cleanup()
+
     def add_tags(self, tags):
         """
         Associate specified tags with instance
