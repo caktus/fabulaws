@@ -1449,6 +1449,8 @@ def recreate_servers(deployment_tag, environment, wait=30):
                           instance_ids=[instance_id])[0]
     # shutdown the server and create the AMI & Launch config
     lc = _create_launch_config(server=server)
+    # clean up the leftover server in EC2
+    server.terminate()
     # make sure all the web servers get re-created using auto-scaling
     deploy_serial(deployment_tag, environment, launch_config_name=lc.name, answer='y')
 
@@ -1890,24 +1892,30 @@ def _create_image_from_server(server):
 def _create_launch_config(type_=None, server=None):
     """Returns a new launch configuration for the specified image."""
     # Create an AMI using the deploy code, and create a new launch config.
+    created = server is None
     if server is None:
         instance_id = _create_server_for_image(type_=type_)
         # reload the environment WITH the new server
         _setup_env(env.deployment_tag, env.environment)
         server = _get_servers(env.deployment_tag, env.environment, 'web',
                               instance_ids=[instance_id])[0]
-    image = _create_image_from_server(server)
-    timestamp, changeset = image.name.split('_')[-2:]
+    try:
+        image = _create_image_from_server(server)
+        timestamp, changeset = image.name.split('_')[-2:]
 
-    lc = LaunchConfiguration(
-        name=_instance_name('lc', timestamp, changeset),
-        image_id=image.id,
-        security_groups=server.security_groups,
-        instance_type=_find(env.instance_types, env.environment, 'web'),
-    )
-    AutoScaleConnection().create_launch_configuration(lc)
-    print "Created a new launch config with name {0}.".format(lc.name)
-    return lc
+        lc = LaunchConfiguration(
+            name=_instance_name('lc', timestamp, changeset),
+            image_id=image.id,
+            security_groups=server.security_groups,
+            instance_type=_find(env.instance_types, env.environment, 'web'),
+        )
+        AutoScaleConnection().create_launch_configuration(lc)
+        print "Created a new launch config with name {0}.".format(lc.name)
+        return lc
+    finally:
+        # if we created the server, clean it up here
+        if created:
+            server.terminate()
 
 
 def _get_launch_config(name):
