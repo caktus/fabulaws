@@ -66,7 +66,7 @@ for key in ['ssh_keys', 'localsettings_template']:
     new_path = os.path.join(os.path.abspath(os.path.dirname(config_file)), getattr(env, key))
     setattr(env, key, new_path)
 
-def _get_servers(deployment, environment, role):
+def _get_servers(deployment, environment, role, instance_ids=None):
     """
     Queries EC2 and returns the list of FabulAWS server instances for the given
     deployment, environment, and role.
@@ -80,11 +80,11 @@ def _get_servers(deployment, environment, role):
         'volume_type': _find(env.volume_types, environment, role),
         'security_groups': _find(env.security_groups, environment, role),
         'deploy_user': env.deploy_user,
-        'home': env.home,
+        'deploy_user_home': env.home,
     }
     inst_kwargs.update(env.instance_settings)
     return ec2_instances(filters=env.filters, cls=env.role_class_map[role],
-                         inst_kwargs=inst_kwargs)
+                         inst_kwargs=inst_kwargs, instance_ids=instance_ids)
 
 
 def _find(dict_, key1, key2):
@@ -362,7 +362,7 @@ def _new(deployment, environment, role, avail_zone=None, count=1, type_=None,
         sec_grps = _find(env.security_groups, environment, role)
         extra_args = kwargs.copy()
         extra_args.update(env.instance_settings)
-        server = cls(instance_type=type_, placement=placement, home=env.home,
+        server = cls(instance_type=type_, placement=placement, deploy_user_home=env.home,
                      tags=tags, volume_size=vol_size, volume_type=vol_type,
                      deploy_user=env.deploy_user, security_groups=sec_grps,
                      **extra_args)
@@ -1399,7 +1399,7 @@ def recreate_servers(deployment_tag, environment, wait=30):
     print 'Starting AMI and launch config creation in the background'
     # make sure we don't pass open SSH connections down to the child procs
     disconnect_all()
-    lc_creator = BackgroundCommand(_create_launch_config, capture_result=True)
+    lc_creator = BackgroundCommand(_create_server_for_image, capture_result=True)
     lc_creator.start()
     print 'Recreating servers for: %s' % config
     # first, create a new slave & cache to replace the current master & cache servers
@@ -1441,12 +1441,18 @@ def recreate_servers(deployment_tag, environment, wait=30):
     # wait for the launch config to finish creating if needed
     print 'waiting for launch config to finish creating'
     lc_creator.join()
+    instance_id = lc_creator.result()
     # reload the environment once more, after we know the background image
     # creation is finished
     _setup_env(deployment_tag, environment)
+    server = _get_servers(deployment_tag, environment, 'web',
+                          instance_ids=[instance_id])[0]
+    # shutdown the server and create the AMI & Launch config
+    lc = _create_launch_config(server=server)
+    # clean up the leftover server in EC2
+    server.terminate()
     # make sure all the web servers get re-created using auto-scaling
-    lc_name = lc_creator.result().name
-    deploy_serial(deployment_tag, environment, launch_config_name=lc_name, answer='y')
+    deploy_serial(deployment_tag, environment, launch_config_name=lc.name, answer='y')
 
     print 'recreate_servers complete; total downtime was %s secs' % downtime.total_seconds()
 
@@ -1845,12 +1851,8 @@ def _wait_for_elb_state(elb_name, instance_id, state):
         waited += 5
 
 
-def _create_server_and_image(type_=None):
-    """Creates an image from a new web server, then terminates the server.
-
-    Returns the (terminated) server, and the image.
-    """
-    now = datetime.datetime.utcnow().strftime('%Y.%m.%d-%H.%M.%S')
+def _create_server_for_image(type_=None):
+    """Creates a new web server for use in creating an AMI for auto scaling."""
     # New server creation time varies depending on the instance size:
     # t1.micro - about 25 minutes
     # m1.small - about 22 minutes
@@ -1859,13 +1861,16 @@ def _create_server_and_image(type_=None):
     # zones as of 1/2014, so the availability zone is hard coded here.
     if type_ is None:
         type_ = 'm1.small'
-    # with terminate=True, the instance will be terminated when the
-    # variable is garbage collected or when .cleanup() is called
     server = _new(env.deployment_tag, env.environment, 'web',
-                  avail_zone=env.avail_zones[0], type_=type_,
-                  terminate=True)[0]
-    # reload the environment WITH the new server
-    _setup_env(env.deployment_tag, env.environment)
+                  avail_zone=env.avail_zones[0], type_=type_)[0]
+    # return string rather than server itself since we might get run
+    # in another UNIX process
+    return server.instance.id
+
+
+def _create_image_from_server(server):
+    """Creates an AMI of a existing FabulAWS server."""
+    now = datetime.datetime.utcnow().strftime('%Y.%m.%d-%H.%M.%S')
     try:
         with server:
             deploy_web()
@@ -1881,24 +1886,36 @@ def _create_server_and_image(type_=None):
     # reload the environment WITHOUT the new server
     _setup_env(env.deployment_tag, env.environment)
     print "Created a new AMI with id {0}.".format(image.id)
-    return server, image
+    return image
 
 
-def _create_launch_config(type_=None):
+def _create_launch_config(type_=None, server=None):
     """Returns a new launch configuration for the specified image."""
     # Create an AMI using the deploy code, and create a new launch config.
-    server, image = _create_server_and_image(type_=type_)
-    timestamp, changeset = image.name.split('_')[-2:]
+    created = server is None
+    if server is None:
+        instance_id = _create_server_for_image(type_=type_)
+        # reload the environment WITH the new server
+        _setup_env(env.deployment_tag, env.environment)
+        server = _get_servers(env.deployment_tag, env.environment, 'web',
+                              instance_ids=[instance_id])[0]
+    try:
+        image = _create_image_from_server(server)
+        timestamp, changeset = image.name.split('_')[-2:]
 
-    lc = LaunchConfiguration(
-        name=_instance_name('lc', timestamp, changeset),
-        image_id=image.id,
-        security_groups=server.security_groups,
-        instance_type=_find(env.instance_types, env.environment, 'web'),
-    )
-    AutoScaleConnection().create_launch_configuration(lc)
-    print "Created a new launch config with name {0}.".format(lc.name)
-    return lc
+        lc = LaunchConfiguration(
+            name=_instance_name('lc', timestamp, changeset),
+            image_id=image.id,
+            security_groups=server.security_groups,
+            instance_type=_find(env.instance_types, env.environment, 'web'),
+        )
+        AutoScaleConnection().create_launch_configuration(lc)
+        print "Created a new launch config with name {0}.".format(lc.name)
+        return lc
+    finally:
+        # if we created the server, clean it up here
+        if created:
+            server.terminate()
 
 
 def _get_launch_config(name):

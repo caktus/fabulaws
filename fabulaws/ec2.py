@@ -12,6 +12,7 @@ import traceback
 import paramiko
 from boto.ec2.connection import EC2Connection
 from boto.ec2 import elb
+from boto.ec2 import blockdevicemapping
 from boto.exception import BotoServerError
 from fabric.api import *
 from fabric.contrib import files
@@ -39,7 +40,7 @@ class EC2Service(object):
     def setup(self):
         self.conn = self._connect_ec2()
 
-    def instances(self, filters=None, cls=None, inst_kwargs=None):
+    def instances(self, filters=None, cls=None, inst_kwargs=None, instance_ids=None):
         """
         Return list of all matching reservation instances
         """
@@ -48,7 +49,8 @@ class EC2Service(object):
             filters['instance-state-name'] = 'running'
         cls = cls or EC2Instance
         inst_kwargs = inst_kwargs or {}
-        reservations = self.conn.get_all_instances(filters=filters)
+        reservations = self.conn.get_all_instances(filters=filters,
+                                                   instance_ids=instance_ids)
         results = []
         for reservation in reservations:
             for instance in reservation.instances:
@@ -76,6 +78,14 @@ class EC2Instance(object):
     ssh_timeout = 5
 
     _saved_contexts = []
+
+    instance_storage = {
+        'm1.small': ['/dev/xvdb'],
+        'm3.medium': ['/dev/xvdb'],
+        'm3.large': ['/dev/xvdb'],
+        'm3.xlarge': ['/dev/xvdb', '/dev/xvdc'],
+        'c3.large': ['/dev/xvdb', '/dev/xvdc'],
+    }
 
     def __init__(self, access_key_id=None, secret_access_key=None,
                  terminate=False, placement=None, tags=None, instance_id=None,
@@ -159,10 +169,15 @@ class EC2Instance(object):
             if image is None:
                 raise ValueError('AMI {0} not found'.format(ami))
             key_name = self.key and self.key.name or None
+            bdm = blockdevicemapping.BlockDeviceMapping()
+            for i, dev in enumerate(self.instance_storage.get(self.instance_type, [])):
+                eph_name = 'ephemeral{}'.format(i)
+                bdm[dev] = blockdevicemapping.BlockDeviceType(ephemeral_name=eph_name)
             res = image.run(key_name=key_name,
                             security_groups=self.security_groups,
                             instance_type=self.instance_type,
                             placement=placement,
+                            block_device_map=bdm,
                             min_count=count, max_count=count)
             time.sleep(5) # wait for AWS to catch up
             created = True
@@ -393,6 +408,13 @@ class EC2Instance(object):
             logger.debug('Deleting key file {0}'.format(self.key_file.name))
             self.key_file.close()
             self.key_file = None
+
+    def terminate(self):
+        """
+        Terminates this instance in EC2.
+        """
+        self._terminate = True
+        self.cleanup()
 
     def add_tags(self, tags):
         """
