@@ -20,13 +20,14 @@ database_host: localhost
 database_user: dbuser
 home: /home/myproject/
 python: /usr/bin/python2.7
-log_host: 
+log_host:
 
 ## LOCAL / PROJECT SETTINGS ##
 disable_known_hosts: true
 ssh_keys: deployment/users/
 password_names: [database_password, broker_password, smtp_password,
-                 newrelic_license_key, newrelic_api_key, s3_secret]
+                 newrelic_license_key, newrelic_api_key, s3_secret,
+                 secret_key]
 project: myproject
 wsgi_app: myproject.wsgi:application
 requirements_file: requirements/app.txt
@@ -37,7 +38,7 @@ static_html:
   healthcheck_override: deployment/templates/html/healthcheck.html
 localsettings_template: deployment/templates/local_settings.py
 logstash_config: deployment/templates/logstash.conf
-backup_key_fingerprint: 
+backup_key_fingerprint:
 vcs_cmd: git # or hg
 latest_changeset_cmd: git rev-parse HEAD # hg id -i # or git rev-parse HEAD
 repo: git@github.com:username/myproject.git
