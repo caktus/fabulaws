@@ -81,6 +81,7 @@ def _get_servers(deployment, environment, role):
         'security_groups': _find(env.security_groups, environment, role),
         'deploy_user': env.deploy_user,
         'home': env.home,
+        'db_settings': env.db_settings,
     }
     inst_kwargs.update(env.instance_settings)
     return ec2_instances(filters=env.filters, cls=env.role_class_map[role],
@@ -182,6 +183,7 @@ def _setup_env(deployment_tag=None, environment=None, override_servers={}):
     env.all_databases.extend(env.slave_databases)
     for i, db in enumerate(env.all_databases):
         db.stunnel_port = 6432 + i
+    env.db_settings = env.get('db_settings', {})
 
 
 def _random_password(length=8, chars=string.letters + string.digits):
@@ -365,6 +367,7 @@ def _new(deployment, environment, role, avail_zone=None, count=1, type_=None,
         server = cls(instance_type=type_, placement=placement, home=env.home,
                      tags=tags, volume_size=vol_size, volume_type=vol_type,
                      deploy_user=env.deploy_user, security_groups=sec_grps,
+                     db_settings=env.db_settings,
                      **extra_args)
         server.setup()
         servers.append(server)
