@@ -80,7 +80,7 @@ def _get_servers(deployment, environment, role):
         'volume_type': _find(env.volume_types, environment, role),
         'security_groups': _find(env.security_groups, environment, role),
         'deploy_user': env.deploy_user,
-        'home': env.home,
+        'deploy_user_home': env.home,
         'db_settings': env.db_settings,
     }
     inst_kwargs.update(env.instance_settings)
@@ -364,7 +364,7 @@ def _new(deployment, environment, role, avail_zone=None, count=1, type_=None,
         sec_grps = _find(env.security_groups, environment, role)
         extra_args = kwargs.copy()
         extra_args.update(env.instance_settings)
-        server = cls(instance_type=type_, placement=placement, home=env.home,
+        server = cls(instance_type=type_, placement=placement, deploy_user_home=env.home,
                      tags=tags, volume_size=vol_size, volume_type=vol_type,
                      deploy_user=env.deploy_user, security_groups=sec_grps,
                      db_settings=env.db_settings,

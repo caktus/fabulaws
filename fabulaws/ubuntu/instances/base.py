@@ -25,7 +25,7 @@ class UbuntuInstance(BaseAptMixin, EC2Instance):
     admin_groups = ['admin']
     volume_info = [] # tuples of (device, mount_point, size_in_GB, type, passwd)
     fs_type = 'ext3'
-    fs_encrypt = True
+    fs_encrypt = False
     ubuntu_mirror = None
 
     def __init__(self, *args, **kwargs):
@@ -85,6 +85,8 @@ class UbuntuInstance(BaseAptMixin, EC2Instance):
         sudo('mkfs.{0} {1}'.format(self.fs_type, device))
         sudo('mkdir {0}'.format(mount_point))
         sudo('mount {0} {1}'.format(device, mount_point))
+        files.append('/etc/fstab', '{0} {1} {2} defaults 0 0'
+                     ''.format(device, mount_point, self.fs_type), use_sudo=True)
 
     def _set_volume_tags(self, vol, device, tags=None):
         if tags is None:
@@ -216,22 +218,24 @@ class UbuntuInstance(BaseAptMixin, EC2Instance):
             sudo('chown -R {0} /home/{0}/.ssh'.format(name))
 
     @uses_fabric
-    def secure_directories(self, secure_dirs, secure_root):
+    def bind_app_directories(self, app_dirs, app_root):
         """
-        Move the given directories, ``secure_dirs'', to the secure file system
-        mounted at ``secure_root''.
+        Move the given directories, ``app_dirs'', to the specified file system
+        mounted at ``app_root'' (optionally secure if ``self.fs_encrypt == True'').
         """
-        assert files.exists(secure_root)
-        for sdir in secure_dirs:
-            secured_sdir = ''.join([secure_root, sdir])
-            secured_parent = call_python('os.path.dirname', secured_sdir)
-            if files.exists(sdir):
-                sudo('mkdir -p {0}'.format(secured_parent))
-                sudo('mv {0} {1}'.format(sdir, secured_sdir))
+        assert files.exists(app_root)
+        for app_dir in app_dirs:
+            bound_app_dir = ''.join([app_root, app_dir])
+            bound_parent_dir = call_python('os.path.dirname', bound_app_dir)
+            if files.exists(app_dir):
+                sudo('mkdir -p {0}'.format(bound_parent_dir))
+                sudo('mv {0} {1}'.format(app_dir, bound_app_dir))
             else:
-                sudo('mkdir -p {0}'.format(secured_sdir))
-            sudo('mkdir -p {0}'.format(sdir))
-            sudo('mount -o bind {0} {1}'.format(secured_sdir, sdir))
+                sudo('mkdir -p {0}'.format(bound_app_dir))
+            sudo('mkdir -p {0}'.format(app_dir))
+            sudo('mount -o bind {0} {1}'.format(bound_app_dir, app_dir))
+            files.append('/etc/fstab', '{0} {1} none bind 0 0'
+                         ''.format(bound_app_dir, app_dir), use_sudo=True)
 
     def cleanup(self):
         """

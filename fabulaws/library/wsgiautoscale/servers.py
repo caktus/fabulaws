@@ -7,6 +7,7 @@ import subprocess
 from fabric.api import *
 from fabric.contrib import files
 
+from fabulaws.api import call_python
 from fabulaws.decorators import uses_fabric
 from fabulaws.ec2 import EC2Instance
 from fabulaws.ubuntu.instances import UbuntuInstance
@@ -38,23 +39,19 @@ class BaseInstance(FirewallMixin, UbuntuInstance):
 
     def __init__(self, *args, **kwargs):
         for key in ['ami', 'key_prefix', 'admin_groups', 'run_upgrade',
-                    'secure_root', 'secure_home', 'fs_type', 'fs_encrypt',
+                    'app_root', 'deploy_user_home', 'fs_type', 'fs_encrypt',
                     'ubuntu_mirror', 'swap_multiplier', 'instance_type',
                     'deploy_user', 'volume_size', 'volume_type',
-                    'security_groups', 'home']:
-            setattr(self, key, kwargs.pop(key))
+                    'security_groups']:
+            setattr(self, key, kwargs.pop(key, ''))
         if 'terminate' not in kwargs:
             kwargs['terminate'] = False
         passwd = getattr(env, 'luks_passphrase', None)
-        self.volume_info = [('/dev/sdf', self.secure_root, self.volume_size,
+        self.volume_info = [('/dev/sdf', self.app_root, self.volume_size,
                              self.volume_type, passwd)]
-        if self.secure_root:
-            self.default_swap_file = '%s/swapfile' % self.secure_root
-        else:
-            self.default_swap_file = '/swapfile'
+        self.default_swap_file = '%s/swapfile' % self.app_root
         super(BaseInstance, self).__init__(*args, **kwargs)
-        if self.fs_encrypt:
-            self.secure_dirs = ['/tmp', self.secure_home] # mixins add other dirs
+        self.app_dirs = ['/tmp', self.deploy_user_home] # mixins add other dirs
 
     def _get_users(self):
         """
@@ -138,8 +135,8 @@ class BaseInstance(FirewallMixin, UbuntuInstance):
         Creates a deployment user with a directory for Apache configurations.
         """
         user = self.deploy_user
-        sudo('useradd -d {0} -m -s /bin/bash {1}'.format(self.home, user))
-        sudo('mkdir {0}/.ssh'.format(self.home), user=user)
+        sudo('useradd -d {0} -m -s /bin/bash {1}'.format(self.deploy_user_home, user))
+        sudo('mkdir {0}/.ssh'.format(self.deploy_user_home), user=user)
 
     @uses_fabric
     def update_deployer_keys(self):
@@ -147,7 +144,7 @@ class BaseInstance(FirewallMixin, UbuntuInstance):
         Replaces deployer keys with the current sysadmin users keys.
         """
         user = self.deploy_user
-        file_ = '{0}/.ssh/authorized_keys2'.format(self.home)
+        file_ = '{0}/.ssh/authorized_keys2'.format(self.deploy_user_home)
         if files.exists(file_):
             sudo('rm {0}'.format(file_), user=user)
         sudo('touch {0}'.format(file_), user=user)
@@ -174,11 +171,10 @@ class BaseInstance(FirewallMixin, UbuntuInstance):
         self.setup_sudoers()
         # needed for SSH agent forwarding during replication setup:
         self.reset_authentication()
-        if self.fs_encrypt:
-            self.secure_directories(self.secure_dirs, self.secure_root)
-        self.setup_swap() # after secure partition is created
         self.create_deployer()
         self.update_deployer_keys()
+        self.bind_app_directories(self.app_dirs, self.app_root)
+        self.setup_swap() # after app (potentially secure) partition is created
         self.upgrade_packages()
         self.install_packages(['ntp']) # keep date current
 
@@ -190,8 +186,7 @@ class SessionMixin(RedisPpaMixin):
 
     def __init__(self, *args, **kwargs):
         super(SessionMixin, self).__init__(*args, **kwargs)
-        if self.fs_encrypt:
-            self.secure_dirs.append('/var/lib/redis')
+        self.app_dirs.append('/var/lib/redis')
 
 
 class CacheMixin(MemcachedMixin):
@@ -217,8 +212,7 @@ class QueueMixin(RabbitMqMixin):
 
     def __init__(self, *args, **kwargs):
         super(QueueMixin, self).__init__(*args, **kwargs)
-        if self.fs_encrypt:
-            self.secure_dirs.append('/var/lib/rabbitmq')
+        self.app_dirs.append('/var/lib/rabbitmq')
 
     def setup(self):
         """Create the RabbitMQ user and vhost."""
@@ -234,8 +228,7 @@ class DbMixin(PostgresMixin):
 
     def __init__(self, *args, **kwargs):
         super(DbMixin, self).__init__(*args, **kwargs)
-        if self.fs_encrypt:
-            self.secure_dirs.append('/var/lib/postgresql')
+        self.app_dirs.append('/var/lib/postgresql')
 
     def setup(self):
         """Create the Postgres user and database based on the Fabric env."""
