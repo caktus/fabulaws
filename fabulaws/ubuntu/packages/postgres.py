@@ -55,12 +55,13 @@ class PostgresMixin(AptMixin):
         'random_page_cost': '2', # our DB servers have a lot of RAM and may tend to prefer Seq Scans if this is too high
     }
     postgresql_networks = ['10.0.0.0/8']
+    postgresql_disable_oom = False
 
     def __init__(self, *args, **kwargs):
         db_settings = kwargs.pop('db_settings', {})
         for key in ['postgresql_packages', 'postgresql_tune', 'postgresql_tune_type',
                     'postgresql_shmmax', 'postgresql_shmall',
-                    'postgresql_networks']:
+                    'postgresql_networks', 'postgresql_disable_oom']:
             if key in db_settings:
                 setattr(self, key, db_settings.pop(key))
 
