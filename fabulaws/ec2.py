@@ -40,7 +40,7 @@ class EC2Service(object):
     def setup(self):
         self.conn = self._connect_ec2()
 
-    def instances(self, filters=None, cls=None, inst_kwargs=None):
+    def instances(self, filters=None, cls=None, inst_kwargs=None, instance_ids=None):
         """
         Return list of all matching reservation instances
         """
@@ -49,7 +49,8 @@ class EC2Service(object):
             filters['instance-state-name'] = 'running'
         cls = cls or EC2Instance
         inst_kwargs = inst_kwargs or {}
-        reservations = self.conn.get_all_instances(filters=filters)
+        reservations = self.conn.get_all_instances(filters=filters,
+                                                   instance_ids=instance_ids)
         results = []
         for reservation in reservations:
             for instance in reservation.instances:
