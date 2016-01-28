@@ -227,6 +227,7 @@ class DbMixin(PostgresMixin):
     """Mixin that creates a database based on the Fabric env."""
 
     def __init__(self, *args, **kwargs):
+        kwargs['db_settings'] = env.db_settings
         super(DbMixin, self).__init__(*args, **kwargs)
         self.app_dirs.append('/var/lib/postgresql')
 
