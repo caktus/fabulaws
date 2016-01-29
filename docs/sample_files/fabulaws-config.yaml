@@ -259,5 +259,6 @@ db_settings:
   # Networks to allow connections from
   postgresql_networks:
     - '10.0.0.0/8'
+    - '172.16.0.0/12'
   # Whether to disable the Linux out-of-memory killer
   postgresql_disable_oom: true
