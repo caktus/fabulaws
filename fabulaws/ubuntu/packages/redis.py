@@ -40,7 +40,7 @@ class RedisMixin(AptMixin):
         loglevel = 'loglevel {0}'.format(loglevel)
         files.sed(self.redis_conf, self.redis_loglevel_pattern, loglevel,
                   use_sudo=True)
-        keepalive = 'tcp-keepalve {}'.format(keepalive)
+        keepalive = 'tcp-keepalive {}'.format(keepalive)
         files.sed(self.redis_conf, self.redis_keepalive_pattern, keepalive,
                   use_sudo=True)
         self.redis_service('restart')
