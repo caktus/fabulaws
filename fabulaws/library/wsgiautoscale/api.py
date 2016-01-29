@@ -182,6 +182,7 @@ def _setup_env(deployment_tag=None, environment=None, override_servers={}):
     env.all_databases.extend(env.slave_databases)
     for i, db in enumerate(env.all_databases):
         db.stunnel_port = 6432 + i
+    env.db_settings = env.get('db_settings', {})
 
 
 def _random_password(length=8, chars=string.letters + string.digits):

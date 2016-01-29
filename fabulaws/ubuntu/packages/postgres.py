@@ -14,13 +14,66 @@ class PostgresMixin(AptMixin):
     FabulAWS Ubuntu mixin that installs and configures PostgresSQL.
     """
     package_name = 'postgresql'
+
     postgresql_packages = ['postgresql', 'libpq-dev']
-    postgresql_tune = False
+    postgresql_tune = True
     postgresql_tune_type = 'Web'
-    postgresql_shmmax = 536870912 # 512 MB
-    postgresql_shmall = 2097152
-    postgresql_settings = {}
-    postgresql_disable_oom = True
+    postgresql_shmmax = 107374182400 # 100 GB
+    postgresql_shmall = 26214400 # 100 GB / PAGE_SIZE (4096)
+    # for help adjusting these settings, see:
+    # http://wiki.postgresql.org/wiki/Tuning_Your_PostgreSQL_Server
+    # http://wiki.postgresql.org/wiki/Number_Of_Database_Connections
+    # http://thebuild.com/presentations/not-my-job-djangocon-us.pdf
+    postgresql_settings = {
+        # connections
+        'max_connections': '80', # _active_ connections are limited by pgbouncer
+        # replication settings
+        'wal_level': 'hot_standby',
+        'hot_standby': 'on',
+        'hot_standby_feedback': 'on',
+        'max_wal_senders': '3',
+        'wal_keep_segments': '3000', # during client deletion 50 or more may be generated per minute; this allows an hour
+        # resources - let pgtune set these based on actual machine resources
+        #'shared_buffers': '8GB', # 25% of available RAM, up to 8GB
+        #'work_mem': '750MB', # (2*RAM)/max_connections
+        #'maintenance_work_mem': '1GB', # RAM/16 up to 1GB; high values aren't that helpful
+        #'effective_cache_size': '48GB', # between 50-75%, should equal free + cached values in `top`
+        # checkpoint settings
+        'wal_buffers': '16MB',
+        'checkpoint_completion_target': '0.9',
+        'checkpoint_timeout': '10min',
+        'checkpoint_segments': '256', # if checkpoints are happening more often than the timeout, increase this up to 256
+        # logging
+        'log_min_duration_statement': '500',
+        'log_checkpoints': 'on',
+        'log_lock_waits': 'on',
+        'log_temp_files': '0',
+        # write optimizations
+        'commit_delay': '4000', # delay each commit this many microseconds in case we can do a group commit
+        'commit_siblings': '5', # only delay if at least N transactions are in process
+        # index usage optimizations
+        'random_page_cost': '2', # our DB servers have a lot of RAM and may tend to prefer Seq Scans if this is too high
+    }
+    postgresql_networks = ['10.0.0.0/8']
+    postgresql_disable_oom = False
+
+    def __init__(self, *args, **kwargs):
+        db_settings = kwargs.pop('db_settings', {})
+        for key in ['postgresql_packages', 'postgresql_tune', 'postgresql_tune_type',
+                    'postgresql_shmmax', 'postgresql_shmall',
+                    'postgresql_networks', 'postgresql_disable_oom']:
+            if key in db_settings:
+                setattr(self, key, db_settings.pop(key))
+
+        # Override individual default settings with whatever settings the project has specified.
+        self.postgresql_settings.update(db_settings.pop('postgresql_settings', {}))
+
+        if db_settings:
+            # There were keys we did not recognize; complain rather than let the
+            # user think we're applying setttings that we're not.
+            raise ValueError("Unrecognized keys in 'db_settings': %s" % ', '.join(db_settings.keys()))
+
+        super(PostgresMixin, self).__init__(*args, **kwargs)
 
     @property
     def pgpass(self):
