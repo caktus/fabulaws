@@ -1907,7 +1907,7 @@ def _create_launch_config(type_=None, server=None):
         lc = LaunchConfiguration(
             name=_instance_name('lc', timestamp, changeset),
             image_id=image.id,
-            security_groups=server.security_groups,
+            security_groups=server.get_security_group_ids(),
             instance_type=_find(env.instance_types, env.environment, 'web'),
         )
         AutoScaleConnection().create_launch_configuration(lc)

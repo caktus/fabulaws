@@ -120,6 +120,11 @@ class EC2Instance(object):
             self.conn = self._connect_ec2()
         self.elb_conn = self._connect_elb()
 
+    def get_security_group_ids(self):
+        if getattr(self, 'instance', False):
+            return [group.id for group in self.instance.groups]
+        return []
+
     def _connect_ec2(self):
         logger.debug('Connecting to EC2')
         return EC2Connection(self._key_id, self._secret)
