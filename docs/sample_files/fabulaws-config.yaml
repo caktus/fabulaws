@@ -145,11 +145,11 @@ instance_types:
 load_balancers:
   myproject:
     production:
-    - myproject-production-1
+    - myproject-production-lb
     staging:
-    - myproject-staging-1
+    - myproject-staging-lb
     testing:
-    - myproject-testing-1
+    - myproject-testing-lb
 
 # Mapping of Fabric environment names to AWS auto scaling group names. Auto
 # scaling groups can be configured in the AWS Management Console.

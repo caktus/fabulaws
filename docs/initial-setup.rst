@@ -37,10 +37,17 @@ project and updated in `fabulaws-config.yml`.
    * TCP port 6379 from myproject-web-sg
    * TCP port 6379 from myproject-worker-sg
 * **myproject-web-sg**
-   * TCP port 80 from amazon-elb-sg
-   * TCP port 443 from amazon-elb-sg
+  * For EC2-classic:
+    * TCP port 80 from amazon-elb-sg
+    * TCP port 443 from amazon-elb-sg
+  * For VPC-based AWS accounts:
+    * TCP port 80 from myproject-web-sg
+    * TCP port 443 from myproject-web-sg
 * **myproject-worker-sg**
    * (used only as a source - requires no additional firewall rules)
+* **myproject-incoming-web-sg**
+   * TCP port 80 from any address
+   * TCP port 443 from any address
 
 Load Balancer
 +++++++++++++
@@ -52,9 +59,14 @@ wildcard SSL certificate). Use the following parameters as a guide:
 
 * Choose a name and set it in ``fabulaws-config.yml``
 * Ports 80 and 443 should be mapped to 80 and 443 on the instances
-* Until FabulAWS is upgraded to support VPC, 'EC2-Classic' load balancers should
-  be used. Note that this will cause a warning to be shown when you try to 'Assign Security Groups'.
+* If on EC2-Classic (older AWS accounts), you can use 'EC2-Classic' load balancers.
+  Note that this will cause a warning to be shown when you try to 'Assign Security Groups'.
   That warning can be skipped.
+* If on newer, VPC-based AWS accounts:
+  * Add security group **myproject-incoming-web-sg** to the load balancer so
+    the load balancer can receive incoming requests.
+  * Add security group **myproject-web-sg** to the load balancer so the backend instances will
+    accept forwarded requests from the load balancer.
 * Setup an HTTPS health check on port 443 that monitors ``/healthcheck.html``
   at your desired frequency (you'll setup the health check URL in your app below)
 * Backend authentication and stickiness should be disabled

@@ -73,7 +73,7 @@ class EC2Instance(object):
     user = ''
     admin_groups = []
     instance_type = ''
-    security_groups = []
+    security_groups = []  # Names of the instance's security groups
     key_prefix = ''
     ssh_timeout = 5
 
@@ -119,6 +119,17 @@ class EC2Instance(object):
         else:
             self.conn = self._connect_ec2()
         self.elb_conn = self._connect_elb()
+
+    def get_security_groups_for_launch_configuration(self):
+        """
+        Return a list of the instance's security group identifiers in
+        the format needed for a launch configuration.  This is names for
+        EC-2 classic, and IDs for modern accounts.
+        """
+        if getattr(self, 'instance', False) and getattr(self.instance, 'vpc_id', False):
+            # It has a VPC so it's modern
+            return [group.id for group in self.instance.groups]
+        return self.security_groups
 
     def _connect_ec2(self):
         logger.debug('Connecting to EC2')
