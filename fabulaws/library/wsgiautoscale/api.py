@@ -194,6 +194,7 @@ def _load_passwords(names, length=20, generate=False, ignore_local=False):
     """Retrieve password from the user's home directory, or generate a new random one if none exists"""
     for name in names:
         filename = ''.join([env.home, name])
+        filename = os.path.join(env.home, name)
         if generate:
             passwd = _random_password(length=length)
             sudo('touch %s' % filename, user=env.deploy_user)
@@ -599,7 +600,7 @@ def upload_nginx_conf():
     context = dict(env)
     context['allowed_hosts'] = []
     # transform Django's ALLOWED_HOSTS into a format acceptable by Nginx (see
-    # http://nginx.org/en/docs/http/server_names.html and 
+    # http://nginx.org/en/docs/http/server_names.html and
     # http://nginx.org/en/docs/http/request_processing.html)
     for sn in _allowed_hosts():
         if sn.endswith('.'):
@@ -1255,7 +1256,7 @@ def create_environment(deployment_tag, environment, num_web=2):
     executel(environment, deployment_tag)
     # if we create all servers at once, the slave won't be sync'ed yet
     executel(reset_slaves)
-    
+
     print 'Waiting for launch config creation to complete...'
     # wait for the launch config to finish creating if needed
     lc_creator.join()
