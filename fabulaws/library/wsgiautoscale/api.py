@@ -282,16 +282,19 @@ def _check_local_deps():
 
 
 @task
+@runs_once
 def testing(deployment_tag=env.default_deployment, answer=None): # support same args as production
     _setup_env(deployment_tag, 'testing')
 
 
 @task
+@runs_once
 def staging(deployment_tag=env.default_deployment, answer=None): # support same args as production
     _setup_env(deployment_tag, 'staging')
 
 
 @task
+@runs_once
 def production(deployment_tag=env.default_deployment, answer=None):
     if answer is None:
         answer = prompt('Are you sure you want to activate the production '
@@ -323,8 +326,7 @@ def run_shell_command(method, sudo=False):
 ###### NEW SERVER SETUP ######
 
 
-def _new(deployment, environment, role, avail_zone=None, count=1, type_=None,
-         **kwargs):
+def _new(deployment, environment, role, avail_zone=None, count=1, **kwargs):
     """ create new server on AWS using the given deployment, environment, and role """
     if deployment not in env.deployments:
         abort('Choose a valid deployment: %s' % ', '.join(env.deployments))
@@ -356,8 +358,7 @@ def _new(deployment, environment, role, avail_zone=None, count=1, type_=None,
     _load_passwords(password_names)
     servers = []
     for x in range(count):
-        if type_ is None:
-            type_ = _find(env.instance_types, env.environment, role)
+        type_ = _find(env.instance_types, env.environment, role)
         cls = env.role_class_map[role]
         vol_size = _find(env.volume_sizes, environment, role)
         vol_type = _find(env.volume_types, environment, role)
@@ -448,8 +449,8 @@ def _create_many(servers):
 
 
 @task
-def new(deployment, environment, role, avail_zone=None, count=1, type_=None):
-    _new(deployment, environment, role, avail_zone, count, type_)
+def new(deployment, environment, role, avail_zone=None, count=1):
+    _new(deployment, environment, role, avail_zone, count)
 
 
 def vcs(cmd, args=None):
@@ -550,7 +551,7 @@ def upload_supervisor_conf():
     destination = os.path.join(env.services, 'supervisor', '%(environment)s.conf' % env)
     context = env.copy()
     cpu_count = int(run('cat /proc/cpuinfo|grep processor|wc -l'))
-    context['worker_count'] = cpu_count * 4
+    context['worker_count'] = cpu_count * int(getattr(env, 'gunicorn_worker_multipler', 4))
     context['current_role'] = _current_roles()[0]
     _upload_template('supervisor.conf', destination, context=context,
                      user=env.deploy_user, use_jinja=True,
@@ -1570,7 +1571,7 @@ def resume_autoscaling_processes(deployment_tag, environment, *processes):
 
 @task
 @runs_once
-def create_launch_config_for_deployment(deployment_tag, environment, type_=None):
+def create_launch_config_for_deployment(deployment_tag, environment):
     """Create a launch configuration for the deployment code.
 
     Since image creation is the most time-consuming part of the deploy,
@@ -1579,7 +1580,7 @@ def create_launch_config_for_deployment(deployment_tag, environment, type_=None)
     configuration, can be done as a separate step.
     """
     executel(environment, deployment_tag)
-    launch_config = _create_launch_config(type_=type_)
+    launch_config = _create_launch_config()
     print ("Created a new launch configuration named '{0}' to deploy "
            "{1}.".format(launch_config.name, launch_config.image_id))
 
@@ -1853,18 +1854,10 @@ def _wait_for_elb_state(elb_name, instance_id, state):
         waited += 5
 
 
-def _create_server_for_image(type_=None):
+def _create_server_for_image():
     """Creates a new web server for use in creating an AMI for auto scaling."""
-    # New server creation time varies depending on the instance size:
-    # t1.micro - about 25 minutes
-    # m1.small - about 22 minutes
-    # m3.medium - about 16 minutes
-    # Additionally, m3.medium instances aren't supported in all availability
-    # zones as of 1/2014, so the availability zone is hard coded here.
-    if type_ is None:
-        type_ = 'm1.small'
     server = _new(env.deployment_tag, env.environment, 'web',
-                  avail_zone=env.avail_zones[0], type_=type_)[0]
+                  avail_zone=env.avail_zones[0])[0]
     # return string rather than server itself since we might get run
     # in another UNIX process
     return server.instance.id
@@ -1891,12 +1884,12 @@ def _create_image_from_server(server):
     return image
 
 
-def _create_launch_config(type_=None, server=None):
+def _create_launch_config(server=None):
     """Returns a new launch configuration for the specified image."""
     # Create an AMI using the deploy code, and create a new launch config.
     created = server is None
     if server is None:
-        instance_id = _create_server_for_image(type_=type_)
+        instance_id = _create_server_for_image()
         # reload the environment WITH the new server
         _setup_env(env.deployment_tag, env.environment)
         server = _get_servers(env.deployment_tag, env.environment, 'web',
