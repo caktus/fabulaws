@@ -551,7 +551,7 @@ def upload_supervisor_conf():
     destination = os.path.join(env.services, 'supervisor', '%(environment)s.conf' % env)
     context = env.copy()
     cpu_count = int(run('cat /proc/cpuinfo|grep processor|wc -l'))
-    context['worker_count'] = cpu_count * int(getattr(env, 'gunicorn_worker_multipler', 4))
+    context['worker_count'] = cpu_count * int(getattr(env, 'gunicorn_worker_multiplier', 4))
     context['current_role'] = _current_roles()[0]
     _upload_template('supervisor.conf', destination, context=context,
                      user=env.deploy_user, use_jinja=True,
