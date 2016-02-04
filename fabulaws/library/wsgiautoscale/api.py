@@ -489,7 +489,8 @@ def update_local_fabsecrets():
     local_path = os.path.abspath('fabsecrets.py')
 
     answer = prompt('Are you sure you want to destroy %s '
-                    'and replace it with a copy of the values from %s?'
+                    'and replace it with a copy of the values from '
+                    'the worker on %s?'
                     '' % (local_path, env.environment.upper()), default='n')
     if answer != 'y':
         abort('Aborted.')
