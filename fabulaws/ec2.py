@@ -1,4 +1,5 @@
 import os
+import re
 import uuid
 import time
 import socket
@@ -86,6 +87,10 @@ class EC2Instance(object):
         'm3.xlarge': ['/dev/xvdb', '/dev/xvdc'],
         'c3.large': ['/dev/xvdb', '/dev/xvdc'],
     }
+
+    # instances that have EBS optimization by default
+    # (see http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/EBSOptimized.html)
+    ebs_optimized_regex = re.compile(r'^(c4|m4|d2)')
 
     def __init__(self, access_key_id=None, secret_access_key=None,
                  terminate=False, placement=None, tags=None, instance_id=None,
@@ -184,12 +189,14 @@ class EC2Instance(object):
             for i, dev in enumerate(self.instance_storage.get(self.instance_type, [])):
                 eph_name = 'ephemeral{}'.format(i)
                 bdm[dev] = blockdevicemapping.BlockDeviceType(ephemeral_name=eph_name)
-            res = image.run(key_name=key_name,
-                            security_groups=self.security_groups,
-                            instance_type=self.instance_type,
-                            placement=placement,
-                            block_device_map=bdm,
-                            min_count=count, max_count=count)
+            ebs_optimized = bool(self.ebs_optimized_regex.match(self.instance_type))
+            res = self.conn.run_instances(image.id, key_name=key_name,
+                                          security_groups=self.security_groups,
+                                          instance_type=self.instance_type,
+                                          placement=placement,
+                                          block_device_map=bdm,
+                                          min_count=count, max_count=count,
+                                          ebs_optimized=ebs_optimized)
             time.sleep(5) # wait for AWS to catch up
             created = True
         for inst in res.instances:
