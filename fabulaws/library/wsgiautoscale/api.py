@@ -486,16 +486,19 @@ def update_local_fabsecrets():
 
     require('environment', provided_by=env.environments)
 
-    answer = prompt('Are you sure you want to destroy your local fabsecrets.py '
-                    'and replace it with a copy of the values from %s?'
-                    '' % env.environment.upper(), default='n')
+    local_path = os.path.abspath('fabsecrets.py')
+
+    answer = prompt('Are you sure you want to destroy %s '
+                    'and replace it with a copy of the values from '
+                    'the worker on %s?'
+                    '' % (local_path, env.environment.upper()), default='n')
     if answer != 'y':
         abort('Aborted.')
     _load_passwords(env.password_names, ignore_local=True)
     out = ''
     for p in env.password_names:
         out += '%s = "%s"\n' % (p, getattr(env, p))
-    with open(os.path.join(PROJECT_ROOT, 'fabsecrets.py'), 'w') as f:
+    with open(local_path, 'w') as f:
         f.write(out)
 
 
