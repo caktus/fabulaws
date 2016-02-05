@@ -284,19 +284,16 @@ def _check_local_deps():
 
 
 @task
-@runs_once
 def testing(deployment_tag=env.default_deployment, answer=None): # support same args as production
     _setup_env(deployment_tag, 'testing')
 
 
 @task
-@runs_once
 def staging(deployment_tag=env.default_deployment, answer=None): # support same args as production
     _setup_env(deployment_tag, 'staging')
 
 
 @task
-@runs_once
 def production(deployment_tag=env.default_deployment, answer=None):
     if answer is None:
         answer = prompt('Are you sure you want to activate the production '
@@ -1591,7 +1588,6 @@ def create_launch_config_for_deployment(deployment_tag, environment):
 
 
 @task
-@runs_once
 def deploy_full(deployment_tag, environment, launch_config_name=None, num_web=2):
     """Autoscaling replacement for deploy_full_without_autoscaling.
 
