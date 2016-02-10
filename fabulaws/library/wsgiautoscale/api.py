@@ -185,6 +185,7 @@ def _setup_env(deployment_tag=None, environment=None, override_servers={}):
     for i, db in enumerate(env.all_databases):
         db.stunnel_port = 6432 + i
     env.db_settings = env.get('db_settings', {})
+    env.setdefault('syslog_server', False)
 
 
 def _random_password(length=8, chars=string.letters + string.digits):
@@ -381,6 +382,8 @@ def _new(deployment, environment, role, avail_zone=None, count=1, **kwargs):
         executel(install_newrelic_sysmon, hosts=env.roledefs[role])
         executel(install_munin, hosts=env.roledefs[role])
         executel(install_logstash, hosts=env.roledefs[role])
+        if env.syslog_server:
+            executel(install_rsyslog, hosts=env.roledefs[role])
         if role in ('worker', 'web'):
             executel(bootstrap, hosts=env.roledefs[role])
     finally:
@@ -1111,6 +1114,8 @@ def promote_slave(index=0, override_servers={}):
     # make sure logging facilities know about the new db-master role
     executel(upload_newrelic_sysmon_conf, roles=['db-master'])
     executel(install_logstash, roles=['db-master'])
+    if env.syslog_server:
+        executel(install_rsyslog, roles=['db-master'])
     print 'NOTE: you must now update the local_settings.py files on the web'\
           'servers to point to the new master DB ({0}).'.format(slave.hostname)
 
@@ -1219,6 +1224,8 @@ def mount_encrypted(drive_letter='f'):
         supervisor('start', 'celery')
     # make sure logstash is running after /secure is mounted
     sudo('service logstash-agent restart')
+    if env.syslog_server:
+        sudo('service rsyslog restart')
 
 
 ###### TESTING and USAGE EXAMPLES ######
@@ -1500,6 +1507,28 @@ def upload_newrelic_sysmon_conf():
     # leave the hostname the same for the system monitoring so the servers
     # can be linked up properly with the apps by New Relic
     sudo('/etc/init.d/newrelic-sysmond restart')
+
+
+@task
+@parallel
+def install_rsyslog():
+    require('environment', provided_by=env.environments)
+    context = dict(env)
+    context['current_role'] = _current_roles()[0]
+    template = os.path.join(env.templates_dir, 'rsyslog.conf')
+    destination = os.path.join('/etc', 'rsyslog.d/%(project)s-%(environment)s.conf' % env)
+    _upload_template(template, destination, user='root', context=context)
+
+    output = run('rsyslogd -v')
+    if 'rsyslogd 8' not in output:
+        sudo("add-apt-repository --yes ppa:adiscon/v8-stable")
+        sudo("apt-get update -qq")
+        sudo("apt-get install rsyslog -y")
+
+    print 'Ignore any useradd or chgrp warnings below.'
+    with settings(warn_only=True):
+        sudo('useradd --system --groups adm syslog')
+    sudo('service rsyslog restart')
 
 
 @task
