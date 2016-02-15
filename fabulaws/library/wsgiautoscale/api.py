@@ -746,13 +746,22 @@ def bootstrap(purge=False):
 @roles('web', 'worker')
 def update_source(changeset=None):
     """Checkout the latest code from repo."""
-    if changeset is None:
-        changeset = env.branch
     require('environment', provided_by=env.environments)
     with cd(env.code_root):
         sudo('find . -name "*.pyc" -delete')
-        vcs('pull')
-        vcs('update', [changeset])
+        if env.vcs_cmd.endswith('git'):
+            vcs('fetch')
+            # Assumption: if changeset is provided, it's a commit hash, not a branch name
+            if changeset is None:
+                changeset = env.branch
+                if not changeset.startswith('origin/'):
+                    changeset = 'origin/%s' % changeset
+            vcs('reset', ['--hard', changeset])
+        else:
+            if changeset is None:
+                changeset = env.branch
+            vcs('pull')
+            vcs('update', [changeset])
 
 
 @task
