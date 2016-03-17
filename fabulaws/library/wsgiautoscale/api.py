@@ -196,7 +196,6 @@ def _random_password(length=8, chars=string.letters + string.digits):
 def _load_passwords(names, length=20, generate=False, ignore_local=False):
     """Retrieve password from the user's home directory, or generate a new random one if none exists"""
     for name in names:
-        filename = ''.join([env.home, name])
         filename = os.path.join(env.home, name)
         if generate:
             passwd = _random_password(length=length)
@@ -1148,11 +1147,12 @@ def update_sysadmin_users():
 def upgrade_packages():
     """ update packages on the servers """
 
-    sudo('apt-get update -qq')
+    with settings(warn_only=True):
+        sudo('apt-get -qq update')
     if 'web' in _current_roles() or 'worker' in _current_roles():
         packages = env.app_server_packages
-        sudo('apt-get install -y {0}'.format(' '.join(packages)))
-    sudo('apt-get upgrade')
+        sudo('apt-get -qq -y install {0}'.format(' '.join(packages)))
+    sudo('apt-get -qq -y upgrade')
 
 
 @task
@@ -1482,7 +1482,7 @@ def recreate_servers(deployment_tag, environment, wait=30):
 @parallel
 def install_munin():
     require('environment', provided_by=env.environments)
-    sudo('apt-get install -y munin-node munin-plugins-extra libdbd-pg-perl')
+    sudo('apt-get -qq -y install munin-node munin-plugins-extra libdbd-pg-perl')
     append('/etc/munin/munin-node.conf', 'allow ^10\.\d+\.\d+\.\d+$', use_sudo=True)
     sudo('service munin-node restart')
 
@@ -1494,8 +1494,9 @@ def install_newrelic_sysmon():
     _load_passwords(['newrelic_license_key'])
     sudo('echo deb http://apt.newrelic.com/debian/ newrelic non-free > /etc/apt/sources.list.d/newrelic.list', shell=True)
     sudo('wget -O- https://download.newrelic.com/548C16BF.gpg | apt-key add -', shell=True)
-    sudo('apt-get update -qq')
-    sudo('apt-get install -y -o Dpkg::Options::="--force-confnew" newrelic-sysmond')
+    with settings(warn_only=True):
+        sudo('apt-get -qq update')
+    sudo('apt-get -qq -y -o Dpkg::Options::="--force-confnew" install newrelic-sysmond')
     upload_newrelic_sysmon_conf()
 
 
@@ -1531,8 +1532,9 @@ def install_rsyslog():
     output = run('rsyslogd -v')
     if 'rsyslogd 8' not in output:
         sudo("add-apt-repository --yes ppa:adiscon/v8-stable")
-        sudo("apt-get update -qq")
-        sudo("apt-get install rsyslog -y")
+        with settings(warn_only=True):
+            sudo("apt-get -qq update")
+        sudo("apt-get -qq -y install rsyslog")
 
     print 'Ignore any useradd or chgrp warnings below.'
     with settings(warn_only=True):
@@ -1554,7 +1556,7 @@ def install_logstash():
     _upload_template(template, destination, user='root', context=context)
     with(cd('/tmp')):
         if not exists('logstash.jar'):
-            sudo('apt-get install -y default-jre')
+            sudo('apt-get -qq -y install default-jre')
             sudo('wget https://download.elasticsearch.org/logstash/logstash/logstash-1.1.7-monolithic.jar -O logstash.jar', user=env.deploy_user)
             print 'Ignore any useradd or chgrp warnings below.'
             with settings(warn_only=True):
