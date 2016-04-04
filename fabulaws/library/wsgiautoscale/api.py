@@ -295,6 +295,11 @@ def staging(deployment_tag=env.default_deployment, answer=None): # support same 
 
 
 @task
+def florida(deployment_tag=env.default_deployment, answer=None): # support same args as production
+    _setup_env(deployment_tag, 'florida')
+
+
+@task
 def production(deployment_tag=env.default_deployment, answer=None):
     if answer is None:
         answer = prompt('Are you sure you want to activate the production '
@@ -1034,7 +1039,7 @@ def add_all_to_elb():
 
 @task
 @roles('db-master') # only supported on combo web & database servers
-def reload_production_db(prod_env=env.default_deployment):
+def reload_production_db(prod_env=env.default_deployment, src_env='production'):
     """ Replace the testing or staging database with the production database """
     if env.environment not in ('staging', 'testing'):
         abort('prod_to_staging requires the staging or testing environment.')
@@ -1046,13 +1051,13 @@ def reload_production_db(prod_env=env.default_deployment):
     with settings(warn_only=True):
         sudo('dropdb {0}'.format(env.database_name), user='postgres')
     env.servers['db-master'][0].create_db(env.database_name, owner=env.database_user)
-    prod_servers = _get_servers(prod_env, 'production', 'db-master')
+    prod_servers = _get_servers(prod_env, src_env, 'db-master')
     prod_hosts = [server.hostname for server in prod_servers]
     dump_cmd = 'ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=60 '\
                '-C {user}@{host} pg_dump -Ox {db_name}'.format(
         user=env.deploy_user,
         host=prod_hosts[0],
-        db_name=env.database_name.replace(env.environment, 'production'),
+        db_name=env.database_name.replace(env.environment, src_env),
     )
     load_cmd = 'bash -o pipefail -c "{dump_cmd} | psql {db_name}"'.format(
         dump_cmd=dump_cmd,
