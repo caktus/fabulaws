@@ -20,6 +20,7 @@ from boto.exception import BotoServerError
 
 from fabric.api import (abort, cd, env, execute, hide, hosts, local, parallel,
     prompt, put, roles, require, run, runs_once, settings, sudo, task)
+from fabric.colors import red
 from fabric.contrib.files import exists, upload_template, append, uncomment, sed
 from fabric.network import disconnect_all
 
@@ -201,11 +202,12 @@ def _read_local_secrets():
             secrets_file = filename
             break
     else:
-        print("Warning: No secrets file found. Looked for %r" % secrets_files)
+        print(red("Warning: No secrets file found. Looked for %r" % secrets_files, bold=True))
         return None
     if secrets_file == 'fabsecrets.py':
-        print("Warning: Getting secrets from fabsecrets.py, which is deprecated. Secrets "
-              "should be in fabsecrets_{environment}.py.".format(environment=env.environment))
+        print(red("Warning: Getting secrets from fabsecrets.py, which is deprecated. Secrets "
+                  "should be in fabsecrets_{environment}.py.".format(environment=env.environment),
+                  bold=True))
     secrets = run_path(secrets_file)
     # run_path returns the globals dictionary, which includes things
     # like __file__, so strip those out.
