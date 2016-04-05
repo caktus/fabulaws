@@ -131,10 +131,10 @@ Local passwords
 
 A number of passwords are required during deployment.  To reduce the number of
 prompts that need to be answered manually, you can use a file called
-``fabsecrets.py`` in the top level of your repository.
+``fabsecrets_<environment>.py`` in the top level of your repository.
 
 If you already have a server environment setup, run the following command to
-get a local copy of fabsecrets.py::
+get a local copy of fabsecrets_<environment>.py::
 
     fab <environment> update_local_fabsecrets
 
@@ -144,7 +144,7 @@ will be creating new servers, this must be obtained securely from another
 developer.
 
 If this is a brand-new project, you can use the following template for
-``fabsecrets.py``:
+``fabsecrets_<environment>.py``:
 
 .. literalinclude:: sample_files/fabsecrets.py
    :language: python
@@ -154,13 +154,13 @@ All of these are required to be filled in before any servers can be created.
 Remote passwords
 ++++++++++++++++
 
-To update passwords on the server, first retrieve a copy of ``fabsecrets.py``
+To update passwords on the server, first retrieve a copy of ``fabsecrets_<environment>.py``
 using the above command (or from another developer) and then run the following
 command::
 
     fab <environment> update_server_passwords
 
-**Note:** It's only necessary to have a copy of ``fabsecrets.py`` locally if you
+**Note:** It's only necessary to have a copy of ``fabsecrets_<environment>.py`` locally if you
 will be deploying new servers or updating the existing passwords on the
 servers.
 

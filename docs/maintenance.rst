@@ -29,12 +29,12 @@ To update the New Relic API and License keys, first find the new keys from
 the new account. The License Key can be found from the main account page, and
 the API key can be found via these instructions: https://docs.newrelic.com/docs/apis/api-key
 
-Next, make sure your local fabsecrets.py file is up to date::
+Next, make sure your local fabsecrets_<environment>.py file is up to date::
 
     fab production update_local_fabsecrets
 
 Next, update the ``newrelic_license_key`` and ``newrelic_api_key`` values
-inside the ``fabsecrets.py`` file with the new values. Then, update the keys
+inside the ``fabsecrets_<environment>.py`` file with the new values. Then, update the keys
 on the servers::
 
     fab staging update_server_passwords
