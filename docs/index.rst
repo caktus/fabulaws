@@ -36,6 +36,7 @@ Contents
    maintenance
    troubleshooting
    internals
+   useful_commands
 
 Indices and tables
 ==================
