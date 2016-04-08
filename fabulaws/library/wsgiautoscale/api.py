@@ -37,6 +37,15 @@ from .servers import (CacheInstance, DbMasterInstance,
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
+
+def status_line(msg):
+    # Overwrite current output line with a new message
+    # You can keep calling this and each message should overwrite the previous one
+    # When done, print a blank line to get past this output line.
+    sys.stdout.write("\r{spaces}".format(spaces=" " * 80))
+    sys.stdout.write("\r{msg}".format(msg=msg))
+
+
 def _reset_hosts():
     """Reset the roledefs and servers environment variables to their default values."""
     # roledefs must be defined, even with empty lists, for Fabric to run
@@ -321,6 +330,11 @@ def _check_local_deps():
         abort('You must install curl to run a deployment.')
 
 ###### ENVIRONMENT SETUP ######
+
+
+@task
+def dan(deployment_tag=env.default_deployment, answer=None): # support same args as production
+    _setup_env(deployment_tag, 'dan')
 
 
 @task
@@ -1675,6 +1689,115 @@ def create_launch_config_for_deployment(deployment_tag, environment):
 
 
 @task
+def deploy_hard(environment, launch_config_name):
+    """
+    Aggressively switch web servers to new launch config, but
+    without taking site down.
+
+    Do NOT use this if the AG has autoscaling rules; this process
+    does not take that into account at all. (It should probably suspend
+    autoscaling until this is done, or something like that.)
+
+    What this does:
+
+    * deploy an update to the worker
+    * switch the AG group to the new launch config
+    * set the desired/minimum to the number of current servers plus the current
+      value of desired, so that the AG will bring up "desired" instances with
+      the new launch config.
+    * wait for those to all be in service
+    * terminate the old ones, asking AWS to lower our desired number as we
+      request terminating each one. "Old ones" is defined as all the instances
+      that were running when we started, so we can use this to replace all the
+      instances even if the launch configuration doesn't actually change.
+    * wait for the old ones to be out of service
+    * reset the rest of the settings back to where they were
+    """
+    _check_local_deps()
+    executel(environment, env.default_deployment)
+
+    # make sure we deploy the same changeset as was used in the launch config
+    changeset = launch_config_name.split('_')[-1]
+    executel(deploy_worker, changeset=changeset)
+
+    group = _get_autoscaling_group()
+    old_instances = group.instances[:]  # Copy instances we started with
+    old_instance_ids = [i.instance_id for i in old_instances]
+
+    # Update the group to use the new launch config.
+    launch_config = _get_launch_config(launch_config_name)
+    group = _update_autoscaling_group(launch_config)
+
+    # Remember current settings on the group
+    curr_minimum = group.min_size
+    curr_maximum = group.max_size
+    curr_desired = group.desired_capacity
+    try:
+        # Temporarily adjust the group settings so that it will be forced to
+        # create the desired number of new instances using the updated launch
+        # configuration.
+        curr_servers = len(group.instances)
+        # How many new servers we want
+        num_new = curr_desired
+        # How many we're going to temporarily end up with
+        num_temp = num_new + curr_servers
+        group.min_size = group.desired_capacity = num_temp
+        group.max_size = max(num_temp, curr_maximum)
+        group.update()
+        print ("Temporarily updated the autoscaling group's minimum/desired/max "
+               "instance capacity to {0}/{1}/{2}".
+               format(group.min_size, group.desired_capacity, group.max_size))
+
+        print "Waiting for new instances to be in service."
+        waited = 0
+        while True:
+            time.sleep(5)
+            waited += 5
+            group = _get_autoscaling_group(quiet=True)  # Refresh instances.
+            new_instances = [i for i in group.instances
+                             if i.launch_config_name == group.launch_config_name
+                                and i.instance_id not in old_instance_ids
+                                and i.lifecycle_state == "InService"]
+            count = len(new_instances)
+            if count >= num_new:
+                print("")
+                print ("Created {0} new servers in {1} "
+                       "seconds.".format(count, waited))
+                break
+            else:
+                status_line("{0} seconds: Have {1} instances and need at least {2} "
+                            "more.".format(waited, count, num_new - count))
+
+        # Lower minimum so we can terminate instances back down to just our new ones.
+        group.min_size = num_new
+        group.update()
+
+        # Kill off the old ones, lowering "desired" so AG doesn't just start new ones
+        for old_instance in old_instances:
+            AutoScaleConnection().terminate_instance(old_instance.instance_id, decrement_capacity=True)
+
+        # Wait for them to be out of service
+        for old_instance in old_instances:
+            for elb_name in env.elb_names:
+                print "Waiting for {0} to be out of service with load balancer {1}. "\
+                      "Note: ignore any 'InvalidInstance' errors.".format(
+                       old_instance.instance_id, elb_name)
+                _wait_for_elb_state(elb_name, old_instance.instance_id,
+                                    "OutOfService")
+
+    finally:
+        # Whatever happened, clean up after ourselves
+        group.min_size = curr_minimum
+        group.max_size = curr_maximum
+        group.desired_capacity = curr_desired
+        group.update()
+        print "Reset minimum, desired, and maximum number of servers."
+
+    # Reload the environment to remove the old web servers.
+    executel(environment, env.default_deployment)
+
+
+@task
 def deploy_full(deployment_tag, environment, launch_config_name=None, num_web=2):
     """Autoscaling replacement for deploy_full_without_autoscaling.
 
@@ -1935,8 +2058,9 @@ def _wait_for_elb_state(elb_name, instance_id, state):
     """
     waited = 0
     while True:
-        print ("Have waited {0} seconds for {1} to be {2}...".format(waited, instance_id, state))
+        status_line("Have waited {0} seconds for {1} to be {2}...".format(waited, instance_id, state))
         if _elb_state(elb_name, instance_id) == state:
+            print("")
             return state
         time.sleep(5)
         waited += 5
@@ -2015,7 +2139,7 @@ def _get_launch_config(name):
     return config
 
 
-def _get_autoscaling_group(name=None):
+def _get_autoscaling_group(name=None, quiet=False):
     """Retrieves the autoscaling group for this environment.
 
     Assumes it already exists, and that there is only one.
@@ -2029,7 +2153,8 @@ def _get_autoscaling_group(name=None):
     elif len(groups) >= 2:
         raise Exception("Found more than one autoscaling group with "
                         "the name '{name}'.".format(name=name))
-    print "Retrieved auto scaling group named '{0}'.".format(groups[0].name)
+    if not quiet:
+        print "Retrieved auto scaling group named '{0}'.".format(groups[0].name)
     return groups[0]
 
 
