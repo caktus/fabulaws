@@ -3,13 +3,14 @@ Deployment
 
 FabulAWS uses `Fabric <http://docs.fabfile.org/>`_ for deployment, with which
 some familiarity is strongly recommended.  This page assumes that you've
-completed the necessary setup described in the :doc:`/preparing`.
+completed the necessary setup described in the :doc:`/architecture`.
 You will also need a local development environment setup as described in
 :doc:`/initial-setup`.
 
-**Important:** When deploying to an environment, your local copy of the code
-should be up to date and must also have a checkout of the correct branch.
-Environments can be mapped to branches in the ``fabulaws-config.yml`` file.
+.. IMPORTANT::
+   When deploying to an environment, your local copy of the code
+   should be up to date and must also have a checkout of the correct branch.
+   Environments can be mapped to branches in the ``fabulaws-config.yml`` file.
 
 Testing environment
 -------------------
@@ -111,6 +112,10 @@ The syntax for completing a full deployment is as follows::
 The launch configuration name is optional, and one will be created automatically
 if not specified.
 
+.. NOTE::
+   This command does not update secrets from your local file to the servers. If you want to do that,
+   explicitly run ``fab <environment> update_server_passwords`` before running this command.
+
 Autoscaling: Serial deployment
 ++++++++++++++++++++++++++++++
 
@@ -131,8 +136,12 @@ follows::
 Again, the launch config is optional and one will be created automatically if
 not specified.
 
-**Note:** You may see errors that look like this while running a serial
-deployment::
+.. NOTE::
+   This command does not update secrets from your local file to the servers. If you want to do that,
+   explicitly run ``fab <environment> update_server_passwords`` before running this command.
+
+.. NOTE::
+   You may see errors that look like this while running a serial deployment::
 
     400 Bad Request
     <ErrorResponse xmlns="http://elasticloadbalancing.amazonaws.com/doc/2012-06-01/">

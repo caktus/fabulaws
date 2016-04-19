@@ -37,14 +37,20 @@ project and updated in `fabulaws-config.yml`.
    * TCP port 6379 from myproject-web-sg
    * TCP port 6379 from myproject-worker-sg
 * **myproject-web-sg**
+
   * For EC2-classic:
+
     * TCP port 80 from amazon-elb-sg
     * TCP port 443 from amazon-elb-sg
+
   * For VPC-based AWS accounts:
+
     * TCP port 80 from myproject-web-sg
     * TCP port 443 from myproject-web-sg
+
 * **myproject-worker-sg**
    * (used only as a source - requires no additional firewall rules)
+
 * **myproject-incoming-web-sg**
    * TCP port 80 from any address
    * TCP port 443 from any address
@@ -63,6 +69,7 @@ wildcard SSL certificate). Use the following parameters as a guide:
   Note that this will cause a warning to be shown when you try to 'Assign Security Groups'.
   That warning can be skipped.
 * If on newer, VPC-based AWS accounts:
+
   * Add security group **myproject-incoming-web-sg** to the load balancer so
     the load balancer can receive incoming requests.
   * Add security group **myproject-web-sg** to the load balancer so the backend instances will
@@ -160,9 +167,14 @@ command::
 
     fab <environment> update_server_passwords
 
-**Note:** It's only necessary to have a copy of ``fabsecrets_<environment>.py`` locally if you
-will be deploying new servers or updating the existing passwords on the
-servers.
+.. NOTE::
+   It's only necessary to have a copy of ``fabsecrets_<environment>.py`` locally if you
+   will be deploying new servers or updating the existing passwords on the servers.
+
+.. NOTE::
+   This command is really only useful on the web and worker servers. On all other servers,
+   the command will update the secrets, but nothing will force the running processes to re-read
+   those secrets.
 
 Project Configuration
 ---------------------

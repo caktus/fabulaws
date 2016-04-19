@@ -24,6 +24,11 @@ All-in-one commands:
   all the web servers down and bring up new ones. This is faster than deploy_serial but
   does cause downtime.
 
+  .. NOTE::
+     Neither of the above commands updates secrets on the servers. Be sure to explicitly run
+     ``fab environment update_server_passwords`` if you want to change secrets at the time of
+     deployment.
+
 More low-level commands:
 
 * ``fab create_launch_config_for_deployment:deployment,environment`` - Create a new launch
