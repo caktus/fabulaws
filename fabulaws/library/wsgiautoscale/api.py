@@ -1683,6 +1683,14 @@ def deploy_full(deployment_tag, environment, launch_config_name=None, num_web=2)
     """
     _check_local_deps()
     executel(environment, deployment_tag)
+
+    if env.environment in ['production', 'florida']:
+        answer = prompt("Are you sure you want to run a deploy_full in production? "
+                        "This will cause downtime! (y/N)? ",
+                        default='n')
+        if not answer.lower().startswith('y'):
+            abort("Not running deploy_full on production")
+
     if not launch_config_name:
         launch_config = _create_launch_config()
     else:
