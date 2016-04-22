@@ -8,6 +8,7 @@ import string
 import logging
 import datetime
 import multiprocessing
+from copy import copy
 from runpy import run_path
 
 import yaml
@@ -1799,7 +1800,7 @@ def deploy_full(deployment_tag, environment, launch_config_name=None, num_web=2)
 
 @task
 @runs_once
-def deploy_serial(deployment_tag, environment, launch_config_name=None, answer=None):
+def deploy_serial(deployment_tag, environment, launch_config_name=None, answer=None, batchsize=1):
     """Autoscaling replacement for deploy_serial_without_autoscaling.
 
     Safely deploy to the specified environment with no downtime, by updating
@@ -1824,7 +1825,7 @@ def deploy_serial(deployment_tag, environment, launch_config_name=None, answer=N
 
     # Bring down each old instance in turn and allow the autoscaling group to
     # recreate it (if needed) using the new launch config.
-    _refresh_instances(autoscaling_group)
+    _refresh_instances(autoscaling_group, batchsize=batchsize)
 
     print "Completed deployment with autoscaling."
 
@@ -1854,7 +1855,15 @@ def _ag_inst_states(autoscaling_group):
     return instances
 
 
-def _refresh_instances(autoscaling_group):
+def _n_at_a_time(items, batchsize):
+    items = copy(items)
+    while len(items) > batchsize:
+        yield items[:batchsize]
+        items[:batchsize] = []
+    yield items
+
+
+def _refresh_instances(autoscaling_group, batchsize=1):
     """
     Brings down each non-current instance in turn and allows the autoscaling
     group to recreate it (if needed) using the current configuration.
@@ -1869,18 +1878,20 @@ def _refresh_instances(autoscaling_group):
     check_period = 5 # seconds
     old_instances = _ag_instances(autoscaling_group, current=False)
     print "Found {0} old instances.".format(len(old_instances))
-    for old_instance in old_instances:
-        print "Starting to bring down old instance with id {0}.".format(
-               old_instance.instance_id)
-        conn.set_instance_health(old_instance.instance_id, "Unhealthy")
-        for elb_name in env.elb_names:
-            print "Waiting for {0} to be out of service with load balancer {1}. "\
-                  "Note: ignore any 'InvalidInstance' errors.".format(
-                   old_instance.instance_id, elb_name)
-            _wait_for_elb_state(elb_name, old_instance.instance_id,
-                                "OutOfService")
-        print "{0} is now out of service. Waiting for autoscaling group...".format(
-               old_instance.instance_id)
+    for batch in _n_at_a_time(old_instances, batchsize):
+        for old_instance in batch:
+            print "Starting to bring down old instance with id {0}.".format(
+                   old_instance.instance_id)
+            conn.set_instance_health(old_instance.instance_id, "Unhealthy")
+        for old_instance in batch:
+            for elb_name in env.elb_names:
+                print "Waiting for {0} to be out of service with load balancer {1}. "\
+                      "Note: ignore any 'InvalidInstance' errors.".format(
+                       old_instance.instance_id, elb_name)
+                _wait_for_elb_state(elb_name, old_instance.instance_id,
+                                    "OutOfService")
+            print "{0} is now out of service. Waiting for autoscaling group...".format(
+                   old_instance.instance_id)
         time.sleep(45)  # Wait for the autoscaling group to catch up.
                         # This time amount is just a guess - it seems to take
                         # that long for the group to decide whether or not to
@@ -1913,8 +1924,9 @@ def _refresh_instances(autoscaling_group):
             # refresh instance states
             autoscaling_group = _get_autoscaling_group()  # Refresh instances list.
             inst_states = _ag_inst_states(autoscaling_group)
-        print ("Finished bringing down old instance with id {0}.".format(
-               old_instance.instance_id))
+        for old_instance in batch:
+            print ("Finished bringing down old instance with id {0}.".format(
+                   old_instance.instance_id))
     print "All old instances have been terminated."
 
 

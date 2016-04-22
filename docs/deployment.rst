@@ -126,10 +126,14 @@ autoscaling group as unhealthy, and then waiting for the group to create a new,
 healthy instance before proceeding. A serial deployment can be started as
 follows::
 
-    fab deploy_serial:cmyproject,<environment>[,<launch config name>]
+    fab deploy_serial:cmyproject,<environment>[,<launch config name>][,batchsize=<N>]
 
 Again, the launch config is optional and one will be created automatically if
 not specified.
+
+You can take down more than one instance at a time by passing ``,batchsize=N``.
+For example, add on ``,batchsize=5`` to take down 5 instances at a time, wait
+for new instances to be online, then continue to the next 5.
 
 **Note:** You may see errors that look like this while running a serial
 deployment::
