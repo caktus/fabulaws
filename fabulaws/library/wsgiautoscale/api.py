@@ -188,7 +188,8 @@ def _setup_env(deployment_tag=None, environment=None, override_servers={}):
         db.stunnel_port = 6432 + i
     env.db_settings = env.get('db_settings', {})
     env.setdefault('syslog_server', False)
-    env.use_basic_auth = env.get('use_basic_auth', False)
+    if 'use_basic_auth' not in env:
+        env.use_basic_auth = {}
 
 
 def _read_local_secrets():
@@ -671,7 +672,7 @@ def upload_nginx_conf():
             # Specifying a regular expression instead prevents that.
             sn = r'"~[a-zA-Z0-9-]+%s$"' % sn.replace('.', r'\.')
         context['allowed_hosts'].append(sn)
-    if env.use_basic_auth:
+    if env.use_basic_auth.get(env.environment):
         (f, tmpfile) = mkstemp()
         chars = 'abcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*(-_=+)'
         salt = ''.join(random.choice(chars) for i in range(8))

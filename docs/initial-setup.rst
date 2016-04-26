@@ -275,7 +275,9 @@ like this:
 
   # Any sites that need basic auth
   # This is NOT intended to provide very high security.
-  use_basic_auth: True
+  use_basic_auth:
+    testing: True
+    anotherenv: True
 
 And add the desired username and password to each environment secrets file:
 
