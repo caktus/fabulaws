@@ -188,9 +188,7 @@ def _setup_env(deployment_tag=None, environment=None, override_servers={}):
         db.stunnel_port = 6432 + i
     env.db_settings = env.get('db_settings', {})
     env.setdefault('syslog_server', False)
-    if not 'basic_auth' in env:
-        env.basic_auth = {}
-    env.use_basic_auth = env.environment in env.basic_auth
+    env.use_basic_auth = env.get('use_basic_auth', False)
 
 
 def _read_local_secrets():
@@ -675,12 +673,11 @@ def upload_nginx_conf():
         context['allowed_hosts'].append(sn)
     if env.use_basic_auth:
         (f, tmpfile) = mkstemp()
-        for user, password in env.basic_auth[env.environment]:
-            chars = 'abcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*(-_=+)'
-            salt = ''.join([random.choice(chars) for i in range(8)])
-            cmd = ['openssl', 'passwd', '-apr1', '-salt', salt, password]
-            encrypted = subprocess.check_output(cmd)
-            f.write(user + ":" + encrypted + "\n")
+        chars = 'abcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*(-_=+)'
+        salt = ''.join(random.choice(chars) for i in range(8))
+        cmd = ['openssl', 'passwd', '-apr1', '-salt', salt, env.basic_auth_password]
+        encrypted = subprocess.check_output(cmd)
+        f.write(env.basic_auth_username + ":" + encrypted + "\n")
         f.close()
         env.passwdfile_path = "/etc/nginx/%(project)s.passwd" % env
         _upload_template(tmpfile, env.passwdfile_path)
