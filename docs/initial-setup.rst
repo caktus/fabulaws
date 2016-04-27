@@ -279,12 +279,21 @@ like this:
     testing: True
     anotherenv: True
 
+Add ``basic_auth_username`` and ``basic_auth_password`` to ``password_names``:
+
+.. code-block:: yaml
+
+  password_names: [a, b, c, ..., basic_auth_username, basic_auth_password]
+
 And add the desired username and password to each environment secrets file:
 
 .. code-block:: yaml
 
   basic_auth_username: user1
   basic_auth_password: password1
+
+You'll need to add these entries to all secrets files; just set them to an
+empty string for environments where you are not using basic auth.
 
 Then in the ``testing`` and ``anotherenv`` environments, fabulaws will apply
 basic auth to the sites. For testing, user ``user1`` will be able to use password

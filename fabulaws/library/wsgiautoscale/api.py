@@ -657,8 +657,10 @@ def upload_nginx_conf():
     """Upload Nginx configuration from the template."""
 
     require('environment', provided_by=env.environments)
+    _load_passwords(env.password_names)
     context = dict(env)
     context['allowed_hosts'] = []
+    context['passwdfile_path'] = ''
     # transform Django's ALLOWED_HOSTS into a format acceptable by Nginx (see
     # http://nginx.org/en/docs/http/server_names.html and
     # http://nginx.org/en/docs/http/request_processing.html)
@@ -673,15 +675,19 @@ def upload_nginx_conf():
             sn = r'"~[a-zA-Z0-9-]+%s$"' % sn.replace('.', r'\.')
         context['allowed_hosts'].append(sn)
     if env.use_basic_auth.get(env.environment):
-        (f, tmpfile) = mkstemp()
+        (handle, tmpfile) = mkstemp()
+        f = os.fdopen(handle, 'w')
         chars = 'abcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*(-_=+)'
         salt = ''.join(random.choice(chars) for i in range(8))
         cmd = ['openssl', 'passwd', '-apr1', '-salt', salt, env.basic_auth_password]
         encrypted = subprocess.check_output(cmd)
         f.write(env.basic_auth_username + ":" + encrypted + "\n")
         f.close()
-        env.passwdfile_path = "/etc/nginx/%(project)s.passwd" % env
-        _upload_template(tmpfile, env.passwdfile_path)
+        context['passwdfile_path'] = "/etc/nginx/%(project)s.passwd" % env
+        template_dir = os.path.dirname(tmpfile)
+        template_name = os.path.basename(tmpfile)
+        _upload_template(template_name, context['passwdfile_path'], context=context, user='root',
+                         use_jinja=True, template_dir=template_dir)
         os.remove(tmpfile)
     _upload_template('nginx.conf', env.nginx_conf, context=context, user=env.deploy_user,
                      use_jinja=True, template_dir=env.templates_dir)
