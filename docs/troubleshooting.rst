@@ -202,3 +202,25 @@ When that's complete, disable the upgrade message on the web servers::
 
    fab <environment> end_upgrade
 
+Web servers churning during a deploy
+------------------------------------
+
+If you see web servers being launched, but then being terminated before they come into service, this
+is usually due to a problem with the load balancer not receiving a healthy response from the health
+check. If the web server is returning a 500 error, you should hopefully get an error email, which
+will help you debug the problem. If you get a 4xx error, you may not, so you might not even be aware
+that the web servers are churning. Once you are aware, suspend autoscaling::
+
+  fab suspend_autoscaling_processes:myproject,<environment>
+
+SSH into the web server in question. Look at the
+``/home/myproject/www/{environment}/log/access.log`` and see what HTTP status code is being returned
+to the load balancer.
+
+* 401 errors mean the load balancer is getting a Basic Auth check which it is failing.
+* 404 errors mean the health check URL is incorrectly configured, either due to a misconfiguration
+  in Nginx or in Django.
+
+Remember to resume autoscaling once you have fixed the problem::
+
+  fab resume_autoscaling_processes:myproject,<environment>
