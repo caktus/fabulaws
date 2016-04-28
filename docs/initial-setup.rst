@@ -265,6 +265,41 @@ something as simple as ``Upgrade in progress. Please check back later.`` or
 a complete HTML file complete with stylesheets and images to display a "pretty"
 upgrade-in-progress message.
 
+Basic Auth
+++++++++++
+
+If you want to add HTTP Basic Auth to a site, add a section to ``fabulaws-config.yml``
+like this:
+
+.. code-block:: yaml
+
+  # Any sites that need basic auth
+  # This is NOT intended to provide very high security.
+  use_basic_auth:
+    testing: True
+    anotherenv: True
+
+Add ``basic_auth_username`` and ``basic_auth_password`` to ``password_names``:
+
+.. code-block:: yaml
+
+  password_names: [a, b, c, ..., basic_auth_username, basic_auth_password]
+
+And add the desired username and password to each environment secrets file:
+
+.. code-block:: yaml
+
+  basic_auth_username: user1
+  basic_auth_password: password1
+
+You'll need to add these entries to all secrets files; just set them to an
+empty string for environments where you are not using basic auth.
+
+Then in the ``testing`` and ``anotherenv`` environments, fabulaws will apply
+basic auth to the sites. For testing, user ``user1`` will be able to use password
+``password1``, and so forth.
+
+
 Health Check
 ++++++++++++
 
