@@ -185,6 +185,9 @@ def _setup_env(deployment_tag=None, environment=None, override_servers={}):
         db.stunnel_port = 6432 + i
     env.db_settings = env.get('db_settings', {})
     env.setdefault('syslog_server', False)
+    if 'production_environments' not in env:
+        # Backwards compatibility
+        env.production_environments = ['production']
 
 
 def _read_local_secrets():
@@ -321,6 +324,20 @@ def _check_local_deps():
         abort('You must install curl to run a deployment.')
 
 ###### ENVIRONMENT SETUP ######
+
+def _is_production(environment):
+    """
+    Return True if the environment named 'environment' appears to
+    be a production environment.
+
+    If the config has an item named 'production_environments', then it is
+    taken as a list of environment names that are production environments, and
+    everything else is assumed not to be production.
+
+    If there is no such configuration item, _setup_env (above) defaults
+    it to just ['production'].
+    """
+    return environment in env.production_environments
 
 
 @task
@@ -1684,7 +1701,7 @@ def deploy_full(deployment_tag, environment, launch_config_name=None, num_web=2)
     _check_local_deps()
     executel(environment, deployment_tag)
 
-    if env.environment in ['production', 'florida']:
+    if _is_production(env.environment):
         answer = prompt("Are you sure you want to run a deploy_full in production? "
                         "This will cause downtime! (y/N)? ",
                         default='n')

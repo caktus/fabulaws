@@ -108,6 +108,8 @@ environments:
 - staging
 - production
 - testing
+production_environments:
+- production
 valid_roles:
 - cache
 - db-master
