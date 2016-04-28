@@ -173,8 +173,7 @@ command::
 
 .. NOTE::
    This command is really only useful on the web and worker servers. On all other servers,
-   the command will update the secrets, but nothing will force the running processes to re-read
-   those secrets.
+   nothing will update the configuration files to use the new secrets.
 
 Project Configuration
 ---------------------
