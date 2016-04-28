@@ -677,9 +677,7 @@ def upload_nginx_conf():
     if env.use_basic_auth.get(env.environment):
         (handle, tmpfile) = mkstemp()
         f = os.fdopen(handle, 'w')
-        chars = 'abcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*(-_=+)'
-        salt = ''.join(random.choice(chars) for i in range(8))
-        cmd = ['openssl', 'passwd', '-apr1', '-salt', salt, env.basic_auth_password]
+        cmd = ['openssl', 'passwd', '-apr1', env.basic_auth_password]
         encrypted = subprocess.check_output(cmd)
         f.write(env.basic_auth_username + ":" + encrypted + "\n")
         f.close()
