@@ -303,8 +303,8 @@ basic auth to the sites. For testing, user ``user1`` will be able to use passwor
    Fabulaws will also turn off Basic Auth for the health check URL so that the load balancer
    can access it. It assumes that the health check URL is ``/healthcheck.html`` and that Django will
    be serving the health check URL (rather than being served as a static file directly by Nginx, for
-   example). If either of those assumptions are not correct, this version of Basic Auth setup may
-   not work for your situation.
+   example). If either of those assumptions are not correct, you will need to tweak it by copying
+   and modifying the template for nginx.conf.
 
 Health Check
 ++++++++++++
