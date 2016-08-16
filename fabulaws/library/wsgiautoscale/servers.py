@@ -13,7 +13,7 @@ from fabulaws.ec2 import EC2Instance
 from fabulaws.ubuntu.instances import UbuntuInstance
 from fabulaws.ubuntu.packages.fail2ban import Fail2banMixin
 from fabulaws.ubuntu.packages.postgres import PostgresMixin
-from fabulaws.ubuntu.packages.redis import RedisPpaMixin
+from fabulaws.ubuntu.packages.redis import RedisMixin
 from fabulaws.ubuntu.packages.memcached import MemcachedMixin
 from fabulaws.ubuntu.packages.python import PythonMixin
 from fabulaws.ubuntu.packages.rabbitmq import RabbitMqMixin
@@ -179,7 +179,7 @@ class BaseInstance(FirewallMixin, UbuntuInstance):
         self.install_packages(['ntp']) # keep date current
 
 
-class SessionMixin(RedisPpaMixin):
+class SessionMixin(RedisMixin):
     """Mixin that creates a session store using Redis."""
 
     redis_bind = '' # allow connections on all interfaces
