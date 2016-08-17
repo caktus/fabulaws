@@ -4,6 +4,8 @@ import os
 import time
 import subprocess
 
+from decimal import Decimal
+
 from fabric.api import *
 from fabric.contrib import files
 
@@ -64,8 +66,11 @@ class BaseInstance(FirewallMixin, UbuntuInstance):
 
     def _add_swap(self, path):
         sudo('mkswap -f {0}'.format(path))
-        sudo('swapon {0}'.format(path))
-        files.append('/etc/fstab', '{0} swap swap defaults 0 0'.format(path), use_sudo=True)
+        with settings(warn_only=True):
+            # sometimes mkswap seems to 'mount' the swap partition
+            # automatically, so this command will fail
+            sudo('swapon {0}'.format(path))
+        files.append('/etc/fstab', '{0} none swap sw 0 0'.format(path), use_sudo=True)
 
     @uses_fabric
     def setup_swap(self):
@@ -98,7 +103,8 @@ class BaseInstance(FirewallMixin, UbuntuInstance):
                 continue
             sudo('cryptsetup -d /dev/urandom create {0} {1}'.format(crypt_name, dev))
             files.append('/etc/crypttab',
-                         'cryptswap {0} /dev/urandom swap'.format(dev), use_sudo=True)
+                         '{0} {1} /dev/urandom swap'.format(crypt_name, dev),
+                         use_sudo=True)
             files.comment('/etc/fstab', dev, use_sudo=True)
             self._add_swap('/dev/mapper/{0}'.format(crypt_name))
         if swap_mb > 0:
@@ -271,18 +277,8 @@ class AppMixin(PythonMixin):
     """
 
     python_packages = ['python2.7', 'python2.7-dev']
-    python_pip_version = '8.0.0'
-    python_virtualenv_version = '14.0.0'
-
-    @uses_fabric
-    def update_meld3(self):
-        """
-        Installs and updates meld3 to 0.6.7 due to issue with supervisor in
-        11.04: http://vandahm.com/articles/how-fix-supervisor-ubuntu-1104/
-        """
-
-        #self.install_packages(['python-meld3'])
-        #sudo('pip install -U meld3==0.6.7')
+    python_pip_version = '8.1.2'
+    python_virtualenv_version = '15.0.3'
 
     @uses_fabric
     def install_less_and_yuglify(self):
@@ -292,20 +288,31 @@ class AppMixin(PythonMixin):
         and the ``yuglify`` binary used by pipeline.
         """
 
-        self.add_ppa('ppa:chris-lea/node.js')
-        #In 12.04 npm is included in the chris-lea ppa in the 'nodejs' package
-        self.install_packages(['nodejs'])
+        if self.ubuntu_release >= Decimal('16.04'):
+            # nodejs-legacy contains 'node' -> 'nodejs' symlink on 16.04
+            self.install_packages(['npm', 'nodejs-legacy'])
+        else:
+            self.add_ppa('ppa:chris-lea/node.js')
+            #In 12.04 npm is included in the chris-lea ppa in the 'nodejs' package
+            self.install_packages(['nodejs'])
         less_version = getattr(env, 'less_version', '1.3.3')
         sudo('npm install -g less@%s' % less_version)
         sudo('npm install -g yuglify')
 
+    @uses_fabric
     def install_system_packages(self):
-        """Installs the required system packages."""
+        """Installs the system packages specified in the environment."""
 
         # Install required system packages for deployment, plus some extras
-        # Install pip, and use it to install virtualenv
-        packages = env.app_server_packages
+        packages = set(env.app_server_packages) | set([
+            'supervisor',
+            'pgbouncer',
+            'stunnel4',
+        ])
         self.install_packages(packages)
+        # supervisord doesn't start automatically on all Ubuntu versions,
+        # so make sure it's started here
+        sudo('service supervisor restart')
 
     @uses_fabric
     def create_webserver_user(self):
@@ -321,7 +328,6 @@ class AppMixin(PythonMixin):
         """
 
         super(AppMixin, self).setup()
-        self.update_meld3()
         self.install_less_and_yuglify()
         self.install_system_packages()
         self.create_webserver_user()

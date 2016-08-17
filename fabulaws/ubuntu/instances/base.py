@@ -5,6 +5,8 @@ import logging
 
 import boto.exception
 
+from decimal import Decimal
+
 from fabric.api import *
 from fabric.contrib import files
 
@@ -155,6 +157,13 @@ class UbuntuInstance(BaseAptMixin, EC2Instance):
             vol.update()
         logger.debug('Deleting volume {0}'.format(vol.id))
         vol.delete()
+
+    @property
+    @uses_fabric
+    def ubuntu_release(self):
+        if not hasattr(self, '_ubuntu_release'):
+            self._ubuntu_release = Decimal(run('lsb_release -r -s').strip())
+        return self._ubuntu_release
 
     @uses_fabric
     def setup_mirror(self, mirror=None):
