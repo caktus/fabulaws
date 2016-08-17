@@ -45,8 +45,7 @@ class BaseAptMixin(object):
     def add_ppa(self, name):
         """Add personal package archive."""
 
-        release = Decimal(sudo(u"lsb_release -r").split(':')[1].strip())
-        if release >= Decimal('12.04'):
+        if self.ubuntu_release >= Decimal('12.04'):
             sudo(u"apt-add-repository -y %s" % name)
         else:
             sudo(u"apt-add-repository %s" % name)
