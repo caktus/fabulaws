@@ -20,12 +20,12 @@ class RabbitMqMixin(AptMixin):
     def rabbitmq_service(self, cmd):
         return sudo('service rabbitmq-server {0}'.format(cmd))
 
-    def secure_directories(self, *args, **kwargs):
+    def bind_app_directories(self, *args, **kwargs):
         tries = kwargs.pop('rabbitmq_tries', 10)
         sleep = kwargs.pop('rabbitmq_sleep', 2)
         # make sure we stop before proceeding in case we get moved to a secure directory
         self.rabbitmq_service('stop') 
-        super(RabbitMqMixin, self).secure_directories(*args, **kwargs)
+        super(RabbitMqMixin, self).bind_app_directories(*args, **kwargs)
         # try starting a number of times with warn_only=True, as rabbitmq
         # fails to restart occassionally for unknown reasons
         restarted = False

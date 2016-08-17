@@ -37,12 +37,12 @@ project and updated in `fabulaws-config.yml`.
    * TCP port 6379 from myproject-web-sg
    * TCP port 6379 from myproject-worker-sg
 * **myproject-web-sg**
-  * For EC2-classic:
-    * TCP port 80 from amazon-elb/amazon-elb-sg
-    * TCP port 443 from amazon-elb/amazon-elb-sg
-  * For VPC-based AWS accounts:
-    * TCP port 80 from myproject-web-sg
-    * TCP port 443 from myproject-web-sg
+   * For EC2-classic:
+      * TCP port 80 from amazon-elb/amazon-elb-sg
+      * TCP port 443 from amazon-elb/amazon-elb-sg
+   * For VPC-based AWS accounts:
+      * TCP port 80 from myproject-web-sg
+      * TCP port 443 from myproject-web-sg
 * **myproject-worker-sg**
    * (used only as a source - requires no additional firewall rules)
 * **myproject-incoming-web-sg**
@@ -63,6 +63,7 @@ wildcard SSL certificate). Use the following parameters as a guide:
   Note that this will cause a warning to be shown when you try to 'Assign Security Groups'.
   That warning can be skipped.
 * If on newer, VPC-based AWS accounts:
+
   * Add security group **myproject-incoming-web-sg** to the load balancer so
     the load balancer can receive incoming requests.
   * Add security group **myproject-web-sg** to the load balancer so the backend instances will
@@ -131,10 +132,10 @@ Local passwords
 
 A number of passwords are required during deployment.  To reduce the number of
 prompts that need to be answered manually, you can use a file called
-``fabsecrets.py`` in the top level of your repository.
+``fabsecrets_<environment>.py`` in the top level of your repository.
 
 If you already have a server environment setup, run the following command to
-get a local copy of fabsecrets.py::
+get a local copy of fabsecrets_<environment>.py::
 
     fab <environment> update_local_fabsecrets
 
@@ -144,7 +145,7 @@ will be creating new servers, this must be obtained securely from another
 developer.
 
 If this is a brand-new project, you can use the following template for
-``fabsecrets.py``:
+``fabsecrets_<environment>.py``:
 
 .. literalinclude:: sample_files/fabsecrets.py
    :language: python
@@ -154,15 +155,19 @@ All of these are required to be filled in before any servers can be created.
 Remote passwords
 ++++++++++++++++
 
-To update passwords on the server, first retrieve a copy of ``fabsecrets.py``
+To update passwords on the server, first retrieve a copy of ``fabsecrets_<environment>.py``
 using the above command (or from another developer) and then run the following
 command::
 
     fab <environment> update_server_passwords
 
-**Note:** It's only necessary to have a copy of ``fabsecrets.py`` locally if you
-will be deploying new servers or updating the existing passwords on the
-servers.
+.. NOTE::
+   It's only necessary to have a copy of ``fabsecrets_<environment>.py`` locally if you
+   will be deploying new servers or updating the existing passwords on the servers.
+
+.. NOTE::
+   This command is really only useful on the web and worker servers. On all other servers,
+   nothing will update the configuration files to use the new secrets.
 
 Project Configuration
 ---------------------
@@ -264,6 +269,47 @@ Similarly, the ``healthcheck.html`` can contain anything you'd like, either
 something as simple as ``Upgrade in progress. Please check back later.`` or
 a complete HTML file complete with stylesheets and images to display a "pretty"
 upgrade-in-progress message.
+
+Basic Auth
+++++++++++
+
+If you want to add HTTP Basic Auth to a site, add a section to ``fabulaws-config.yml``
+like this:
+
+.. code-block:: yaml
+
+  # Any sites that need basic auth
+  # This is NOT intended to provide very high security.
+  use_basic_auth:
+    testing: True
+    anotherenv: True
+
+Add ``basic_auth_username`` and ``basic_auth_password`` to ``password_names``:
+
+.. code-block:: yaml
+
+  password_names: [a, b, c, ..., basic_auth_username, basic_auth_password]
+
+And add the desired username and password to each environment secrets file:
+
+.. code-block:: yaml
+
+  basic_auth_username: user1
+  basic_auth_password: password1
+
+You'll need to add these entries to all secrets files; just set them to an
+empty string for environments where you are not using basic auth.
+
+Then in the ``testing`` and ``anotherenv`` environments, fabulaws will apply
+basic auth to the sites. For testing, user ``user1`` will be able to use password
+``password1``, and so forth.
+
+.. NOTE::
+   Fabulaws will also turn off Basic Auth for the health check URL so that the load balancer
+   can access it. It assumes that the health check URL is ``/healthcheck.html`` and that Django will
+   be serving the health check URL (rather than being served as a static file directly by Nginx, for
+   example). If either of those assumptions are not correct, you will need to tweak it by copying
+   and modifying the template for nginx.conf.
 
 Health Check
 ++++++++++++

@@ -8,6 +8,11 @@ import string
 import logging
 import datetime
 import multiprocessing
+from runpy import run_path
+
+import subprocess
+from tempfile import mkstemp
+
 import yaml
 
 from getpass import getpass
@@ -18,6 +23,7 @@ from boto.exception import BotoServerError
 
 from fabric.api import (abort, cd, env, execute, hide, hosts, local, parallel,
     prompt, put, roles, require, run, runs_once, settings, sudo, task)
+from fabric.colors import red
 from fabric.contrib.files import exists, upload_template, append, uncomment, sed
 from fabric.network import disconnect_all
 
@@ -30,10 +36,6 @@ from .servers import (CacheInstance, DbMasterInstance,
     DbSlaveInstance, WebInstance, WorkerInstance,
     CombinedInstance)
 
-try:
-    import fabsecrets
-except ImportError:
-    fabsecrets = None
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -183,9 +185,42 @@ def _setup_env(deployment_tag=None, environment=None, override_servers={}):
         env.all_databases.append(env.master_database)
     env.all_databases.extend(env.slave_databases)
     for i, db in enumerate(env.all_databases):
-        db.stunnel_port = 6432 + i
+        db.stunnel_port = 7432 + i
     env.db_settings = env.get('db_settings', {})
     env.setdefault('syslog_server', False)
+    if 'production_environments' not in env:
+        # Backwards compatibility
+        env.production_environments = ['production']
+    if 'use_basic_auth' not in env:
+        env.use_basic_auth = {}
+
+
+def _read_local_secrets():
+    """
+    Return a dictionary with the secrets from the local secrets file, if any;
+    else returns None.
+    """
+    secrets_files = [
+        'fabsecrets_{environment}.py'.format(environment=env.environment),
+        'fabsecrets.py'
+    ]
+    secrets_file = None
+    for filename in secrets_files:
+        if os.path.exists(filename):
+            secrets_file = filename
+            break
+    else:
+        print(red("Warning: No secrets file found. Looked for %r" % secrets_files, bold=True))
+        return None
+    if secrets_file == 'fabsecrets.py':
+        print(red("Warning: Getting secrets from fabsecrets.py, which is deprecated. Secrets "
+                  "should be in fabsecrets_{environment}.py.".format(environment=env.environment),
+                  bold=True))
+    secrets = run_path(secrets_file)
+    # run_path returns the globals dictionary, which includes things
+    # like __file__, so strip those out.
+    secrets = {k: secrets[k] for k in secrets if not k.startswith("__")}
+    return secrets
 
 
 def _random_password(length=8, chars=string.letters + string.digits):
@@ -193,18 +228,30 @@ def _random_password(length=8, chars=string.letters + string.digits):
     return ''.join([random.choice(chars) for i in range(length)])
 
 
-def _load_passwords(names, length=20, generate=False, ignore_local=False):
-    """Retrieve password from the user's home directory, or generate a new random one if none exists"""
+def _load_passwords(names, ignore_local=False):
+    """
+    Utility for working with secrets, maybe on a remote server.
+
+    It gets a value for each password: If there's a local secrets file and it
+    has a value for name and ignore_local is false, it uses the
+    value from the local secrets file; in all other cases, it gets
+    the value from the remote server.
+
+    Then it sets the password as an attribute on 'env'.  This is because template rendering
+    uses `env` as its context and all the templates expect the
+    passwords to be in the context.
+
+    :param names: Iterable of names to operate on
+    :param ignore_local: Whether to prefer the remote value even if there's a local value
+    """
+    if ignore_local:
+        fabsecrets = None
+    else:
+        fabsecrets = _read_local_secrets()
     for name in names:
         filename = os.path.join(env.home, name)
-        if generate:
-            passwd = _random_password(length=length)
-            sudo('touch %s' % filename, user=env.deploy_user)
-            sudo('chmod 600 %s' % filename, user=env.deploy_user)
-            with hide('running'):
-                sudo('echo "%s">%s' % (passwd, filename), user=env.deploy_user)
-        if fabsecrets and hasattr(fabsecrets, name) and not ignore_local:
-            passwd = getattr(fabsecrets, name)
+        if fabsecrets and name in fabsecrets and not ignore_local:
+            passwd = fabsecrets[name]
         elif env.host_string and exists(filename):
             with hide('stdout'):
                 passwd = sudo('cat %s' % filename).strip()
@@ -282,6 +329,20 @@ def _check_local_deps():
 
 ###### ENVIRONMENT SETUP ######
 
+def _is_production(environment):
+    """
+    Return True if the environment named 'environment' appears to
+    be a production environment.
+
+    If the config has an item named 'production_environments', then it is
+    taken as a list of environment names that are production environments, and
+    everything else is assumed not to be production.
+
+    If there is no such configuration item, _setup_env (above) defaults
+    it to just ['production'].
+    """
+    return environment in env.production_environments
+
 
 @task
 def testing(deployment_tag=env.default_deployment, answer=None): # support same args as production
@@ -291,6 +352,11 @@ def testing(deployment_tag=env.default_deployment, answer=None): # support same 
 @task
 def staging(deployment_tag=env.default_deployment, answer=None): # support same args as production
     _setup_env(deployment_tag, 'staging')
+
+
+@task
+def florida(deployment_tag=env.default_deployment, answer=None): # support same args as production
+    _setup_env(deployment_tag, 'florida')
 
 
 @task
@@ -483,24 +549,29 @@ def vcs(cmd, args=None):
 @runs_once
 @roles('worker')
 def update_local_fabsecrets():
-    """ create or update the local fabsecrets.py file based on the passwords on the server """
+    """ create or update the local fabsecrets_<environment>.py file based on the passwords on the server """
 
     require('environment', provided_by=env.environments)
 
-    local_path = os.path.abspath('fabsecrets.py')
+    local_path = os.path.abspath('fabsecrets_{environment}.py'.format(environment=env.environment))
 
-    answer = prompt('Are you sure you want to destroy %s '
-                    'and replace it with a copy of the values from '
-                    'the worker on %s?'
-                    '' % (local_path, env.environment.upper()), default='n')
-    if answer != 'y':
-        abort('Aborted.')
+    if os.path.exists(local_path):
+        answer = prompt('Are you sure you want to destroy %s '
+                        'and replace it with a copy of the values from '
+                        'the worker on %s?'
+                        '' % (local_path, env.environment.upper()), default='n')
+        if answer != 'y':
+            abort('Aborted.')
+
+    # Get the secrets from the remote server, ignoring any local secrets since we want
+    # to replace them with the ones actually in use.
     _load_passwords(env.password_names, ignore_local=True)
     out = ''
     for p in env.password_names:
         out += '%s = "%s"\n' % (p, getattr(env, p))
     with open(local_path, 'w') as f:
         f.write(out)
+    print("Wrote passwords to %s" % local_path)
 
 
 @task
@@ -602,8 +673,10 @@ def upload_nginx_conf():
     """Upload Nginx configuration from the template."""
 
     require('environment', provided_by=env.environments)
+    _load_passwords(env.password_names)
     context = dict(env)
     context['allowed_hosts'] = []
+    context['passwdfile_path'] = ''
     # transform Django's ALLOWED_HOSTS into a format acceptable by Nginx (see
     # http://nginx.org/en/docs/http/server_names.html and
     # http://nginx.org/en/docs/http/request_processing.html)
@@ -617,6 +690,19 @@ def upload_nginx_conf():
             # Specifying a regular expression instead prevents that.
             sn = r'"~[a-zA-Z0-9-]+%s$"' % sn.replace('.', r'\.')
         context['allowed_hosts'].append(sn)
+    if env.use_basic_auth.get(env.environment):
+        (handle, tmpfile) = mkstemp()
+        f = os.fdopen(handle, 'w')
+        cmd = ['openssl', 'passwd', '-apr1', env.basic_auth_password]
+        encrypted = subprocess.check_output(cmd)
+        f.write(env.basic_auth_username + ":" + encrypted + "\n")
+        f.close()
+        context['passwdfile_path'] = "/etc/nginx/%(project)s.passwd" % env
+        template_dir = os.path.dirname(tmpfile)
+        template_name = os.path.basename(tmpfile)
+        _upload_template(template_name, context['passwdfile_path'], context=context, user='root',
+                         use_jinja=True, template_dir=template_dir)
+        os.remove(tmpfile)
     _upload_template('nginx.conf', env.nginx_conf, context=context, user=env.deploy_user,
                      use_jinja=True, template_dir=env.templates_dir)
     _upload_template('web-rc.local', '/etc/rc.local', context=context,
@@ -1033,7 +1119,7 @@ def add_all_to_elb():
 
 @task
 @roles('db-master') # only supported on combo web & database servers
-def reload_production_db(prod_env=env.default_deployment):
+def reload_production_db(prod_env=env.default_deployment, src_env='production'):
     """ Replace the testing or staging database with the production database """
     if env.environment not in ('staging', 'testing'):
         abort('prod_to_staging requires the staging or testing environment.')
@@ -1045,13 +1131,13 @@ def reload_production_db(prod_env=env.default_deployment):
     with settings(warn_only=True):
         sudo('dropdb {0}'.format(env.database_name), user='postgres')
     env.servers['db-master'][0].create_db(env.database_name, owner=env.database_user)
-    prod_servers = _get_servers(prod_env, 'production', 'db-master')
+    prod_servers = _get_servers(prod_env, src_env, 'db-master')
     prod_hosts = [server.hostname for server in prod_servers]
     dump_cmd = 'ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=60 '\
                '-C {user}@{host} pg_dump -Ox {db_name}'.format(
         user=env.deploy_user,
         host=prod_hosts[0],
-        db_name=env.database_name.replace(env.environment, 'production'),
+        db_name=env.database_name.replace(env.environment, src_env),
     )
     load_cmd = 'bash -o pipefail -c "{dump_cmd} | psql {db_name}"'.format(
         dump_cmd=dump_cmd,
@@ -1636,6 +1722,14 @@ def deploy_full(deployment_tag, environment, launch_config_name=None, num_web=2)
     """
     _check_local_deps()
     executel(environment, deployment_tag)
+
+    if _is_production(env.environment):
+        answer = prompt("Are you sure you want to run a deploy_full in production? "
+                        "This will cause downtime! (y/N)? ",
+                        default='n')
+        if not answer.lower().startswith('y'):
+            abort("Not running deploy_full on production")
+
     if not launch_config_name:
         launch_config = _create_launch_config()
     else:
