@@ -1234,7 +1234,7 @@ def upgrade_packages():
     """ update packages on the servers """
 
     with settings(warn_only=True):
-        sudo('apt-get -qq update')
+        sudo('apt-get -qq update || apt-get -qq update')
     if 'web' in _current_roles() or 'worker' in _current_roles():
         packages = env.app_server_packages
         sudo('apt-get -qq -y install {0}'.format(' '.join(packages)))
@@ -1581,7 +1581,7 @@ def install_newrelic_sysmon():
     sudo('echo deb http://apt.newrelic.com/debian/ newrelic non-free > /etc/apt/sources.list.d/newrelic.list', shell=True)
     sudo('wget -O- https://download.newrelic.com/548C16BF.gpg | apt-key add -', shell=True)
     with settings(warn_only=True):
-        sudo('apt-get -qq update')
+        sudo('apt-get -qq update || apt-get -qq update')
     sudo('apt-get -qq -y -o Dpkg::Options::="--force-confnew" install newrelic-sysmond')
     upload_newrelic_sysmon_conf()
 
@@ -1619,7 +1619,7 @@ def install_rsyslog():
     if 'rsyslogd 8' not in output:
         sudo("add-apt-repository --yes ppa:adiscon/v8-stable")
         with settings(warn_only=True):
-            sudo("apt-get -qq update")
+            sudo("apt-get -qq update || apt-get -qq update")
         sudo("apt-get -qq -y install rsyslog")
 
     print 'Ignore any useradd or chgrp warnings below.'

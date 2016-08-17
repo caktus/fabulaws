@@ -32,7 +32,7 @@ class BaseAptMixin(object):
     def update_apt_sources(self):
         """Update apt source."""
         with settings(warn_only=True):
-            sudo(u"apt-get -qq update")
+            sudo(u"apt-get -qq update || apt-get -qq update")
 
     @uses_fabric
     def upgrade_packages(self):
