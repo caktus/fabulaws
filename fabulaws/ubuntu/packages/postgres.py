@@ -227,10 +227,10 @@ class PostgresMixin(AptMixin):
         sudo('{0}/pg_ctl -D {1} promote'.format(self.pg_bin, self.pg_data),
              user='postgres')
 
-    def secure_directories(self, *args, **kwargs):
+    def bind_app_directories(self, *args, **kwargs):
         # make sure we stop first in case we're being moved to a secure directory
         self.pg_cmd('stop', fail=False)
-        super(PostgresMixin, self).secure_directories(*args, **kwargs)
+        super(PostgresMixin, self).bind_app_directories(*args, **kwargs)
         self.pg_cmd('start', fail=False)
 
     def setup(self):

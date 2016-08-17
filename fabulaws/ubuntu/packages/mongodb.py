@@ -16,10 +16,10 @@ class MongoDbMixin(AptMixin):
     def mongodb_service(self, cmd):
         sudo('service mongodb {0}'.format(cmd))
 
-    def secure_directories(self, *args, **kwargs):
+    def bind_app_directories(self, *args, **kwargs):
         # make sure we stop first in case we're being moved to a secure directory
         self.mongodb_service('stop')
-        super(MongoDbMixin, self).secure_directories(*args, **kwargs)
+        super(MongoDbMixin, self).bind_app_directories(*args, **kwargs)
         self.mongodb_service('start')
 
 

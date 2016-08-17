@@ -45,10 +45,10 @@ class RedisMixin(AptMixin):
                   use_sudo=True)
         self.redis_service('restart')
 
-    def secure_directories(self, *args, **kwargs):
+    def bind_app_directories(self, *args, **kwargs):
         # make sure we stop first in case we're being moved to a secure directory
         self.redis_service('stop')
-        super(RedisMixin, self).secure_directories(*args, **kwargs)
+        super(RedisMixin, self).bind_app_directories(*args, **kwargs)
         self.redis_service('start')
 
     def setup(self):
