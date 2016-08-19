@@ -283,18 +283,14 @@ class AppMixin(PythonMixin):
     @uses_fabric
     def install_less_and_yuglify(self):
         """
-        Adds PPAs for node.js and NPM, installs NPM, and uses NPM to globally
+        Adds apt repo for node.js and NPM, installs NPM, and uses NPM to globally
         install the ``lessc`` binary used by django_compressor and pipeline
         and the ``yuglify`` binary used by pipeline.
         """
 
-        if self.ubuntu_release >= Decimal('16.04'):
-            # nodejs-legacy contains 'node' -> 'nodejs' symlink on 16.04
-            self.install_packages(['npm', 'nodejs-legacy'])
-        else:
-            self.add_ppa('ppa:chris-lea/node.js')
-            #In 12.04 npm is included in the chris-lea ppa in the 'nodejs' package
-            self.install_packages(['nodejs'])
+        node_version = getattr(env, 'node_version', '6.x')
+        sudo('curl -sL https://deb.nodesource.com/setup_%s | bash -' % node_version)
+        sudo('apt-get -qq -y install nodejs')
         less_version = getattr(env, 'less_version', '1.3.3')
         sudo('npm install -g less@%s' % less_version)
         sudo('npm install -g yuglify')
