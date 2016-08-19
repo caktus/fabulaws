@@ -1280,21 +1280,20 @@ def mount_encrypted(drive_letter='f'):
     answer_sudo('cryptsetup luksOpen {device} {crypt}'
                 ''.format(device=device, crypt=crypt),
                 answers=answers)
-    sudo('sudo mount /dev/mapper/{0} /secure'.format(crypt))
     current_server = _current_server()
+    if exists(current_server.mount_script):
+        sudo(current_server.mount_script)
+    else:
+        abort('attempting to mount encrypted partitions, but mount script {} '
+              'does not exist'.format(current_server.mount_script))
     if exists(current_server.default_swap_file):
         sudo('swapon %s' % current_server.default_swap_file)
-    sudo('sudo mount -o bind /secure/home/secure /home/secure' % env)
-    sudo('sudo mount -o bind /secure/tmp /tmp')
     # if we're being created from an image, make sure the hostname gets updated
     upload_newrelic_sysmon_conf()
     if 'db-master' in _current_roles() or 'db-slave' in _current_roles():
-        sudo('sudo mount -o bind /secure/var/lib/postgresql /var/lib/postgresql')
         sudo('service postgresql start')
     if 'cache' in _current_roles():
-        sudo('sudo mount -o bind /secure/var/lib/redis /var/lib/redis')
         sudo('service redis-server start', pty=False)
-        sudo('sudo mount -o bind /secure/var/lib/rabbitmq /var/lib/rabbitmq')
         sudo('service rabbitmq-server start', pty=False)
         print '*** WARNING: While immediately restarting a cache server works as expected, '\
               'stopping and later restarting does not. For more information, see docs/servers/maintenance.rst ***'
