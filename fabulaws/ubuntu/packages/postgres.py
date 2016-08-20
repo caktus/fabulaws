@@ -33,7 +33,7 @@ class PostgresMixin(AptMixin):
         'hot_standby_feedback': 'on',
         'max_wal_senders': '3',
         'wal_keep_segments': '3000', # during client deletion 50 or more may be generated per minute; this allows an hour
-        # resources - set these dynamically based on actual machine resources (see __init__)
+        # resources - set these dynamically based on actual machine resources (see pg_resource_settings())
         #'shared_buffers': '8GB',
         #'work_mem': '750MB',
         #'maintenance_work_mem': '1GB',
@@ -140,7 +140,7 @@ class PostgresMixin(AptMixin):
         mem = self.server_memory
         max_connections = int(self.postgresql_settings['max_connections'])
         # pgtune isn't available anymore as of Ubuntu 16.04, so calculate a few
-        # basic resources dynamically here just in case
+        # basic resources dynamically just in case
         return {
             # 25% of available RAM, up to 8GB
             'shared_buffers': '%sMB' % int(max(mem * 0.25, 8096)),
