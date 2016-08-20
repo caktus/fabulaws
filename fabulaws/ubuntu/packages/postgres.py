@@ -33,11 +33,11 @@ class PostgresMixin(AptMixin):
         'hot_standby_feedback': 'on',
         'max_wal_senders': '3',
         'wal_keep_segments': '3000', # during client deletion 50 or more may be generated per minute; this allows an hour
-        # resources - let pgtune set these based on actual machine resources
-        #'shared_buffers': '8GB', # 25% of available RAM, up to 8GB
-        #'work_mem': '750MB', # (2*RAM)/max_connections
-        #'maintenance_work_mem': '1GB', # RAM/16 up to 1GB; high values aren't that helpful
-        #'effective_cache_size': '48GB', # between 50-75%, should equal free + cached values in `top`
+        # resources - set these dynamically based on actual machine resources (see __init__)
+        #'shared_buffers': '8GB',
+        #'work_mem': '750MB',
+        #'maintenance_work_mem': '1GB',
+        #'effective_cache_size': '48GB',
         # checkpoint settings
         'wal_buffers': '16MB',
         'checkpoint_completion_target': '0.9',
@@ -66,6 +66,7 @@ class PostgresMixin(AptMixin):
                 setattr(self, key, db_settings.pop(key))
 
         # Override individual default settings with whatever settings the project has specified.
+        self.postgresql_settings = self.postgresql_settings.copy()
         self.postgresql_settings.update(db_settings.pop('postgresql_settings', {}))
 
         if db_settings:
@@ -129,6 +130,27 @@ class PostgresMixin(AptMixin):
 
         if fail or files.exists('/etc/init/postgresql.conf'):
             sudo('service postgresql %s' % action)
+
+    @uses_fabric
+    def pg_resource_settings(self):
+        """
+        Calculate a few resource settings dynamically. Will be overridden by
+        pgtune or manually specified settings, if any.
+        """
+        mem = self.server_memory
+        max_connections = int(self.postgresql_settings['max_connections'])
+        # pgtune isn't available anymore as of Ubuntu 16.04, so calculate a few
+        # basic resources dynamically here just in case
+        return {
+            # 25% of available RAM, up to 8GB
+            'shared_buffers': '%sMB' % int(max(mem * 0.25, 8096)),
+            # (2*RAM)/max_connections
+            'work_mem': '%sMB' % int((mem * 2) / max_connections),
+            # RAM/16 up to 1GB; high values aren't that helpful
+            'maintenance_work_mem': '%sMB' % int(max(mem / 16, 1024)),
+            # between 50-75%, should equal free + cached values in `top`
+            'effective_cache_size': '%sMB' % int(mem * 0.7),
+        }
 
     @uses_fabric
     def pg_tune_config(self, restart=True):
@@ -237,6 +259,8 @@ class PostgresMixin(AptMixin):
         """Postgres mixin"""
 
         super(PostgresMixin, self).setup()
+        if 'max_connections' in self.postgresql_settings:
+            self.pg_update_settings(self.pg_resource_settings(), restart=False)
         if self.postgresql_tune:
             self.pg_tune_config(restart=False)
         self.pg_set_sysctl_params(restart=False)

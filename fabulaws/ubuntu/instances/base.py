@@ -160,6 +160,17 @@ class UbuntuInstance(BaseAptMixin, EC2Instance):
 
     @property
     @uses_fabric
+    def server_memory(self):
+        """Returns total server memory, in MB"""
+        if not hasattr(self, '_server_memory'):
+            mem = run('cat /proc/meminfo|grep MemTotal')
+            while '  ' in mem:
+                mem = mem.replace('  ', ' ')
+            self._server_memory = int(mem.split(' ')[1])/1024
+        return self._server_memory
+
+    @property
+    @uses_fabric
     def ubuntu_release(self):
         if not hasattr(self, '_ubuntu_release'):
             self._ubuntu_release = Decimal(run('lsb_release -r -s').strip())
