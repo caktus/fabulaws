@@ -447,7 +447,6 @@ def _new(deployment, environment, role, avail_zone=None, count=1, **kwargs):
         executel(update_server_passwords, hosts=env.roledefs[role])
         executel(install_newrelic_sysmon, hosts=env.roledefs[role])
         executel(install_munin, hosts=env.roledefs[role])
-        executel(install_logstash, hosts=env.roledefs[role])
         if env.syslog_server:
             executel(install_rsyslog, hosts=env.roledefs[role])
         if role in ('worker', 'web'):
@@ -1208,7 +1207,6 @@ def promote_slave(index=0, override_servers={}):
     _setup_env(override_servers=override_servers)
     # make sure logging facilities know about the new db-master role
     executel(upload_newrelic_sysmon_conf, roles=['db-master'])
-    executel(install_logstash, roles=['db-master'])
     if env.syslog_server:
         executel(install_rsyslog, roles=['db-master'])
     print 'NOTE: you must now update the local_settings.py files on the web'\
@@ -1317,8 +1315,6 @@ def mount_encrypted(drive_letter='f'):
         # start everything back up
         supervisor('start', 'pgbouncer')
         supervisor('start', 'celery')
-    # make sure logstash is running after /secure is mounted
-    sudo('service logstash-agent restart')
     if env.syslog_server:
         sudo('service rsyslog restart')
 
@@ -1624,32 +1620,6 @@ def install_rsyslog():
     with settings(warn_only=True):
         sudo('useradd --system --groups adm syslog')
     sudo('service rsyslog restart')
-
-
-@task
-@parallel
-def install_logstash():
-    require('environment', provided_by=env.environments)
-    context = dict(env)
-    context['current_role'] = _current_roles()[0]
-    template = os.path.join(env.templates_dir, 'logstash.conf')
-    destination = os.path.join('/etc', 'logstash-%(environment)s.conf' % env)
-    _upload_template(template, destination, user='root', context=context)
-    template = os.path.join(env.templates_dir, 'logstash-agent.conf')
-    destination = '/etc/init/logstash-agent.conf'
-    _upload_template(template, destination, user='root', context=context)
-    with(cd('/tmp')):
-        if not exists('logstash.jar'):
-            sudo('apt-get install -y default-jre')
-            sudo('wget https://download.elasticsearch.org/logstash/logstash/logstash-1.1.7-monolithic.jar -O logstash.jar', user=env.deploy_user)
-            print 'Ignore any useradd or chgrp warnings below.'
-            with settings(warn_only=True):
-                sudo('useradd --system --groups adm logstash')
-                sudo('chgrp -R adm /var/log/rabbitmq')
-                sudo('chgrp -R adm /var/log/redis')
-                #sudo('adduser logstash redis')
-                #sudo('adduser logstash rabbitmq')
-    sudo('service logstash-agent restart')
 
 
 @task
