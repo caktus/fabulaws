@@ -81,7 +81,9 @@ def answer_sudo(cmd, *args, **kwargs):
         script.writelines([
             "import pexpect, sys\n",
             "child = pexpect.spawn('{0}')\n".format(cmd),
-            "child.logfile = sys.stdout\n"
+            # the following line may be enabled for debugging purposes, but
+            # will spill passphrases in plain text in log files
+            #"child.logfile = sys.stdout\n"
         ])
         for question, answer in answers:
             script.writelines([

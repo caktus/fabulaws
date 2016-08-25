@@ -474,7 +474,8 @@ def _new(deployment, environment, role, avail_zone=None, count=1, **kwargs):
         if env.awslogs_access_key_id:
             executel(install_awslogs, hosts=env.roledefs[role])
         if role in ('worker', 'web'):
-            executel(bootstrap, hosts=env.roledefs[role])
+            # allow overriding bootstrap command in project fabfile
+            executel('bootstrap', hosts=env.roledefs[role])
     finally:
         env.roledefs[role] = saved_roledefs
         env.servers[role] = saved_servers
@@ -1306,25 +1307,26 @@ def mount_encrypted(drive_letter='f'):
     answer_sudo('cryptsetup luksOpen {device} {crypt}'
                 ''.format(device=device, crypt=crypt),
                 answers=answers)
-    sudo('sudo mount /dev/mapper/{0} /secure'.format(crypt))
     current_server = _current_server()
+    if exists(current_server.mount_script):
+        sudo(current_server.mount_script)
+    else:
+        abort('attempting to mount encrypted partitions, but mount script {} '
+              'does not exist'.format(current_server.mount_script))
     if exists(current_server.default_swap_file):
         sudo('swapon %s' % current_server.default_swap_file)
-    sudo('sudo mount -o bind /secure/home/secure /home/secure' % env)
-    sudo('sudo mount -o bind /secure/tmp /tmp')
     # if we're being created from an image, make sure the hostname gets updated
     upload_newrelic_sysmon_conf()
     if 'db-master' in _current_roles() or 'db-slave' in _current_roles():
-        sudo('sudo mount -o bind /secure/var/lib/postgresql /var/lib/postgresql')
         sudo('service postgresql start')
     if 'cache' in _current_roles():
-        sudo('sudo mount -o bind /secure/var/lib/redis /var/lib/redis')
         sudo('service redis-server start', pty=False)
-        sudo('sudo mount -o bind /secure/var/lib/rabbitmq /var/lib/rabbitmq')
         sudo('service rabbitmq-server start', pty=False)
         print '*** WARNING: While immediately restarting a cache server works as expected, '\
               'stopping and later restarting does not. For more information, see docs/servers/maintenance.rst ***'
     if 'web' in _current_roles():
+        # supervisor may have failed to start during initial boot
+        sudo('service supervisor restart')
         # if we're being created from an image, make sure the hostname gets updated
         # in both the Nginx config and local_settings.py
         upload_nginx_conf()
@@ -1336,6 +1338,8 @@ def mount_encrypted(drive_letter='f'):
         supervisor('start', 'web')
         sudo('service nginx start')
     if 'worker' in _current_roles():
+        # supervisor may have failed to start during initial boot
+        sudo('service supervisor restart')
         # if we're being created from an image, make sure the hostname gets updated
         update_local_settings()
         # make sure our worker count is updated to reflect our CPU core count
@@ -1806,11 +1810,15 @@ def deploy_full(deployment_tag, environment, launch_config_name=None, num_web=2)
     # Temporarily adjust the group settings so that it will be forced to
     # create the desired number of new instances using the updated launch
     # configuration.
-    curr_minimum = group.min_size
-    # if desired is "0", use a sane default
+    # if desired is "0", use a sane default (e.g., if we were called by
+    # create_environment)
+    curr_minimum = group.min_size or num_web
     curr_desired = group.desired_capacity or num_web
     curr_servers = len(group.instances)
     group.min_size = group.desired_capacity = curr_servers + curr_desired
+    group.desired_capacity = group.min_size
+    # ensure max_size is at least as big as min_size
+    group.max_size = max(group.max_size, group.min_size)
     group.update()
     print ("Temporarily updated the autoscaling group's minimum/desired "
            "instance capacity to {0}".format(curr_servers + curr_desired))
