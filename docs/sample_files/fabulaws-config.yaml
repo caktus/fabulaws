@@ -20,7 +20,6 @@ database_host: localhost
 database_user: dbuser
 home: /home/myproject/
 python: /usr/bin/python2.7
-log_host:
 
 ## LOCAL / PROJECT SETTINGS ##
 disable_known_hosts: true
@@ -39,12 +38,24 @@ static_html:
 localsettings_template: deployment/templates/local_settings.py
 logstash_config: deployment/templates/logstash.conf
 
+# Set gelf_log_host to the host of your Graylog2 server (or other GELF log
+# receiver)
+# gelf_log_host: hostname
+
 # Set syslog_server to a "hostname:port" (quote marks required due
 # to the ":" in there) and server logs will be forwarded there using
 # syslog protocol.  "hostname:port" could be e.g. papertrail or a
 # similar service.
 # (You might want to set this in fabsecrets instead of here.)
 # syslog_server: "hostname:port"
+
+# Set awslogs_access_key_id to the AWS_ACCESS_KEY_ID of the user with
+# permissions to create log groups, log streams, and log events. For help
+# setting up this role, see:
+# http://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/QuickStartEC2Instance.html
+# NOTE: You will also need to set awslogs_secret_access_key in your
+# fabsecrets_<environment>.py file
+# awslogs_access_key_id: AK....
 
 backup_key_fingerprint:
 vcs_cmd: git # or hg
