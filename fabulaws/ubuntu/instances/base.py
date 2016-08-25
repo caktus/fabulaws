@@ -29,6 +29,7 @@ class UbuntuInstance(BaseAptMixin, EC2Instance):
     fs_type = 'ext3'
     fs_encrypt = False
     ubuntu_mirror = None
+    mount_script = '/mount-deferred.sh'
 
     def __init__(self, *args, **kwargs):
         self.volumes = []
@@ -76,6 +77,32 @@ class UbuntuInstance(BaseAptMixin, EC2Instance):
         return device
 
     @uses_fabric
+    def _mount_and_persist(self, device, mount_point, fs_type=None, opts=None):
+        mount_cmd = ' '.join([
+            'mount',
+            '-o {}'.format(opts) if opts else '',
+            '-t {}'.format(fs_type) if fs_type else '',
+            device,
+            mount_point,
+        ])
+        fstab_entry = ' '.join([
+            device,
+            mount_point,
+            fs_type if fs_type else self.fs_type,
+            opts if opts else 'defaults',
+            '0',
+            '0',
+        ])
+        sudo(mount_cmd)
+        if self.fs_encrypt:
+            if not files.exists(self.mount_script):
+                files.append(self.mount_script, "#!/bin/sh", use_sudo=True)
+                sudo('chmod a+x {}'.format(self.mount_script))
+            files.append(self.mount_script, mount_cmd, use_sudo=True)
+        else:
+            files.append('/etc/fstab', fstab_entry, use_sudo=True)
+
+    @uses_fabric
     def _format_volume(self, device, mount_point, passwd=None):
         """
         Creates an EBS volume of size ``vol_size``, manifests the device at
@@ -86,9 +113,7 @@ class UbuntuInstance(BaseAptMixin, EC2Instance):
             device = self._encrypt_device(device, passwd)
         sudo('mkfs.{0} {1}'.format(self.fs_type, device))
         sudo('mkdir {0}'.format(mount_point))
-        sudo('mount {0} {1}'.format(device, mount_point))
-        files.append('/etc/fstab', '{0} {1} {2} defaults 0 0'
-                     ''.format(device, mount_point, self.fs_type), use_sudo=True)
+        self._mount_and_persist(device, mount_point)
 
     def _set_volume_tags(self, vol, device, tags=None):
         if tags is None:
@@ -242,9 +267,7 @@ class UbuntuInstance(BaseAptMixin, EC2Instance):
             else:
                 sudo('mkdir -p {0}'.format(bound_app_dir))
             sudo('mkdir -p {0}'.format(app_dir))
-            sudo('mount -o bind {0} {1}'.format(bound_app_dir, app_dir))
-            files.append('/etc/fstab', '{0} {1} none bind 0 0'
-                         ''.format(bound_app_dir, app_dir), use_sudo=True)
+            self._mount_and_persist(bound_app_dir, app_dir, fs_type='none', opts='bind')
 
     def cleanup(self):
         """
