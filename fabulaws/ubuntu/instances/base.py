@@ -164,9 +164,7 @@ class UbuntuInstance(BaseAptMixin, EC2Instance):
         """Returns total server memory, in MB"""
         if not hasattr(self, '_server_memory'):
             mem = run('cat /proc/meminfo|grep MemTotal')
-            while '  ' in mem:
-                mem = mem.replace('  ', ' ')
-            self._server_memory = int(mem.split(' ')[1])/1024
+            self._server_memory = int(mem.split()[1]) / 1024
         return self._server_memory
 
     @property
