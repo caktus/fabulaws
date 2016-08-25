@@ -1344,7 +1344,8 @@ def mount_encrypted(drive_letter='f'):
         supervisor('start', 'pgbouncer')
         supervisor('start', 'celery')
     # make sure logstash is running after /secure is mounted
-    sudo('service logstash-agent restart')
+    if env.gelf_log_host:
+        sudo('service logstash-agent restart')
     if env.syslog_server:
         sudo('service rsyslog restart')
 
