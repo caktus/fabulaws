@@ -157,16 +157,6 @@ class BaseInstance(FirewallMixin, UbuntuInstance):
         for _, key_file in self._get_users():
             files.append(file_, open(key_file).read().strip(), use_sudo=True)
 
-    @property
-    @uses_fabric
-    def server_memory(self):
-        """Returns total server memory, in MB"""
-        total = run('cat /proc/meminfo|grep MemTotal')
-        while '  ' in total:
-            total = total.replace('  ', ' ')
-        total = int(total.split(' ')[1])
-        return total/1024
-
     def setup(self):
         """
         Creates sysadmin users and secures the required directories.
