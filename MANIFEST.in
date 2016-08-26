@@ -1,1 +1,2 @@
 include fabulaws/library/wsgiautoscale/templates/*
+include fabulaws/library/wsgiautoscale/templates/awslogs/*
