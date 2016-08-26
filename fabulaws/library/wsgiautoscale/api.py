@@ -1348,11 +1348,14 @@ def mount_encrypted(drive_letter='f'):
         # start everything back up
         supervisor('start', 'pgbouncer')
         supervisor('start', 'celery')
-    # make sure logstash is running after /secure is mounted
+    # make sure logging services are running and notice any now-present log
+    # files after the encrypted partition has been mounted
     if env.gelf_log_host:
         sudo('service logstash-agent restart')
     if env.syslog_server:
         sudo('service rsyslog restart')
+    if env.awslogs_access_key_id:
+        sudo('service awslogs restart')
 
 
 ###### TESTING and USAGE EXAMPLES ######
