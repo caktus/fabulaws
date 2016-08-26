@@ -201,7 +201,7 @@ def _setup_env(deployment_tag=None, environment=None, override_servers={}):
         env.production_environments = ['production']
     if 'use_basic_auth' not in env:
         env.use_basic_auth = {}
-    env.setdefault('extra_log_files', [])
+    env.setdefault('extra_log_files', {})
     env.log_files = [
         ('munin', '/var/log/munin/munin-node.log', '%Y/%m/%d-%H:%M:%S'),
         ('postgresql', '/var/log/postgresql/postgresql-*.log', '%Y-%m-%d %H:%M:%S'),
