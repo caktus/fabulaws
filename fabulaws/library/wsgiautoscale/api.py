@@ -192,7 +192,8 @@ def _setup_env(deployment_tag=None, environment=None, override_servers={}):
         print(red("Warning: Setting log_host is deprecated. Set gelf_log_host "
                   "instead".format(environment=env.environment),
               bold=True))
-        env.gelf_log_host = env.log_host
+        if env.log_host and not env.gelf_log_host:
+            env.gelf_log_host = env.log_host
     env.setdefault('syslog_server', False)
     env.setdefault('awslogs_access_key_id', False)
     if 'production_environments' not in env:
