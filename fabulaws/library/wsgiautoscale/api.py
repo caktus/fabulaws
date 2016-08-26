@@ -187,12 +187,43 @@ def _setup_env(deployment_tag=None, environment=None, override_servers={}):
     for i, db in enumerate(env.all_databases):
         db.stunnel_port = 7432 + i
     env.db_settings = env.get('db_settings', {})
+    env.setdefault('gelf_log_host', False)
+    if hasattr(env, 'log_host'):
+        print(red("Warning: Setting log_host is deprecated. Set gelf_log_host "
+                  "instead".format(environment=env.environment),
+              bold=True))
+        if env.log_host and not env.gelf_log_host:
+            env.gelf_log_host = env.log_host
     env.setdefault('syslog_server', False)
+    env.setdefault('awslogs_access_key_id', False)
     if 'production_environments' not in env:
         # Backwards compatibility
         env.production_environments = ['production']
     if 'use_basic_auth' not in env:
         env.use_basic_auth = {}
+    env.setdefault('extra_log_files', {})
+    env.log_files = [
+        ('munin', '/var/log/munin/munin-node.log', '%Y/%m/%d-%H:%M:%S'),
+        ('postgresql', '/var/log/postgresql/postgresql-*.log', '%Y-%m-%d %H:%M:%S'),
+        ('redis', '/var/log/redis/redis*.log', '%d %b %H:%M:%S'),
+        ('rabbitmq', '/var/log/rabbitmq/rabbit*.log', '%d-%b-%Y::%H:%M:%S'),
+        ('nginx', os.path.join(env.log_dir, 'error.log'), '%Y/%m/%d %H:%M:%S'),
+        ('gunicorn', os.path.join(env.log_dir, 'gunicorn.log'), '%Y-%m-%d %H:%M:%S'),
+        ('pgbouncer', os.path.join(env.log_dir, 'pgbouncer.log'), '%Y-%m-%d %H:%M:%S'),
+        ('stunnel', os.path.join(env.log_dir, 'stunnel.log'), '%Y-%m-%d %H:%M:%S'),
+        ('celery', os.path.join(env.log_dir, 'celerycam.log'), '%Y-%m-%d %H:%M:%S'),
+        ('celery', os.path.join(env.log_dir, 'celerybeat.log'), '%Y-%m-%d %H:%M:%S'),
+    ]
+    # add celery logs, based on the workers configured in fabulaws-config.yaml
+    env.log_files += [
+        ('celery', os.path.join(env.log_dir, 'celeryd-%s.log' % w), '%Y-%m-%d %H:%M:%S')
+         for w in env.celery_workers.keys()
+    ]
+    # add any extra_log_files configured in fabulaws-config.yaml
+    env.log_files += [
+        (args['tag'], filepath, args.get('date_format', ''))
+        for filepath, args in env.extra_log_files.items()
+    ]
 
 
 def _read_local_secrets():
@@ -447,9 +478,12 @@ def _new(deployment, environment, role, avail_zone=None, count=1, **kwargs):
         executel(update_server_passwords, hosts=env.roledefs[role])
         executel(install_newrelic_sysmon, hosts=env.roledefs[role])
         executel(install_munin, hosts=env.roledefs[role])
-        executel(install_logstash, hosts=env.roledefs[role])
+        if env.gelf_log_host:
+            executel(install_logstash, hosts=env.roledefs[role])
         if env.syslog_server:
             executel(install_rsyslog, hosts=env.roledefs[role])
+        if env.awslogs_access_key_id:
+            executel(install_awslogs, hosts=env.roledefs[role])
         if role in ('worker', 'web'):
             # allow overriding bootstrap command in project fabfile
             executel('bootstrap', hosts=env.roledefs[role])
@@ -1209,9 +1243,12 @@ def promote_slave(index=0, override_servers={}):
     _setup_env(override_servers=override_servers)
     # make sure logging facilities know about the new db-master role
     executel(upload_newrelic_sysmon_conf, roles=['db-master'])
-    executel(install_logstash, roles=['db-master'])
+    if env.gelf_log_host:
+        executel(install_logstash, roles=['db-master'])
     if env.syslog_server:
         executel(install_rsyslog, roles=['db-master'])
+    if env.awslogs_access_key_id:
+        executel(install_awslogs, roles=['db-master'])
     print 'NOTE: you must now update the local_settings.py files on the web'\
           'servers to point to the new master DB ({0}).'.format(slave.hostname)
 
@@ -1321,10 +1358,14 @@ def mount_encrypted(drive_letter='f'):
         # start everything back up
         supervisor('start', 'pgbouncer')
         supervisor('start', 'celery')
-    # make sure logstash is running after /secure is mounted
-    sudo('service logstash-agent restart')
+    # make sure logging services are running and notice any now-present log
+    # files after the encrypted partition has been mounted
+    if env.gelf_log_host:
+        sudo('service logstash-agent restart')
     if env.syslog_server:
         sudo('service rsyslog restart')
+    if env.awslogs_access_key_id:
+        sudo('service awslogs restart')
 
 
 ###### TESTING and USAGE EXAMPLES ######
@@ -1614,9 +1655,9 @@ def install_rsyslog():
     require('environment', provided_by=env.environments)
     context = dict(env)
     context['current_role'] = _current_roles()[0]
-    template = os.path.join(env.templates_dir, 'rsyslog.conf')
     destination = os.path.join('/etc', 'rsyslog.d/%(project)s-%(environment)s.conf' % env)
-    _upload_template(template, destination, user='root', context=context)
+    _upload_template('rsyslog.conf', destination, user='root', context=context,
+                     use_jinja=True, template_dir=env.templates_dir)
 
     output = run('rsyslogd -v')
     if 'rsyslogd 8' not in output:
@@ -1633,12 +1674,15 @@ def install_rsyslog():
 @task
 @parallel
 def install_logstash():
+    """
+    Install logstash agent. Requires an Upstart-based OS (e.g., Ubuntu 14.04).
+    """
     require('environment', provided_by=env.environments)
     context = dict(env)
     context['current_role'] = _current_roles()[0]
-    template = os.path.join(env.templates_dir, 'logstash.conf')
     destination = os.path.join('/etc', 'logstash-%(environment)s.conf' % env)
-    _upload_template(template, destination, user='root', context=context)
+    _upload_template('logstash.conf', destination, user='root', context=context,
+                     use_jinja=True, template_dir=env.templates_dir)
     template = os.path.join(env.templates_dir, 'logstash-agent.conf')
     destination = '/etc/init/logstash-agent.conf'
     _upload_template(template, destination, user='root', context=context)
@@ -1654,6 +1698,38 @@ def install_logstash():
                 #sudo('adduser logstash redis')
                 #sudo('adduser logstash rabbitmq')
     sudo('service logstash-agent restart')
+
+
+@task
+@parallel
+def install_awslogs():
+    """
+    Install awslogs agent. Requires a systemd-based OS (e.g., Ubuntu 16.04+).
+    """
+    require('environment', provided_by=env.environments)
+    _load_passwords(['awslogs_secret_access_key'])
+    context = dict(env)
+    context['current_role'] = _current_roles()[0]
+    # upload the config for the AWS CloudWatch Logs agent itself
+    destination = '/tmp/awslogs.conf'
+    _upload_template('awslogs/awslogs.conf', destination, user='root', context=context,
+                     use_jinja=True, template_dir=env.templates_dir)
+    # add our custom systemd init script
+    template = os.path.join(env.templates_dir, 'awslogs', 'awslogs.service')
+    destination = '/etc/init/awslogs.service'
+    _upload_template(template, destination, user='root', context=context)
+    with(cd('/tmp')):
+        sudo('curl https://s3.amazonaws.com/aws-cloudwatch/downloads/latest/awslogs-agent-setup.py -O', user=env.deploy_user)
+        sudo('python awslogs-agent-setup.py --region us-east-1 --non-interactive --configfile awslogs.conf')
+        sudo('rm awslogs.conf')
+    # upload AWS credentials
+    template = os.path.join(env.templates_dir, 'awslogs', 'aws.conf')
+    destination = '/var/awslogs/etc/aws.conf'
+    _upload_template(template, destination, user='root', context=context)
+    # enable & start the service
+    sudo('systemctl enable awslogs.service')
+    sudo('systemctl start awslogs.service')
+    sudo('service awslogs restart')
 
 
 @task
