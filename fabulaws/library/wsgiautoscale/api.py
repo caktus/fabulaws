@@ -201,6 +201,7 @@ def _setup_env(deployment_tag=None, environment=None, override_servers={}):
         env.production_environments = ['production']
     if 'use_basic_auth' not in env:
         env.use_basic_auth = {}
+    env.setdefault('extra_log_files', [])
     env.log_files = [
         ('munin', '/var/log/munin/munin-node.log', '%Y/%m/%d-%H:%M:%S'),
         ('postgresql', '/var/log/postgresql/postgresql-*.log', '%Y-%m-%d %H:%M:%S'),
@@ -212,8 +213,17 @@ def _setup_env(deployment_tag=None, environment=None, override_servers={}):
         ('stunnel', os.path.join(env.log_dir, 'stunnel.log'), '%Y-%m-%d %H:%M:%S'),
         ('celery', os.path.join(env.log_dir, 'celerycam.log'), '%Y-%m-%d %H:%M:%S'),
         ('celery', os.path.join(env.log_dir, 'celerybeat.log'), '%Y-%m-%d %H:%M:%S'),
-    ] + [('celery', os.path.join(env.log_dir, 'celeryd-%s.log' % w), '%Y-%m-%d %H:%M:%S')
-         for w in env.celery_workers.keys()]
+    ]
+    # add celery logs, based on the workers configured in fabulaws-config.yaml
+    env.log_files += [
+        ('celery', os.path.join(env.log_dir, 'celeryd-%s.log' % w), '%Y-%m-%d %H:%M:%S')
+         for w in env.celery_workers.keys()
+    ]
+    # add any extra_log_files configured in fabulaws-config.yaml
+    env.log_files += [
+        (args['tag'], filepath, args.get('date_format', ''))
+        for filepath, args in env.extra_log_files.items()
+    ]
 
 
 def _read_local_secrets():

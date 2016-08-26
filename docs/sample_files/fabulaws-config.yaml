@@ -57,6 +57,13 @@ logstash_config: deployment/templates/logstash.conf
 # fabsecrets_<environment>.py file
 # awslogs_access_key_id: AK....
 
+# Set extra_log_files to a list of log files you want to monitor, in addition
+# to the default logs monitored by FabulAWS itself:
+# extra_log_files:
+#   /path/to/file:
+#     tag: mytag
+#     date_format: '%Y-%m-%d %H:%M:%S'
+
 backup_key_fingerprint:
 vcs_cmd: git # or hg
 latest_changeset_cmd: git rev-parse HEAD # hg id -i # or git rev-parse HEAD
