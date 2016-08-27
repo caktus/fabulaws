@@ -37,20 +37,14 @@ project and updated in `fabulaws-config.yml`.
    * TCP port 6379 from myproject-web-sg
    * TCP port 6379 from myproject-worker-sg
 * **myproject-web-sg**
-
-  * For EC2-classic:
-
-    * TCP port 80 from amazon-elb-sg
-    * TCP port 443 from amazon-elb-sg
-
-  * For VPC-based AWS accounts:
-
-    * TCP port 80 from myproject-web-sg
-    * TCP port 443 from myproject-web-sg
-
+   * For EC2-classic:
+      * TCP port 80 from amazon-elb/amazon-elb-sg
+      * TCP port 443 from amazon-elb/amazon-elb-sg
+   * For VPC-based AWS accounts:
+      * TCP port 80 from myproject-web-sg
+      * TCP port 443 from myproject-web-sg
 * **myproject-worker-sg**
    * (used only as a source - requires no additional firewall rules)
-
 * **myproject-incoming-web-sg**
    * TCP port 80 from any address
    * TCP port 443 from any address

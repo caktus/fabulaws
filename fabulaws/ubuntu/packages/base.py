@@ -20,7 +20,7 @@ class BaseAptMixin(object):
     def install_packages(self, packages):
         """Install apt packages from a list."""
 
-        sudo(u"apt-get install -y %s" % u" ".join(packages))
+        sudo(u"apt-get -qq -y install %s" % u" ".join(packages))
 
     @uses_fabric
     def install_packages_from_file(self, file_name):
@@ -31,15 +31,15 @@ class BaseAptMixin(object):
     @uses_fabric
     def update_apt_sources(self):
         """Update apt source."""
-
-        sudo(u"apt-get update")
+        with settings(warn_only=True):
+            sudo(u"apt-get -qq update || apt-get -qq update")
 
     @uses_fabric
     def upgrade_packages(self):
         """Safe upgrade of all packages."""
 
         self.update_apt_sources()
-        sudo(u"apt-get upgrade -y")
+        sudo(u"apt-get -qq -y upgrade")
 
     @uses_fabric
     def add_ppa(self, name):

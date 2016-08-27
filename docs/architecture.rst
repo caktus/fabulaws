@@ -2,7 +2,7 @@ Server Architecture
 ===================
 
 Prior to creating any new servers or deploying new code using FabulAWS, it's
-helpful to have an overall understand of the different components of the
+helpful to have an overall understanding of the different components of the
 server architecture.
 
 FabulAWS creates 5 different types of servers, plus an Amazon Elastic Load
@@ -91,5 +91,5 @@ SSL Certificates
 SSL certifcates for the production and staging domains can be updated and
 managed via the Elastic Load Balancers in the AWS console.  Internally, the
 load balancer communicates with the web instances over SSL using the default
-self-signed certificate that's created on a standard Ubuntu installation 
+self-signed certificate that's created on a standard Ubuntu installation
 (``/etc/ssl/certs/ssl-cert-snakeoil.pem``).
