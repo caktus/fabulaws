@@ -1296,6 +1296,9 @@ def update_server_passwords():
 def mount_encrypted(drive_letter='f'):
     """mount the luks encrypted partition and start the services there"""
     require('environment', provided_by=env.environments)
+    if not env.hosts:
+        print 'no hosts found; exiting cleanly'
+        return
     device = '/dev/sd' + drive_letter
     crypt = 'crypt-sd' + drive_letter
     if not exists(device):
