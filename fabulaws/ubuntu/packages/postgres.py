@@ -143,11 +143,11 @@ class PostgresMixin(AptMixin):
         # basic resources dynamically just in case
         return {
             # 25% of available RAM, up to 8GB
-            'shared_buffers': '%sMB' % int(max(mem * 0.25, 8096)),
+            'shared_buffers': '%sMB' % int(min(mem * 0.25, 8096)),
             # (2*RAM)/max_connections
             'work_mem': '%sMB' % int((mem * 2) / max_connections),
             # RAM/16 up to 1GB; high values aren't that helpful
-            'maintenance_work_mem': '%sMB' % int(max(mem / 16, 1024)),
+            'maintenance_work_mem': '%sMB' % int(min(mem / 16, 1024)),
             # between 50-75%, should equal free + cached values in `top`
             'effective_cache_size': '%sMB' % int(mem * 0.7),
         }
