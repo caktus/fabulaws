@@ -448,7 +448,8 @@ def _new(deployment, environment, role, avail_zone=None, count=1, **kwargs):
         print 'Note: Assigning random availability zone "{0}"'.format(avail_zone)
     placement = ''.join([env.region, avail_zone])
     _setup_env()
-    password_names = env.password_names
+    # copy the original so we don't accidentally store luks_passphrase on the server
+    password_names = list(env.password_names)
     if env.instance_settings['fs_encrypt']:
         password_names.append('luks_passphrase')
     _load_passwords(password_names)
