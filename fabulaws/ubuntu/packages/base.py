@@ -39,7 +39,11 @@ class BaseAptMixin(object):
         """Safe upgrade of all packages."""
 
         self.update_apt_sources()
-        sudo(u"apt-get -qq -y upgrade")
+        # make sure apt/dpkg keep our installed config files, if any, and don't
+        # prompt for user input:
+        sudo(u'export DEBIAN_FRONTEND=noninteractive ; apt-get dist-upgrade -y '
+             '-o Dpkg::Options::="--force-confdef" '
+             '-o Dpkg::Options::="--force-confold" --force-yes')
 
     @uses_fabric
     def add_ppa(self, name):
@@ -59,7 +63,7 @@ class BaseAptMixin(object):
             key_server = 'keyserver.ubuntu.com'
         if key_name:
             sudo('apt-key adv --keyserver {0} --recv {1}'.format(key_server,
-                                                                  key_name))
+                                                                 key_name))
         self.update_apt_sources()
 
     @uses_fabric
