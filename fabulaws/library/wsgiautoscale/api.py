@@ -655,7 +655,7 @@ def _upload_template(filename, destination, **kwargs):
 @task
 @parallel
 @roles('web', 'worker')
-def upload_supervisor_conf():
+def upload_supervisor_conf(run_update=True):
     """Upload Supervisor configuration from the template."""
 
     require('environment', provided_by=env.environments)
@@ -670,7 +670,8 @@ def upload_supervisor_conf():
     with settings(warn_only=True):
         sudo('rm /etc/supervisor/conf.d/%(project)s-*.conf' % env)
     sudo('ln -s /%(home)s/services/supervisor/%(environment)s.conf /etc/supervisor/conf.d/%(project)s-%(environment)s.conf' % env)
-    supervisor_command('update')
+    if run_update:
+        supervisor_command('update')
 
 
 @task
@@ -1343,7 +1344,7 @@ def mount_encrypted(drive_letter='f'):
         upload_nginx_conf()
         update_local_settings()
         # make sure our worker count is updated to reflect our CPU core count
-        upload_supervisor_conf()
+        upload_supervisor_conf(run_update=False)
         # supervisor may have failed to start during initial boot
         # note: this will auto-start services marked as such in the supervisor config
         sudo('service supervisor restart')
@@ -1355,7 +1356,7 @@ def mount_encrypted(drive_letter='f'):
         # if we're being created from an image, make sure the hostname gets updated
         update_local_settings()
         # make sure our worker count is updated to reflect our CPU core count
-        upload_supervisor_conf()
+        upload_supervisor_conf(run_update=False)
         # supervisor may have failed to start during initial boot
         sudo('service supervisor restart')
         # start everything back up
