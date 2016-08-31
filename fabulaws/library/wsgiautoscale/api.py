@@ -1338,25 +1338,26 @@ def mount_encrypted(drive_letter='f'):
         print '*** WARNING: While immediately restarting a cache server works as expected, '\
               'stopping and later restarting does not. For more information, see docs/servers/maintenance.rst ***'
     if 'web' in _current_roles():
-        # supervisor may have failed to start during initial boot
-        sudo('service supervisor restart')
         # if we're being created from an image, make sure the hostname gets updated
         # in both the Nginx config and local_settings.py
         upload_nginx_conf()
         update_local_settings()
         # make sure our worker count is updated to reflect our CPU core count
         upload_supervisor_conf()
-        # start everything back up
+        # supervisor may have failed to start during initial boot
+        # note: this will auto-start services marked as such in the supervisor config
+        sudo('service supervisor restart')
+        # start everything back up, if not already started by 'supervisor restart'
         supervisor('start', 'pgbouncer')
         supervisor('start', 'web')
         sudo('service nginx start')
     if 'worker' in _current_roles():
-        # supervisor may have failed to start during initial boot
-        sudo('service supervisor restart')
         # if we're being created from an image, make sure the hostname gets updated
         update_local_settings()
         # make sure our worker count is updated to reflect our CPU core count
         upload_supervisor_conf()
+        # supervisor may have failed to start during initial boot
+        sudo('service supervisor restart')
         # start everything back up
         supervisor('start', 'pgbouncer')
         supervisor('start', 'celery')
