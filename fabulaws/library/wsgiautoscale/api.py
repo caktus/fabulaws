@@ -40,6 +40,7 @@ from .servers import (CacheInstance, DbMasterInstance,
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
+
 def _reset_hosts():
     """Reset the roledefs and servers environment variables to their default values."""
     # roledefs must be defined, even with empty lists, for Fabric to run
@@ -69,6 +70,7 @@ for key, value in env.static_html.items():
 for key in ['ssh_keys', 'localsettings_template']:
     new_path = os.path.join(os.path.abspath(os.path.dirname(config_file)), getattr(env, key))
     setattr(env, key, new_path)
+
 
 def _get_servers(deployment, environment, role, instance_ids=None):
     """
@@ -1146,9 +1148,12 @@ def add_all_to_elb():
     for elb_name in env.elb_names:
         for server in servers:
             server.add_to_elb(elb_name)
+    # wait for the servers to be added in a separate loop, so AWS can wait for all
+    # instances to become healthy at once
+    for elb_name in env.elb_names:
         for server in servers:
             state = server.wait_for_elb_state(elb_name, 'InService')
-            print 'Instance %s now in state %s' % (server.instance.id, state)
+            print 'Instance %s now in state %s in ELB %s' % (server.instance.id, state, elb_name)
 
 
 ###### DATABASE MAINTENANCE ######
@@ -1798,21 +1803,16 @@ def create_launch_config_for_deployment(deployment_tag, environment):
 
 
 @task
-def deploy_full(deployment_tag, environment, launch_config_name=None, num_web=2):
+def deploy_full(deployment_tag, environment, launch_config_name=None, num_web=2,
+                show_upgrade=True, answer=None):
     """Autoscaling replacement for deploy_full_without_autoscaling.
 
     Performs a full deployment of new code. Users who visit the site during
     the critical parts of the upgrade will be shown a 503 error message.
     """
+    show_upgrade = bool(int(show_upgrade))
     _check_local_deps()
-    executel(environment, deployment_tag)
-
-    if _is_production(env.environment):
-        answer = prompt("Are you sure you want to run a deploy_full in production? "
-                        "This will cause downtime! (y/N)? ",
-                        default='n')
-        if not answer.lower().startswith('y'):
-            abort("Not running deploy_full on production")
+    executel(environment, deployment_tag, answer=answer)
 
     if not launch_config_name:
         launch_config = _create_launch_config()
@@ -1877,9 +1877,10 @@ def deploy_full(deployment_tag, environment, launch_config_name=None, num_web=2)
     # Reload the environment to add the new web servers.
     executel(environment, deployment_tag)
 
-    # Show the upgrade message on all servers, new and old, so that no user
-    # will be able to access the site.
-    executel(begin_upgrade)
+    if show_upgrade:
+        # Show the upgrade message on all servers, new and old, so that no user
+        # will be able to access the site.
+        executel(begin_upgrade)
 
     # make sure we deploy the same changeset as was used in the launch config
     changeset = launch_config.name.split('_')[-1]
@@ -1928,8 +1929,9 @@ def deploy_full(deployment_tag, environment, launch_config_name=None, num_web=2)
     # Reload the environment to remove the old web servers.
     executel(environment, deployment_tag)
 
-    # Remove the upgrade message so that the users can access the site again.
-    executel(end_upgrade)
+    if show_upgrade:
+        # Remove the upgrade message so that the users can access the site again.
+        executel(end_upgrade)
 
 
 @task
@@ -1942,26 +1944,8 @@ def deploy_serial(deployment_tag, environment, launch_config_name=None, answer=N
     off old instances one by one, and allowing the autoscaling group to bring
     up new instances as needed.
     """
-    _check_local_deps()
-    executel(environment, deployment_tag, answer=answer)
-
-    if not launch_config_name:
-        launch_config = _create_launch_config()
-    else:
-        launch_config = _get_launch_config(launch_config_name)
-
-    # make sure we deploy the same changeset as was used in the launch config
-    changeset = launch_config.name.split('_')[-1]
-    executel(deploy_worker, changeset=changeset)
-
-    # Update the existing autoscaling group to use the new launch config.
-    autoscaling_group = _update_autoscaling_group(launch_config)
-
-    # Bring down each old instance in turn and allow the autoscaling group to
-    # recreate it (if needed) using the new launch config.
-    _refresh_instances(autoscaling_group)
-
-    print "Completed deployment with autoscaling."
+    deploy_full(deployment_tag, environment, launch_config_name=launch_config_name,
+                answer=answer, show_upgrade=False)
 
 
 def _ag_instances(autoscaling_group, current=True):
@@ -1987,70 +1971,6 @@ def _ag_inst_states(autoscaling_group):
             inst_id = inst.instance_id
             instances[(elb_name, inst_id)] = _elb_state(elb_name, inst_id)
     return instances
-
-
-def _refresh_instances(autoscaling_group):
-    """
-    Brings down each non-current instance in turn and allows the autoscaling
-    group to recreate it (if needed) using the current configuration.
-    """
-    conn = AutoScaleConnection()
-
-    # NOTE: It takes longer for the load balancer(s) to finish bringing down/up
-    # instances than it does for the autoscaling group, so for each server we
-    # check the status according to the load balancer(s) before moving on to the
-    # next.
-    max_inst_create_time = 180 # seconds
-    check_period = 5 # seconds
-    old_instances = _ag_instances(autoscaling_group, current=False)
-    print "Found {0} old instances.".format(len(old_instances))
-    for old_instance in old_instances:
-        print "Starting to bring down old instance with id {0}.".format(
-               old_instance.instance_id)
-        conn.set_instance_health(old_instance.instance_id, "Unhealthy")
-        for elb_name in env.elb_names:
-            print "Waiting for {0} to be out of service with load balancer {1}. "\
-                  "Note: ignore any 'InvalidInstance' errors.".format(
-                   old_instance.instance_id, elb_name)
-            _wait_for_elb_state(elb_name, old_instance.instance_id,
-                                "OutOfService")
-        print "{0} is now out of service. Waiting for autoscaling group...".format(
-               old_instance.instance_id)
-        time.sleep(45)  # Wait for the autoscaling group to catch up.
-                        # This time amount is just a guess - it seems to take
-                        # that long for the group to decide whether or not to
-                        # make a new instance, and the load balancer(s) to see it.
-                        # Effective 5/21/15, this was changed from 30 to 45 because
-                        # 30 didn't seem to be long enough.
-        # If this is the first instance we're adding, make sure at least one new
-        # one comes up before continuing.
-        for i in range(max_inst_create_time/check_period):
-            time.sleep(check_period)
-            autoscaling_group = _get_autoscaling_group()  # Refresh instances list.
-            # Wait for a new instance, if any, to be fully brought up.
-            # (If we had more-than-the minimum instances before the upgrade, then
-            # the autoscaling group might not bring up another immediately.)
-            print "Checking for any new instances to be in service..."
-            if _ag_instances(autoscaling_group, current=True):
-                break
-        else:
-            print "WARNING: no new instances detected after %s seconds" % max_inst_create_time
-        # Wait for all instances currently known to the auto scaling group to be in
-        # service with each load balancer. We may get 400 Bad Request / Could not find
-        # instance responses while this is in process.
-        inst_states = _ag_inst_states(autoscaling_group)
-        while not all([(s == 'InService') for s in inst_states.values()]):
-            print "Waiting for the following instances to be in service:"
-            for k, v in inst_states.items():
-                if v != 'InService':
-                    print '    %s: %s' % k # k is tuple of (elb_name, instance_id)
-            time.sleep(10)
-            # refresh instance states
-            autoscaling_group = _get_autoscaling_group()  # Refresh instances list.
-            inst_states = _ag_inst_states(autoscaling_group)
-        print ("Finished bringing down old instance with id {0}.".format(
-               old_instance.instance_id))
-    print "All old instances have been terminated."
 
 
 def _elb_state(elb_name, instance_id):
