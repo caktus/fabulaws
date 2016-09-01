@@ -578,7 +578,7 @@ def _create_many(servers):
 
 @task
 def new(deployment, environment, role, avail_zone=None, count=1):
-    _retry_new(deployment, environment, role, avail_zone, count)
+    _new(deployment, environment, role, avail_zone, count)
 
 
 def vcs(cmd, args=None):
