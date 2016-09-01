@@ -507,6 +507,10 @@ def _new(deployment, environment, role, avail_zone=None, count=1, terminate_on_f
 
 
 def _retry_new(*args, **kwargs):
+    """
+    Retries instance creation up to three times (or ``tries``, if supplied).
+    Helps circumvent temporary network failures (e.g., while running apt-get).
+    """
     tries = kwargs.pop('tries', 3)
     class RetryFailure(Exception):
         pass
