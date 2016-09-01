@@ -469,6 +469,8 @@ def _new(deployment, environment, role, avail_zone=None, count=1, terminate_on_f
         try:
             server.setup()
         except:
+            logger.exception('server.setup() failed. tags=%s; terminate_on_failure=%s.'
+                             '' % (tags, terminate_on_failure))
             if terminate_on_failure:
                 server.terminate()
             raise
@@ -493,6 +495,8 @@ def _new(deployment, environment, role, avail_zone=None, count=1, terminate_on_f
             # allow overriding bootstrap command in project fabfile
             executel('bootstrap', hosts=env.roledefs[role])
     except:
+        logger.exception('server post-setup failed. tags=%s; terminate_on_failure=%s.'
+                         '' % (tags, terminate_on_failure))
         if terminate_on_failure:
             for server in servers:
                 server.terminate()
@@ -506,20 +510,23 @@ def _new(deployment, environment, role, avail_zone=None, count=1, terminate_on_f
     return servers
 
 
+class RetryFailure(Exception):
+    """To be used as env.abort_exception in Fabric."""
+    pass
+
+
 def _retry_new(*args, **kwargs):
     """
     Retries instance creation up to three times (or ``tries``, if supplied).
     Helps circumvent temporary network failures (e.g., while running apt-get).
     """
     tries = kwargs.pop('tries', 3)
-    class RetryFailure(Exception):
-        pass
     with settings(abort_exception=RetryFailure, abort_on_prompts=True):
         for i in range(tries-1):
             try:
                 return _new(*args, terminate_on_failure=True, **kwargs)
             except RetryFailure:
-                print 'Server creation failed; retrying...'
+                print '\n\n **** Server creation failed; retrying (attempt #%s)... ****\n\n' % i+2
                 continue
     # if the last attempt is still going to fail, let it fail normally:
     return _new(*args, **kwargs)
