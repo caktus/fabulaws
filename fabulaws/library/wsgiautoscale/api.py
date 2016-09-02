@@ -526,7 +526,7 @@ def _retry_new(*args, **kwargs):
             try:
                 return _new(*args, terminate_on_failure=True, **kwargs)
             except RetryFailure:
-                print '\n\n **** Server creation failed; retrying (attempt #%s)... ****\n\n' % i+2
+                print '\n\n **** Server creation failed; retrying (attempt #%s)... ****\n\n' % (i+2)
                 continue
     # if the last attempt is still going to fail, let it fail normally:
     return _new(*args, **kwargs)
