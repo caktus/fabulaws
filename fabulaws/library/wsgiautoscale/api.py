@@ -469,8 +469,8 @@ def _new(deployment, environment, role, avail_zone=None, count=1, terminate_on_f
         try:
             server.setup()
         except:
-            logger.exception('server.setup() failed. tags=%s; terminate_on_failure=%s.'
-                             '' % (tags, terminate_on_failure))
+            logger.exception('server.setup() failed. tags=%s; terminate_on_failure=%s.',
+                             tags, terminate_on_failure)
             if terminate_on_failure:
                 server.terminate()
             raise
@@ -495,8 +495,8 @@ def _new(deployment, environment, role, avail_zone=None, count=1, terminate_on_f
             # allow overriding bootstrap command in project fabfile
             executel('bootstrap', hosts=env.roledefs[role])
     except:
-        logger.exception('server post-setup failed. tags=%s; terminate_on_failure=%s.'
-                         '' % (tags, terminate_on_failure))
+        logger.exception('server post-setup failed. tags=%s; terminate_on_failure=%s.',
+                         tags, terminate_on_failure)
         if terminate_on_failure:
             for server in servers:
                 server.terminate()
@@ -522,7 +522,7 @@ def _retry_new(*args, **kwargs):
     """
     tries = kwargs.pop('tries', 3)
     with settings(abort_exception=RetryFailure, abort_on_prompts=True):
-        for i in range(tries-1):
+        for i in range(tries - 1):
             try:
                 return _new(*args, terminate_on_failure=True, **kwargs)
             except RetryFailure:
