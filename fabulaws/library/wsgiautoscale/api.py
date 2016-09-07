@@ -422,7 +422,7 @@ def run_shell_command(method, sudo=False):
 ###### NEW SERVER SETUP ######
 
 
-def _new(deployment, environment, role, avail_zone=None, count=1, **kwargs):
+def _new(deployment, environment, role, avail_zone=None, count=1, terminate_on_failure=False, **kwargs):
     """ create new server on AWS using the given deployment, environment, and role """
     if deployment not in env.deployments:
         abort('Choose a valid deployment: %s' % ', '.join(env.deployments))
@@ -466,7 +466,14 @@ def _new(deployment, environment, role, avail_zone=None, count=1, **kwargs):
                      tags=tags, volume_size=vol_size, volume_type=vol_type,
                      deploy_user=env.deploy_user, security_groups=sec_grps,
                      **extra_args)
-        server.setup()
+        try:
+            server.setup()
+        except:
+            logger.exception('server.setup() failed. tags=%s; terminate_on_failure=%s.',
+                             tags, terminate_on_failure)
+            if terminate_on_failure:
+                server.terminate()
+            raise
         servers.append(server)
     # the methods below should only be run on the created server(s), so
     # replace that role definition accordingly
@@ -487,6 +494,13 @@ def _new(deployment, environment, role, avail_zone=None, count=1, **kwargs):
         if role in ('worker', 'web'):
             # allow overriding bootstrap command in project fabfile
             executel('bootstrap', hosts=env.roledefs[role])
+    except:
+        logger.exception('server post-setup failed. tags=%s; terminate_on_failure=%s.',
+                         tags, terminate_on_failure)
+        if terminate_on_failure:
+            for server in servers:
+                server.terminate()
+        raise
     finally:
         env.roledefs[role] = saved_roledefs
         env.servers[role] = saved_servers
@@ -494,6 +508,28 @@ def _new(deployment, environment, role, avail_zone=None, count=1, **kwargs):
     for server in servers:
         _change_role(server, role)
     return servers
+
+
+class RetryFailure(Exception):
+    """To be used as env.abort_exception in Fabric."""
+    pass
+
+
+def _retry_new(*args, **kwargs):
+    """
+    Retries instance creation up to three times (or ``tries``, if supplied).
+    Helps circumvent temporary network failures (e.g., while running apt-get).
+    """
+    tries = kwargs.pop('tries', 3)
+    with settings(abort_exception=RetryFailure, abort_on_prompts=True):
+        for i in range(tries - 1):
+            try:
+                return _new(*args, terminate_on_failure=True, **kwargs)
+            except RetryFailure:
+                print '\n\n **** Server creation failed; retrying (attempt #%s)... ****\n\n' % (i+2)
+                continue
+    # if the last attempt is still going to fail, let it fail normally:
+    return _new(*args, **kwargs)
 
 
 class BackgroundCommand(multiprocessing.Process):
@@ -539,7 +575,7 @@ def _create_many(servers):
     # make sure we don't pass open SSH connections down to the child procs
     disconnect_all()
     for server in servers:
-        proc = BackgroundCommand(_new, args=list(server))
+        proc = BackgroundCommand(_retry_new, args=list(server))
         proc.start()
         procs.append(proc)
     time.sleep(2)
@@ -2079,8 +2115,8 @@ def _wait_for_elb_state(elb_name, instance_id, state):
 
 def _create_server_for_image():
     """Creates a new web server for use in creating an AMI for auto scaling."""
-    server = _new(env.deployment_tag, env.environment, 'web',
-                  avail_zone=env.avail_zones[0])[0]
+    server = _retry_new(env.deployment_tag, env.environment, 'web',
+                        avail_zone=env.avail_zones[0])[0]
     # return string rather than server itself since we might get run
     # in another UNIX process
     return server.instance.id
