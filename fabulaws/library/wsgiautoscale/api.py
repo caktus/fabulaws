@@ -1128,7 +1128,6 @@ def deploy_web(changeset=None):
 def deploy_worker(changeset=None):
     """
     Update the code on the celery worker, sync the database, and collect static media on S3.
-    If this is the first time deploy_worker is being run, initial should be set to 1.
     """
 
     require('environment', provided_by=env.environments)
@@ -1431,7 +1430,7 @@ def create_environment(deployment_tag, environment, num_web=2):
     print 'Starting AMI and launch config creation in the background'
     # make sure we don't pass open SSH connections down to the child procs
     disconnect_all()
-    lc_creator = BackgroundCommand(_create_launch_config, capture_result=True)
+    lc_creator = BackgroundCommand(_create_server_for_image, capture_result=True)
     lc_creator.start()
     az_1 = env.avail_zones[0]
     az_2 = env.avail_zones[1]
@@ -1450,16 +1449,22 @@ def create_environment(deployment_tag, environment, num_web=2):
     print 'Waiting for launch config creation to complete...'
     # wait for the launch config to finish creating if needed
     lc_creator.join()
-    # make sure all the web servers get re-created using auto-scaling
-    lc_name = lc_creator.result().name
+    instance_id = lc_creator.result()
+    # reload the environment once more, after we know the background image
+    # creation is finished
+    _setup_env(deployment_tag, environment)
+    server = _get_servers(deployment_tag, environment, 'web',
+                          instance_ids=[instance_id])[0]
+    # shutdown the server and create the AMI & Launch config
+    lc = _create_launch_config(server=server)
+    # clean up the leftover server in EC2
+    server.terminate()
     print 'Running deploy_full...'
     # run the initial deployment with the new AMI containing the latest code
-    deploy_full(deployment_tag, environment, launch_config_name=lc_name, num_web=num_web)
+    deploy_full(deployment_tag, environment, launch_config_name=lc.name, num_web=num_web)
 
     print 'The non-web servers have been created and the autoscaling group has been updated '\
-          'with a new launch configuration. To finish creating the environment, '\
-          'you need to navigate to the AWS console, set the minimum and desired '\
-          'instance counts for the %(ag_name)s auto scaling group' % env
+          'with a new launch configuration.'
 
 
 @task
