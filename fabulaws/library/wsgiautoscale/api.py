@@ -25,6 +25,7 @@ from fabric.api import (abort, cd, env, execute, hide, hosts, local, parallel,
     prompt, put, roles, require, run, runs_once, settings, sudo, task)
 from fabric.colors import red
 from fabric.contrib.files import exists, upload_template, append, uncomment, sed
+from fabric.exceptions import NetworkError
 from fabric.network import disconnect_all
 
 from argyle import system
@@ -520,7 +521,8 @@ def _retry_new(*args, **kwargs):
         for i in range(tries - 1):
             try:
                 return _new(*args, terminate_on_failure=True, **kwargs)
-            except RetryFailure:
+            # Fabric may raise our abort_exception OR a NetworkError
+            except (RetryFailure, NetworkError):
                 print '\n\n **** Server creation failed; retrying (attempt #%s)... ****\n\n' % (i+2)
                 continue
     # if the last attempt is still going to fail, let it fail normally:
