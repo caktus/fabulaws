@@ -1214,6 +1214,7 @@ def reload_production_db(prod_env=env.default_deployment, src_env='production'):
     )
     sshagent_run(load_cmd, user=env.deploy_user)
     executel(supervisor, 'start', 'pgbouncer')
+    executel(migrate)
     executel(supervisor, 'start', 'celery', roles=['worker'])
     executel(supervisor, 'start', 'web', roles=['web'])
     executel(end_upgrade)
