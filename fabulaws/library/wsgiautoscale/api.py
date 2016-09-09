@@ -386,11 +386,6 @@ def staging(deployment_tag=env.default_deployment, answer=None): # support same 
 
 
 @task
-def florida(deployment_tag=env.default_deployment, answer=None): # support same args as production
-    _setup_env(deployment_tag, 'florida')
-
-
-@task
 def production(deployment_tag=env.default_deployment, answer=None):
     if answer is None:
         answer = prompt('Are you sure you want to activate the production '
