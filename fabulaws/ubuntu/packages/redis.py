@@ -17,7 +17,7 @@ class RedisMixin(AptMixin):
     redis_conf = '/etc/redis/redis.conf'
     redis_bind_pattern = '#?\s*bind 127\.0\.0\.1'
     redis_loglevel_pattern = '#?\s*loglevel \w+'
-    redis_keepalive_pattern = ' #?\s*tcp-keepalive \w+'
+    redis_keepalive_pattern = '#?\s*tcp-keepalive \w+'
 
     @uses_fabric
     def redis_service(self, cmd):
