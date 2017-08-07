@@ -340,16 +340,16 @@ def _change_role(server, new_role):
 
 def _stop_all():
     """Stop all supervisor services, in order."""
-    executel(supervisor, 'stop', 'web', roles=['web'])
-    executel(supervisor, 'stop', 'celery', roles=['worker'])
-    executel(supervisor, 'stop', 'pgbouncer')
+    executel('supervisor', 'stop', 'web', roles=['web'])
+    executel('supervisor', 'stop', 'celery', roles=['worker'])
+    executel('supervisor', 'stop', 'pgbouncer')
 
 
 def _start_all():
     """Start all supervisor services, in order."""
-    executel(supervisor, 'start', 'pgbouncer')
-    executel(supervisor, 'start', 'celery', roles=['worker'])
-    executel(supervisor, 'start', 'web', roles=['web'])
+    executel('supervisor', 'start', 'pgbouncer')
+    executel('supervisor', 'start', 'celery', roles=['worker'])
+    executel('supervisor', 'start', 'web', roles=['web'])
 
 
 def _check_local_deps():
@@ -478,17 +478,16 @@ def _new(deployment, environment, role, avail_zone=None, count=1, terminate_on_f
     try:
         env.roledefs[role] = [server.hostname for server in servers]
         env.servers[role] = servers
-        executel(update_server_passwords, hosts=env.roledefs[role])
-        executel(install_newrelic_sysmon, hosts=env.roledefs[role])
-        executel(install_munin, hosts=env.roledefs[role])
+        executel('update_server_passwords', hosts=env.roledefs[role])
+        executel('install_newrelic_sysmon', hosts=env.roledefs[role])
+        executel('install_munin', hosts=env.roledefs[role])
         if env.gelf_log_host:
-            executel(install_logstash, hosts=env.roledefs[role])
+            executel('install_logstash', hosts=env.roledefs[role])
         if env.syslog_server:
-            executel(install_rsyslog, hosts=env.roledefs[role])
+            executel('install_rsyslog', hosts=env.roledefs[role])
         if env.awslogs_access_key_id:
-            executel(install_awslogs, hosts=env.roledefs[role])
+            executel('install_awslogs', hosts=env.roledefs[role])
         if role in ('worker', 'web'):
-            # allow overriding bootstrap command in project fabfile
             executel('bootstrap', hosts=env.roledefs[role])
     except:
         logger.exception('server post-setup failed. tags=%s; terminate_on_failure=%s.',
@@ -998,14 +997,14 @@ def dbrestore(filepath):
     private_key = os.path.join(dest, 'caktus_admin-private.asc')
     local('gpg --export-secret-keys --armor Caktus > {0}'.format(os.path.join(dest,'caktus_admin-private.asc')))
     try:
-        executel(begin_upgrade)
-        executel(supervisor, 'stop', 'web', roles=['web'])
-        executel(supervisor, 'stop', 'celery', roles=['worker'])
-        executel(supervisor, 'stop', 'pgbouncer')
+        executel('begin_upgrade')
+        executel('supervisor', 'stop', 'web', roles=['web'])
+        executel('supervisor', 'stop', 'celery', roles=['worker'])
+        executel('supervisor', 'stop', 'pgbouncer')
         with env.master_database:
             sudo('dropdb {0}'.format(env.database_name), user='postgres')
         env.servers['db-master'][0].create_db(env.database_name, owner=env.database_user)
-        executel(supervisor, 'start', 'pgbouncer')
+        executel('supervisor', 'start', 'pgbouncer')
         backup_dir = 'django-dbbackups/'
         with cd(dest):
             put(private_key, dest)
@@ -1016,10 +1015,10 @@ def dbrestore(filepath):
             sudo('gpg --homedir {0} --batch --delete-secret-keys "{1}"'.format(env.gpg_dir, env.backup_key_fingerprint), user=env.webserver_user)
             sudo('gpg --homedir {0} -K'.format(env.gpg_dir), user=env.webserver_user)
             sudo('rm {0}'.format(os.path.join(dest, os.path.split(private_key)[1])))
-        executel(migrate)
-        executel(supervisor, 'start', 'celery', roles=['worker'])
-        executel(supervisor, 'start', 'web', roles=['web'])
-        executel(end_upgrade)
+        executel('migrate')
+        executel('supervisor', 'start', 'celery', roles=['worker'])
+        executel('supervisor', 'start', 'web', roles=['web'])
+        executel('end_upgrade')
     finally:
         local('rm {0}'.format(private_key))
 
@@ -1192,11 +1191,11 @@ def reload_production_db(prod_env=env.default_deployment, src_env='production'):
     """ Replace the testing or staging database with the production database """
     if env.environment not in ('staging', 'testing'):
         abort('prod_to_staging requires the staging or testing environment.')
-    executel(suspend_autoscaling_processes, env.deployment_tag, env.environment)
-    executel(begin_upgrade)
-    executel(supervisor, 'stop', 'web', roles=['web'])
-    executel(supervisor, 'stop', 'celery', roles=['worker'])
-    executel(supervisor, 'stop', 'pgbouncer')
+    executel('suspend_autoscaling_processes', env.deployment_tag, env.environment)
+    executel('begin_upgrade')
+    executel('supervisor', 'stop', 'web', roles=['web'])
+    executel('supervisor', 'stop', 'celery', roles=['worker'])
+    executel('supervisor', 'stop', 'pgbouncer')
     with settings(warn_only=True):
         sudo('dropdb {0}'.format(env.database_name), user='postgres')
     env.servers['db-master'][0].create_db(env.database_name, owner=env.database_user)
@@ -1213,12 +1212,12 @@ def reload_production_db(prod_env=env.default_deployment, src_env='production'):
         db_name=env.database_name,
     )
     sshagent_run(load_cmd, user=env.deploy_user)
-    executel(supervisor, 'start', 'pgbouncer')
-    executel(migrate)
-    executel(supervisor, 'start', 'celery', roles=['worker'])
-    executel(supervisor, 'start', 'web', roles=['web'])
-    executel(end_upgrade)
-    executel(resume_autoscaling_processes, env.deployment_tag, env.environment)
+    executel('supervisor', 'start', 'pgbouncer')
+    executel('migrate')
+    executel('supervisor', 'start', 'celery', roles=['worker'])
+    executel('supervisor', 'start', 'web', roles=['web'])
+    executel('end_upgrade')
+    executel('resume_autoscaling_processes', env.deployment_tag, env.environment)
 
 
 @task
@@ -1274,13 +1273,13 @@ def promote_slave(index=0, override_servers={}):
     _change_role(slave, 'db-master')
     _setup_env(override_servers=override_servers)
     # make sure logging facilities know about the new db-master role
-    executel(upload_newrelic_sysmon_conf, roles=['db-master'])
+    executel('upload_newrelic_sysmon_conf', roles=['db-master'])
     if env.gelf_log_host:
-        executel(install_logstash, roles=['db-master'])
+        executel('install_logstash', roles=['db-master'])
     if env.syslog_server:
-        executel(install_rsyslog, roles=['db-master'])
+        executel('install_rsyslog', roles=['db-master'])
     if env.awslogs_access_key_id:
-        executel(install_awslogs, roles=['db-master'])
+        executel('install_awslogs', roles=['db-master'])
     print 'NOTE: you must now update the local_settings.py files on the web'\
           'servers to point to the new master DB ({0}).'.format(slave.hostname)
 
@@ -1442,7 +1441,7 @@ def create_environment(deployment_tag, environment, num_web=2):
     env.roles = []
     executel(environment, deployment_tag)
     # if we create all servers at once, the slave won't be sync'ed yet
-    executel(reset_slaves)
+    executel('reset_slaves')
 
     print 'Waiting for launch config creation to complete...'
     # wait for the launch config to finish creating if needed
@@ -1470,9 +1469,9 @@ def create_environment(deployment_tag, environment, num_web=2):
 def update_environment(deployment_tag, environment):
     """Runs period maintenance tasks on the servers to ensure they're up to date."""
     executel(environment, deployment_tag)
-    executel(update_sysadmin_users)
-    executel(update_server_passwords)
-    executel(upgrade_packages)
+    executel('update_sysadmin_users')
+    executel('update_server_passwords')
+    executel('upgrade_packages')
 
 
 @task
@@ -1490,9 +1489,9 @@ def reboot_environment(deployment_tag, environment, sleep_time=180):
             server.reboot()
     logger.info('Sleeping for %s seconds' % sleep_time)
     time.sleep(sleep_time)
-    executel(mount_encrypted, roles=['db-master', 'cache'])
-    executel(mount_encrypted, roles=['db-slave'])
-    executel(mount_encrypted, roles=['web', 'worker'])
+    executel('mount_encrypted', roles=['db-master', 'cache'])
+    executel('mount_encrypted', roles=['db-slave'])
+    executel('mount_encrypted', roles=['web', 'worker'])
 
 
 @task
@@ -1505,12 +1504,12 @@ def update_newrelic_keys(deployment_tag, environment):
                     '' % env.environment.upper(), default='n')
     if answer != 'y':
         abort('Aborted.')
-    executel(upload_newrelic_conf)
-    executel(upload_newrelic_sysmon_conf)
-    executel(supervisor, 'restart', 'celery', roles=['worker'])
-    executel(begin_upgrade)
-    executel(supervisor, 'restart', 'web', roles=['web'])
-    executel(end_upgrade)
+    executel('upload_newrelic_conf')
+    executel('upload_newrelic_sysmon_conf')
+    executel('supervisor', 'restart', 'celery', roles=['worker'])
+    executel('begin_upgrade')
+    executel('supervisor', 'restart', 'web', roles=['web'])
+    executel('end_upgrade')
 
 
 @task
@@ -1541,10 +1540,10 @@ def deploy_full_without_autoscaling(deployment_tag, environment):
     """Runs a full deploy in parallel on the given deployment and environment."""
     _check_local_deps()
     executel(environment, deployment_tag)
-    executel(begin_upgrade)
-    executel(deploy_worker)
-    executel(deploy_web)
-    executel(end_upgrade)
+    executel('begin_upgrade')
+    executel('deploy_worker')
+    executel('deploy_web')
+    executel('end_upgrade')
 
 
 @task
@@ -1561,7 +1560,7 @@ def deploy_serial_without_autoscaling(deployment_tag, environment, wait=30):
     # make sure we have at least two servers in service in the load balancer(s)
     assert initial_states.values().count('InService') >= 2*len(env.elb_names), \
            'Need 2 or more instances per load balancer in service to run deploy_serial_without_autoscaling'
-    executel(deploy_worker)
+    executel('deploy_worker')
     for server in servers:
         for elb_name in env.elb_names:
             if initial_states[(server.instance.id, elb_name)] == 'InService':
@@ -1572,9 +1571,9 @@ def deploy_serial_without_autoscaling(deployment_tag, environment, wait=30):
         print 'Waiting %s seconds for requests to finish processing...' % wait
         time.sleep(wait) # wait for instance to process outstanding requests
         # be honest to the load balancer(s) about our status (not healthy)
-        executel(begin_upgrade, stay_healthy=False, hosts=[server.hostname])
-        executel(deploy_web, hosts=[server.hostname])
-        executel(end_upgrade, hosts=[server.hostname])
+        executel('begin_upgrade', stay_healthy=False, hosts=[server.hostname])
+        executel('deploy_web', hosts=[server.hostname])
+        executel('end_upgrade', hosts=[server.hostname])
         for elb_name in env.elb_names:
             if initial_states[(server.instance.id, elb_name)] == 'InService':
                 print 'Adding instance %s to ELB %s' % (server.instance.id, elb_name)
@@ -1602,7 +1601,7 @@ def recreate_servers(deployment_tag, environment, wait=30):
     servers += [(deployment_tag, environment, 'cache', z) for z in config['cache']]
     _create_many(servers)
     start_time = datetime.datetime.now()
-    executel(begin_upgrade)
+    executel('begin_upgrade')
     _stop_all()
     print 'Decommisioning old servers...'
     # rename the original slave server(s)
@@ -1616,11 +1615,11 @@ def recreate_servers(deployment_tag, environment, wait=30):
     override = {'web': orig_servers['web']}
     _setup_env(deployment_tag, environment, override_servers=override)
     # promote that slave to the master role
-    executel(promote_slave, override_servers=override)
+    executel('promote_slave', override_servers=override)
     # update local_settings.py with new, single master
-    executel(update_local_settings)
+    executel('update_local_settings')
     _start_all()
-    executel(end_upgrade)
+    executel('end_upgrade')
     end_time = datetime.datetime.now()
     downtime = end_time - start_time
     print 'downtime complete; total = %s secs' % downtime.total_seconds()
@@ -1630,7 +1629,7 @@ def recreate_servers(deployment_tag, environment, wait=30):
     servers += [(deployment_tag, environment, 'worker', config['worker'][0])]
     _create_many(servers)
     for worker in orig_servers['worker']:
-        executel(supervisor, 'stop', 'celery', hosts=[worker.hostname])
+        executel('supervisor', 'stop', 'celery', hosts=[worker.hostname])
         _change_role(worker, 'worker-OLD')
 
     # wait for the launch config to finish creating if needed
@@ -1792,7 +1791,7 @@ def generate_and_upload_munin_conf(deployment_tag, environment):
     address %s
     use_node_name yes
 """ % (deployment_tag, environment, role, server.hostname, server.internal_ip)
-    executel(upload_munin_conf, deployment_tag, environment, munin_conf)
+    executel('upload_munin_conf', deployment_tag, environment, munin_conf)
 
 
 ### Autoscaling ###
@@ -1918,11 +1917,11 @@ def deploy_full(deployment_tag, environment, launch_config_name=None, num_web=2)
 
     # Show the upgrade message on all servers, new and old, so that no user
     # will be able to access the site.
-    executel(begin_upgrade)
+    executel('begin_upgrade')
 
     # make sure we deploy the same changeset as was used in the launch config
     changeset = launch_config.name.split('_')[-1]
-    executel(deploy_worker, changeset=changeset)
+    executel('deploy_worker', changeset=changeset)
 
     # It's safe to add to the load balancer now, since all servers have the
     # upgrade message.
@@ -1968,7 +1967,7 @@ def deploy_full(deployment_tag, environment, launch_config_name=None, num_web=2)
     executel(environment, deployment_tag)
 
     # Remove the upgrade message so that the users can access the site again.
-    executel(end_upgrade)
+    executel('end_upgrade')
 
 
 @task
@@ -1991,7 +1990,7 @@ def deploy_serial(deployment_tag, environment, launch_config_name=None, answer=N
 
     # make sure we deploy the same changeset as was used in the launch config
     changeset = launch_config.name.split('_')[-1]
-    executel(deploy_worker, changeset=changeset)
+    executel('deploy_worker', changeset=changeset)
 
     # Update the existing autoscaling group to use the new launch config.
     autoscaling_group = _update_autoscaling_group(launch_config)
