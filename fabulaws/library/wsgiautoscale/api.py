@@ -209,6 +209,7 @@ def _setup_env(deployment_tag=None, environment=None, override_servers={}):
         ('redis', '/var/log/redis/redis*.log', '%d %b %H:%M:%S'),
         ('rabbitmq', '/var/log/rabbitmq/rabbit*.log', '%d-%b-%Y::%H:%M:%S'),
         ('nginx', os.path.join(env.log_dir, 'error.log'), '%Y/%m/%d %H:%M:%S'),
+        ('nginx', os.path.join(env.log_dir, 'access.log'), '%Y/%m/%d %H:%M:%S'),
         ('gunicorn', os.path.join(env.log_dir, 'gunicorn.log'), '%Y-%m-%d %H:%M:%S'),
         ('pgbouncer', os.path.join(env.log_dir, 'pgbouncer.log'), '%Y-%m-%d %H:%M:%S'),
         ('stunnel', os.path.join(env.log_dir, 'stunnel.log'), '%Y-%m-%d %H:%M:%S'),
