@@ -49,6 +49,23 @@ logstash_config: deployment/templates/logstash.conf
 # (You might want to set this in fabsecrets instead of here.)
 # syslog_server: "hostname:port"
 
+# You can alternatively supply a multi-line config for rsyslog as follows
+# (e.g., in the event you need to enable TLS). For more information, see:
+# http://www.rsyslog.com/doc/v8-stable/tutorials/tls_cert_client.html#sample-syslog-conf
+# syslog_server: |
+#   # make gtls driver the default
+#   $DefaultNetstreamDriver gtls
+#
+#   # certificate files
+#   $DefaultNetstreamDriverCAFile /rsyslog/protected/ca.pem
+#   $DefaultNetstreamDriverCertFile /rsyslog/protected/machine-cert.pem
+#   $DefaultNetstreamDriverKeyFile /rsyslog/protected/machine-key.pem
+#
+#   $ActionSendStreamDriverAuthMode x509/name
+#   $ActionSendStreamDriverPermittedPeer central.example.net
+#   $ActionSendStreamDriverMode 1 # run driver in TLS-only mode
+#   *.* @@central.example.net:10514 # forward everything to remote server
+
 # Set awslogs_access_key_id to the AWS_ACCESS_KEY_ID of the user with
 # permissions to create log groups, log streams, and log events. For help
 # setting up this role, see:
