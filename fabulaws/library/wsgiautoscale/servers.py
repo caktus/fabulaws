@@ -61,7 +61,8 @@ class BaseInstance(FirewallMixin, UbuntuInstance):
         """
         users_dir = env.ssh_keys
         users = [(n, os.path.join(users_dir, n))
-                 for n in os.listdir(users_dir)]
+                 for n in os.listdir(users_dir)
+                 if '.' not in n]  # skip files ending in '.gecos' or other suffixes
         return users
 
     def _add_swap(self, path):

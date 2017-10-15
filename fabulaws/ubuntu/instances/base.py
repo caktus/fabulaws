@@ -259,6 +259,13 @@ class UbuntuInstance(BaseAptMixin, EC2Instance):
             put(keyfile, '/home/{0}/.ssh/authorized_keys2'.format(name),
                 use_sudo=True, mode=0600)
             sudo('chown -R {0} /home/{0}/.ssh'.format(name))
+            # if a file exists with the comment field (e.g., for GECOS info)
+            # for the user, use usermod -c to add it.
+            gecos_file = keyfile + '.gecos'
+            if os.path.exists(gecos_file):
+                with open(gecos_file, 'r') as gecos_fd:
+                    gecos = gecos_fd.readline().strip()
+                    sudo('usermod -c "{}" {}'.format(gecos, name))
 
     @uses_fabric
     def bind_app_directories(self, app_dirs, app_root):
