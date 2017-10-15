@@ -135,6 +135,17 @@ class BaseInstance(FirewallMixin, UbuntuInstance):
         sudo('chown root:root /etc/sudoers.new')
         sudo('mv /etc/sudoers.new /etc/sudoers')
 
+    def reset_authentication(self):
+        """
+        Delete's the 'ubuntu' user in the AMI once it's no longer needed.
+        """
+        user = self.user  # save user before it's overwritten by super() method
+        super(BaseInstance, self).reset_authentication()
+        if user == 'ubuntu':
+            with self:
+                # disable the 'ubuntu' user so it can no longer log in
+                sudo('usermod --expiredate 1 {}'.format(user))
+
     @uses_fabric
     def create_deployer(self):
         """
