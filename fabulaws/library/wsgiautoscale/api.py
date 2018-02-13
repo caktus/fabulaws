@@ -696,6 +696,7 @@ def upload_supervisor_conf(run_update=True):
     context = env.copy()
     cpu_count = int(run('cat /proc/cpuinfo|grep processor|wc -l'))
     context['timeout'] = int(getattr(env, 'gunicorn_timeout', 30))
+    context['worker_class'] = getattr(env, 'gunicorn_worker_class', 'sync')
     context['worker_count'] = cpu_count * int(getattr(env, 'gunicorn_worker_multiplier', 4))
     context['current_role'] = _current_roles()[0]
     _upload_template('supervisor.conf', destination, context=context,
