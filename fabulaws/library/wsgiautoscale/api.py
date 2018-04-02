@@ -844,7 +844,7 @@ def update_requirements():
     # add HOME= so if there's an error, pip can save the log (Fabric doesn't
     # pass -H to sudo)
     cmd = ['HOME=%(home)s %(virtualenv_root)s/bin/pip install -q' % env]
-    cmd += [' --use-wheel']
+    cmd += [' --only-binary']
     if env.requirements_sdists:
         sdists = os.path.join(env.code_root, env.requirements_sdists)
         cmd += [' --no-index --find-links=file://%s' % sdists]
