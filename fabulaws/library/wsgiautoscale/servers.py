@@ -279,8 +279,8 @@ class AppMixin(PythonMixin):
     """
 
     python_packages = ['python2.7', 'python2.7-dev']
-    python_pip_version = '8.1.2'
-    python_virtualenv_version = '15.0.3'
+    python_pip_version = '9.0.3'
+    python_virtualenv_version = '15.2.0'
 
     @uses_fabric
     def install_less_and_yuglify(self):

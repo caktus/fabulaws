@@ -20,32 +20,14 @@ class PythonMixin(AptMixin):
     python_install_tools = True
     python_pip_version = None # install the latest version
     python_virtualenv_version = None # install the latest version
-    python_pypi_mirrors = [
-        'https://pypi.python.org',
-    ]
-
-    def _find_mirror(self):
-        """
-        Finds a PyPI mirror that appears to be online.
-        """
-
-        for mirror in self.python_pypi_mirrors:
-            try:
-                r = urllib2.urlopen(mirror)
-                if r.code == 200:
-                    return mirror
-            except urllib2.URLError:
-                pass
-        raise ValueError('No active mirror found.')
 
     @uses_fabric
     def install_python_tools(self):
         """
-        Installs the required Python tools from a random (hopefully online)
-        PyPI mirror.
+        Installs the required Python tools from PyPI.
         """
 
-        mirror = self._find_mirror()
+        mirror = 'https://pypi.python.org'
         version = ''
         if self.python_pip_version:
             version = '==%s' % self.python_pip_version
