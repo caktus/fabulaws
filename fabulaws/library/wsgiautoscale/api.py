@@ -1007,13 +1007,12 @@ def dbrestore(filepath):
             sudo('dropdb {0}'.format(env.database_name), user='postgres')
         env.servers['db-master'][0].create_db(env.database_name, owner=env.database_user)
         executel('supervisor', 'start', 'pgbouncer')
-        backup_dir = 'django-dbbackups/'
         with cd(dest):
             put(private_key, dest)
             with settings(warn_only=True):
                 sudo('gpg --homedir {0} --batch --delete-secret-keys "{1}"'.format(env.gpg_dir, env.backup_key_fingerprint), user=env.webserver_user)
             sudo('gpg --homedir {0} --import {1}'.format(env.gpg_dir, os.path.split(private_key)[1]), user=env.webserver_user)
-            _call_managepy('dbrestore --database=default --filepath={0}'.format(backup_dir+filepath), pty=True)
+            _call_managepy('dbrestore --database=default --input-filename={0}'.format(filepath), pty=True)
             sudo('gpg --homedir {0} --batch --delete-secret-keys "{1}"'.format(env.gpg_dir, env.backup_key_fingerprint), user=env.webserver_user)
             sudo('gpg --homedir {0} -K'.format(env.gpg_dir), user=env.webserver_user)
             sudo('rm {0}'.format(os.path.join(dest, os.path.split(private_key)[1])))
