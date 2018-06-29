@@ -387,7 +387,11 @@ class EC2Instance(object):
         logger.info('Waiting for image to enter "available" state...')
         while image.update() == 'pending':
             time.sleep(2)
-        assert image.update() == 'available'
+        status = image.update()
+        while status != 'available':
+            logger.info('Unexpected image status after pending: %s...waiting a bit longer...', status)
+            time.sleep(2)
+            status = image.update()
         logger.info('Image creation finished.')
         return image
 
