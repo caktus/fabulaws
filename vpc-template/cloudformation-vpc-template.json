@@ -1,0 +1,1490 @@
+{
+    "Conditions": {
+        "AcmCertConditionProduction": {
+            "Fn::Not": [
+                {
+                    "Fn::Equals": [
+                        {
+                            "Ref": "AcmCertArnProduction"
+                        },
+                        ""
+                    ]
+                }
+            ]
+        },
+        "AcmCertConditionStaging": {
+            "Fn::Not": [
+                {
+                    "Fn::Equals": [
+                        {
+                            "Ref": "AcmCertArnStaging"
+                        },
+                        ""
+                    ]
+                }
+            ]
+        },
+        "AssetsCloudFrontCertArnCondition": {
+            "Fn::Not": [
+                {
+                    "Fn::Equals": [
+                        {
+                            "Ref": "AssetsCloudFrontCertArn"
+                        },
+                        ""
+                    ]
+                }
+            ]
+        },
+        "AssetsCloudFrontDomainAndUsEast1Condition": {
+            "Fn::And": [
+                {
+                    "Fn::Not": [
+                        {
+                            "Fn::Equals": [
+                                {
+                                    "Ref": "AssetsCloudFrontDomain"
+                                },
+                                ""
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "Fn::Equals": [
+                        {
+                            "Ref": "AWS::Region"
+                        },
+                        "us-east-1"
+                    ]
+                }
+            ]
+        },
+        "AssetsCloudFrontDomainCondition": {
+            "Fn::Not": [
+                {
+                    "Fn::Equals": [
+                        {
+                            "Ref": "AssetsCloudFrontDomain"
+                        },
+                        ""
+                    ]
+                }
+            ]
+        },
+        "AssetsUseCloudFrontCondition": {
+            "Fn::Equals": [
+                {
+                    "Ref": "AssetsUseCloudFront"
+                },
+                "true"
+            ]
+        },
+        "AssetsUseS3EncryptionCondition": {
+            "Fn::Equals": [
+                {
+                    "Ref": "AssetsUseAES256Encryption"
+                },
+                "true"
+            ]
+        },
+        "InGovCloudRegion": {
+            "Fn::Equals": [
+                {
+                    "Ref": "AWS::Region"
+                },
+                "us-gov-west-1"
+            ]
+        },
+        "NoAlternateDomains": {
+            "Fn::Equals": [
+                {
+                    "Fn::Join": [
+                        "",
+                        {
+                            "Ref": "DomainNameAlternates"
+                        }
+                    ]
+                },
+                ""
+            ]
+        },
+        "TcpHealthCheckProduction": {
+            "Fn::Equals": [
+                {
+                    "Ref": "WebWorkerHealthCheck"
+                },
+                ""
+            ]
+        },
+        "TcpHealthCheckStaging": {
+            "Fn::Equals": [
+                {
+                    "Ref": "WebWorkerHealthCheck"
+                },
+                ""
+            ]
+        }
+    },
+    "Metadata": {
+        "AWS::CloudFormation::Interface": {
+            "ParameterGroups": [
+                {
+                    "Label": {
+                        "default": "Global"
+                    },
+                    "Parameters": [
+                        "DomainName",
+                        "DomainNameAlternates",
+                        "PrimaryAZ",
+                        "SecondaryAZ"
+                    ]
+                },
+                {
+                    "Label": {
+                        "default": "Load Balancer"
+                    },
+                    "Parameters": [
+                        "WebWorkerHealthCheck",
+                        "AcmCertArnStaging",
+                        "AcmCertArnProduction"
+                    ]
+                },
+                {
+                    "Label": {
+                        "default": "Static Media"
+                    },
+                    "Parameters": [
+                        "AssetsUseAES256Encryption",
+                        "AssetsUseCloudFront",
+                        "AssetsCloudFrontDomain",
+                        "AssetsCloudFrontCertArn"
+                    ]
+                },
+                {
+                    "Label": {
+                        "default": "Networking"
+                    },
+                    "Parameters": [
+                        "LocalCidr"
+                    ]
+                },
+                {
+                    "Label": {
+                        "default": "EC2"
+                    },
+                    "Parameters": [
+                        "RouterAMI",
+                        "KeyName"
+                    ]
+                }
+            ],
+            "ParameterLabels": {
+                "AcmCertArnProduction": {
+                    "default": "ACM Certificate ARN (production)"
+                },
+                "AcmCertArnStaging": {
+                    "default": "ACM Certificate ARN (staging)"
+                },
+                "AssetsCloudFrontCertArn": {
+                    "default": "CloudFront SSL Certificate ARN"
+                },
+                "AssetsCloudFrontDomain": {
+                    "default": "CloudFront Custom Domain"
+                },
+                "AssetsUseAES256Encryption": {
+                    "default": "Enable AES256 Encryption"
+                },
+                "AssetsUseCloudFront": {
+                    "default": "Enable CloudFront"
+                },
+                "DomainName": {
+                    "default": "Domain Name"
+                },
+                "DomainNameAlternates": {
+                    "default": "Alternate Domain Names"
+                },
+                "KeyName": {
+                    "default": "SSH Key Name"
+                },
+                "LocalCidr": {
+                    "default": "Local CIDR"
+                },
+                "PrimaryAZ": {
+                    "default": "Primary Availability Zone"
+                },
+                "RouterAMI": {
+                    "default": "Router AMI"
+                },
+                "SecondaryAZ": {
+                    "default": "Secondary Availability Zone"
+                },
+                "WebWorkerHealthCheck": {
+                    "default": "Health Check URL"
+                }
+            }
+        }
+    },
+    "Outputs": {
+        "AssetsBucketProductionDomainName": {
+            "Description": "Assets bucket domain name (production)",
+            "Value": {
+                "Fn::GetAtt": [
+                    "AssetsBucketProduction",
+                    "DomainName"
+                ]
+            }
+        },
+        "AssetsBucketStagingDomainName": {
+            "Description": "Assets bucket domain name (staging)",
+            "Value": {
+                "Fn::GetAtt": [
+                    "AssetsBucketStaging",
+                    "DomainName"
+                ]
+            }
+        },
+        "AssetsDistributionProductionDomainName": {
+            "Condition": "AssetsUseCloudFrontCondition",
+            "Description": "The assets bucket CDN domain name (production)",
+            "Value": {
+                "Fn::GetAtt": [
+                    "AssetsDistributionProduction",
+                    "DomainName"
+                ]
+            }
+        },
+        "AssetsDistributionStagingDomainName": {
+            "Condition": "AssetsUseCloudFrontCondition",
+            "Description": "The assets bucket CDN domain name (staging)",
+            "Value": {
+                "Fn::GetAtt": [
+                    "AssetsDistributionStaging",
+                    "DomainName"
+                ]
+            }
+        },
+        "LoadBalancerProductionDNSName": {
+            "Description": "Loadbalancer DNS",
+            "Value": {
+                "Fn::GetAtt": [
+                    "LoadBalancerProduction",
+                    "DNSName"
+                ]
+            }
+        },
+        "LoadBalancerStagingDNSName": {
+            "Description": "Loadbalancer DNS",
+            "Value": {
+                "Fn::GetAtt": [
+                    "LoadBalancerStaging",
+                    "DNSName"
+                ]
+            }
+        },
+        "PrivateBucketProductionDomainName": {
+            "Description": "Private bucket domain name (production)",
+            "Value": {
+                "Fn::GetAtt": [
+                    "PrivateBucketProduction",
+                    "DomainName"
+                ]
+            }
+        },
+        "PrivateBucketStagingDomainName": {
+            "Description": "Private bucket domain name (staging)",
+            "Value": {
+                "Fn::GetAtt": [
+                    "PrivateBucketStaging",
+                    "DomainName"
+                ]
+            }
+        },
+        "RouterPublicIP": {
+            "Description": "Public IP address of router",
+            "Value": {
+                "Ref": "RouterEIP"
+            }
+        }
+    },
+    "Parameters": {
+        "AcmCertArnProduction": {
+            "Default": "",
+            "Description": "ARN of the AWS Certificate Manager certificate (optional). If omitted, TCP connections will be passed directly to the backend instances on port 443.",
+            "Type": "String"
+        },
+        "AcmCertArnStaging": {
+            "Default": "",
+            "Description": "ARN of the AWS Certificate Manager certificate (optional). If omitted, TCP connections will be passed directly to the backend instances on port 443.",
+            "Type": "String"
+        },
+        "AssetsCloudFrontCertArn": {
+            "Description": "If (1) you specified a custom static media domain, (2) your stack is NOT in the us-east-1 region, and (3) you wish to serve static media over HTTPS, you must manually create an ACM certificate in the us-east-1 region and provide its ARN here.",
+            "Type": "String"
+        },
+        "AssetsCloudFrontDomain": {
+            "Default": "",
+            "Description": "A custom domain name (CNAME) for your CloudFront distribution, e.g., \"static.example.com\".",
+            "Type": "String"
+        },
+        "AssetsUseAES256Encryption": {
+            "AllowedValues": [
+                "true",
+                "false"
+            ],
+            "Default": "true",
+            "Description": "Whether or not to use server side encryption for S3 buckets. When true, AES256 encryption is enabled for all asset buckets.",
+            "Type": "String"
+        },
+        "AssetsUseCloudFront": {
+            "AllowedValues": [
+                "true",
+                "false"
+            ],
+            "Default": "true",
+            "Description": "Whether or not to create a CloudFront distribution tied to the S3 assets bucket.",
+            "Type": "String"
+        },
+        "DomainName": {
+            "Description": "The fully-qualified domain name for the application.",
+            "Type": "String"
+        },
+        "DomainNameAlternates": {
+            "Description": "A comma-separated list of Alternate FQDNs.",
+            "Type": "CommaDelimitedList"
+        },
+        "KeyName": {
+            "ConstraintDescription": "must be the name of an existing EC2 KeyPair.",
+            "Description": "Name of an existing EC2 KeyPair to enable SSH access to the AWS EC2 instances",
+            "Type": "AWS::EC2::KeyPair::KeyName"
+        },
+        "LocalCidr": {
+            "Default": "0.0.0.0/0",
+            "Description": "CIDR block from which to allow restricted access. Set this to \"<your IP>/32\".",
+            "Type": "String"
+        },
+        "PrimaryAZ": {
+            "Description": "The primary availability zone for creating resources.",
+            "Type": "AWS::EC2::AvailabilityZone::Name"
+        },
+        "RouterAMI": {
+            "Default": "ami-089c333c4d9b09ffc",
+            "Description": "pfSense AMI from the AWS marketplace in the same region as this stack",
+            "Type": "String"
+        },
+        "SecondaryAZ": {
+            "Description": "The secondary availability zone for creating resources. Must differ from primary zone.",
+            "Type": "AWS::EC2::AvailabilityZone::Name"
+        },
+        "WebWorkerHealthCheck": {
+            "Default": "",
+            "Description": "Web worker health check URL path, e.g., \"/health-check\"; will default to TCP-only health check if left blank",
+            "Type": "String"
+        }
+    },
+    "Resources": {
+        "AssetsBucketProduction": {
+            "DeletionPolicy": "Retain",
+            "Properties": {
+                "AccessControl": "PublicRead",
+                "BucketEncryption": {
+                    "ServerSideEncryptionConfiguration": {
+                        "Fn::If": [
+                            "AssetsUseS3EncryptionCondition",
+                            [
+                                {
+                                    "ServerSideEncryptionByDefault": {
+                                        "SSEAlgorithm": "AES256"
+                                    }
+                                }
+                            ],
+                            [
+                                {}
+                            ]
+                        ]
+                    }
+                },
+                "CorsConfiguration": {
+                    "CorsRules": [
+                        {
+                            "AllowedHeaders": [
+                                "*"
+                            ],
+                            "AllowedMethods": [
+                                "POST",
+                                "PUT",
+                                "HEAD",
+                                "GET"
+                            ],
+                            "AllowedOrigins": {
+                                "Fn::Split": [
+                                    ";",
+                                    {
+                                        "Fn::Join": [
+                                            "",
+                                            [
+                                                "https://",
+                                                {
+                                                    "Ref": "DomainName"
+                                                },
+                                                {
+                                                    "Fn::If": [
+                                                        "NoAlternateDomains",
+                                                        "",
+                                                        ";https://"
+                                                    ]
+                                                },
+                                                {
+                                                    "Fn::Join": [
+                                                        ";https://",
+                                                        {
+                                                            "Ref": "DomainNameAlternates"
+                                                        }
+                                                    ]
+                                                }
+                                            ]
+                                        ]
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                },
+                "VersioningConfiguration": {
+                    "Status": "Enabled"
+                }
+            },
+            "Type": "AWS::S3::Bucket"
+        },
+        "AssetsBucketStaging": {
+            "DeletionPolicy": "Retain",
+            "Properties": {
+                "AccessControl": "PublicRead",
+                "BucketEncryption": {
+                    "ServerSideEncryptionConfiguration": {
+                        "Fn::If": [
+                            "AssetsUseS3EncryptionCondition",
+                            [
+                                {
+                                    "ServerSideEncryptionByDefault": {
+                                        "SSEAlgorithm": "AES256"
+                                    }
+                                }
+                            ],
+                            [
+                                {}
+                            ]
+                        ]
+                    }
+                },
+                "CorsConfiguration": {
+                    "CorsRules": [
+                        {
+                            "AllowedHeaders": [
+                                "*"
+                            ],
+                            "AllowedMethods": [
+                                "POST",
+                                "PUT",
+                                "HEAD",
+                                "GET"
+                            ],
+                            "AllowedOrigins": {
+                                "Fn::Split": [
+                                    ";",
+                                    {
+                                        "Fn::Join": [
+                                            "",
+                                            [
+                                                "https://",
+                                                {
+                                                    "Ref": "DomainName"
+                                                },
+                                                {
+                                                    "Fn::If": [
+                                                        "NoAlternateDomains",
+                                                        "",
+                                                        ";https://"
+                                                    ]
+                                                },
+                                                {
+                                                    "Fn::Join": [
+                                                        ";https://",
+                                                        {
+                                                            "Ref": "DomainNameAlternates"
+                                                        }
+                                                    ]
+                                                }
+                                            ]
+                                        ]
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                },
+                "VersioningConfiguration": {
+                    "Status": "Enabled"
+                }
+            },
+            "Type": "AWS::S3::Bucket"
+        },
+        "AssetsCertificate": {
+            "Condition": "AssetsCloudFrontDomainAndUsEast1Condition",
+            "Properties": {
+                "DomainName": {
+                    "Ref": "AssetsCloudFrontDomain"
+                },
+                "DomainValidationOptions": [
+                    {
+                        "DomainName": {
+                            "Ref": "AssetsCloudFrontDomain"
+                        },
+                        "ValidationDomain": {
+                            "Ref": "AssetsCloudFrontDomain"
+                        }
+                    }
+                ]
+            },
+            "Type": "AWS::CertificateManager::Certificate"
+        },
+        "AssetsDistributionProduction": {
+            "Condition": "AssetsUseCloudFrontCondition",
+            "Properties": {
+                "DistributionConfig": {
+                    "Aliases": {
+                        "Fn::If": [
+                            "AssetsCloudFrontDomainCondition",
+                            [
+                                {
+                                    "Ref": "AssetsCloudFrontDomain"
+                                }
+                            ],
+                            {
+                                "Ref": "AWS::NoValue"
+                            }
+                        ]
+                    },
+                    "DefaultCacheBehavior": {
+                        "ForwardedValues": {
+                            "Headers": [
+                                "Origin",
+                                "Access-Control-Request-Headers",
+                                "Access-Control-Request-Method"
+                            ],
+                            "QueryString": "true"
+                        },
+                        "TargetOriginId": "Assets",
+                        "ViewerProtocolPolicy": "allow-all"
+                    },
+                    "Enabled": "true",
+                    "Origins": [
+                        {
+                            "DomainName": {
+                                "Fn::GetAtt": [
+                                    "AssetsBucketProduction",
+                                    "DomainName"
+                                ]
+                            },
+                            "Id": "Assets",
+                            "S3OriginConfig": {
+                                "OriginAccessIdentity": ""
+                            }
+                        }
+                    ],
+                    "ViewerCertificate": {
+                        "Fn::If": [
+                            "AssetsCloudFrontDomainAndUsEast1Condition",
+                            {
+                                "AcmCertificateArn": {
+                                    "Ref": "AssetsCertificate"
+                                },
+                                "SslSupportMethod": "sni-only"
+                            },
+                            {
+                                "Fn::If": [
+                                    "AssetsCloudFrontCertArnCondition",
+                                    {
+                                        "AcmCertificateArn": {
+                                            "Ref": "AssetsCloudFrontCertArn"
+                                        },
+                                        "SslSupportMethod": "sni-only"
+                                    },
+                                    {
+                                        "Ref": "AWS::NoValue"
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                }
+            },
+            "Type": "AWS::CloudFront::Distribution"
+        },
+        "AssetsDistributionStaging": {
+            "Condition": "AssetsUseCloudFrontCondition",
+            "Properties": {
+                "DistributionConfig": {
+                    "Aliases": {
+                        "Fn::If": [
+                            "AssetsCloudFrontDomainCondition",
+                            [
+                                {
+                                    "Ref": "AssetsCloudFrontDomain"
+                                }
+                            ],
+                            {
+                                "Ref": "AWS::NoValue"
+                            }
+                        ]
+                    },
+                    "DefaultCacheBehavior": {
+                        "ForwardedValues": {
+                            "Headers": [
+                                "Origin",
+                                "Access-Control-Request-Headers",
+                                "Access-Control-Request-Method"
+                            ],
+                            "QueryString": "true"
+                        },
+                        "TargetOriginId": "Assets",
+                        "ViewerProtocolPolicy": "allow-all"
+                    },
+                    "Enabled": "true",
+                    "Origins": [
+                        {
+                            "DomainName": {
+                                "Fn::GetAtt": [
+                                    "AssetsBucketProduction",
+                                    "DomainName"
+                                ]
+                            },
+                            "Id": "Assets",
+                            "S3OriginConfig": {
+                                "OriginAccessIdentity": ""
+                            }
+                        }
+                    ],
+                    "ViewerCertificate": {
+                        "Fn::If": [
+                            "AssetsCloudFrontDomainAndUsEast1Condition",
+                            {
+                                "AcmCertificateArn": {
+                                    "Ref": "AssetsCertificate"
+                                },
+                                "SslSupportMethod": "sni-only"
+                            },
+                            {
+                                "Fn::If": [
+                                    "AssetsCloudFrontCertArnCondition",
+                                    {
+                                        "AcmCertificateArn": {
+                                            "Ref": "AssetsCloudFrontCertArn"
+                                        },
+                                        "SslSupportMethod": "sni-only"
+                                    },
+                                    {
+                                        "Ref": "AWS::NoValue"
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                }
+            },
+            "Type": "AWS::CloudFront::Distribution"
+        },
+        "AutoScalingGroupProduction": {
+            "Properties": {
+                "DesiredCapacity": "0",
+                "HealthCheckGracePeriod": 300,
+                "HealthCheckType": "EC2",
+                "LaunchConfigurationName": {
+                    "Ref": "LaunchConfigurationProduction"
+                },
+                "LoadBalancerNames": [
+                    {
+                        "Ref": "LoadBalancerProduction"
+                    }
+                ],
+                "MaxSize": "32",
+                "MinSize": "0",
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "PropagateAtLaunch": true,
+                        "Value": {
+                            "Fn::Join": [
+                                "-",
+                                [
+                                    {
+                                        "Ref": "AWS::StackName"
+                                    },
+                                    "web_worker"
+                                ]
+                            ]
+                        }
+                    }
+                ],
+                "VPCZoneIdentifier": [
+                    {
+                        "Ref": "PrivateASubnet"
+                    },
+                    {
+                        "Ref": "PrivateBSubnet"
+                    }
+                ]
+            },
+            "Type": "AWS::AutoScaling::AutoScalingGroup"
+        },
+        "AutoScalingGroupStaging": {
+            "Properties": {
+                "DesiredCapacity": "0",
+                "HealthCheckGracePeriod": 300,
+                "HealthCheckType": "EC2",
+                "LaunchConfigurationName": {
+                    "Ref": "LaunchConfigurationStaging"
+                },
+                "LoadBalancerNames": [
+                    {
+                        "Ref": "LoadBalancerProduction"
+                    }
+                ],
+                "MaxSize": "32",
+                "MinSize": "0",
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "PropagateAtLaunch": true,
+                        "Value": {
+                            "Fn::Join": [
+                                "-",
+                                [
+                                    {
+                                        "Ref": "AWS::StackName"
+                                    },
+                                    "web_worker"
+                                ]
+                            ]
+                        }
+                    }
+                ],
+                "VPCZoneIdentifier": [
+                    {
+                        "Ref": "PrivateASubnet"
+                    },
+                    {
+                        "Ref": "PrivateBSubnet"
+                    }
+                ]
+            },
+            "Type": "AWS::AutoScaling::AutoScalingGroup"
+        },
+        "AwsElbSecurityGroup": {
+            "Properties": {
+                "GroupDescription": "AWS elastic load balancer security group.",
+                "SecurityGroupIngress": [
+                    {
+                        "CidrIp": "0.0.0.0/0",
+                        "FromPort": "80",
+                        "IpProtocol": "tcp",
+                        "ToPort": "80"
+                    },
+                    {
+                        "CidrIp": "0.0.0.0/0",
+                        "FromPort": "443",
+                        "IpProtocol": "tcp",
+                        "ToPort": "443"
+                    }
+                ],
+                "VpcId": {
+                    "Ref": "Vpc"
+                }
+            },
+            "Type": "AWS::EC2::SecurityGroup"
+        },
+        "BackendSecurityGroup": {
+            "Properties": {
+                "GroupDescription": "Allow full access between the Backend Instances",
+                "VpcId": {
+                    "Ref": "Vpc"
+                }
+            },
+            "Type": "AWS::EC2::SecurityGroup"
+        },
+        "BackendSecurityGroupIngressRule": {
+            "Properties": {
+                "FromPort": "-1",
+                "GroupId": {
+                    "Ref": "BackendSecurityGroup"
+                },
+                "IpProtocol": "-1",
+                "SourceSecurityGroupId": {
+                    "Ref": "BackendSecurityGroup"
+                },
+                "ToPort": "-1"
+            },
+            "Type": "AWS::EC2::SecurityGroupIngress"
+        },
+        "GatewayAttachement": {
+            "Properties": {
+                "InternetGatewayId": {
+                    "Ref": "InternetGateway"
+                },
+                "VpcId": {
+                    "Ref": "Vpc"
+                }
+            },
+            "Type": "AWS::EC2::VPCGatewayAttachment"
+        },
+        "InternetGateway": {
+            "Type": "AWS::EC2::InternetGateway"
+        },
+        "LaunchConfigurationProduction": {
+            "Properties": {
+                "ImageId": {
+                    "Ref": "RouterAMI"
+                },
+                "InstanceType": "t2.nano",
+                "KeyName": {
+                    "Ref": "KeyName"
+                },
+                "SecurityGroups": [
+                    {
+                        "Ref": "WebServerSecurityGroup"
+                    }
+                ]
+            },
+            "Type": "AWS::AutoScaling::LaunchConfiguration"
+        },
+        "LaunchConfigurationStaging": {
+            "Properties": {
+                "ImageId": {
+                    "Ref": "RouterAMI"
+                },
+                "InstanceType": "t2.nano",
+                "KeyName": {
+                    "Ref": "KeyName"
+                },
+                "SecurityGroups": [
+                    {
+                        "Ref": "WebServerSecurityGroup"
+                    }
+                ]
+            },
+            "Type": "AWS::AutoScaling::LaunchConfiguration"
+        },
+        "LoadBalancerProduction": {
+            "Properties": {
+                "CrossZone": "true",
+                "HealthCheck": {
+                    "HealthyThreshold": "2",
+                    "Interval": "10",
+                    "Target": {
+                        "Fn::If": [
+                            "TcpHealthCheckProduction",
+                            "TCP:80",
+                            {
+                                "Fn::Join": [
+                                    "",
+                                    [
+                                        "HTTPS:80",
+                                        {
+                                            "Ref": "WebWorkerHealthCheck"
+                                        }
+                                    ]
+                                ]
+                            }
+                        ]
+                    },
+                    "Timeout": "9",
+                    "UnhealthyThreshold": "2"
+                },
+                "Instances": [],
+                "Listeners": [
+                    {
+                        "InstancePort": 80,
+                        "InstanceProtocol": "HTTP",
+                        "LoadBalancerPort": 80,
+                        "Protocol": "HTTP"
+                    },
+                    {
+                        "InstancePort": 80,
+                        "InstanceProtocol": {
+                            "Fn::If": [
+                                "AcmCertConditionProduction",
+                                "HTTP",
+                                "TCP"
+                            ]
+                        },
+                        "LoadBalancerPort": 443,
+                        "Protocol": {
+                            "Fn::If": [
+                                "AcmCertConditionProduction",
+                                "HTTPS",
+                                "TCP"
+                            ]
+                        },
+                        "SSLCertificateId": {
+                            "Fn::If": [
+                                "AcmCertConditionProduction",
+                                {
+                                    "Ref": "AcmCertArnProduction"
+                                },
+                                {
+                                    "Ref": "AWS::NoValue"
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "SecurityGroups": [
+                    {
+                        "Ref": "AwsElbSecurityGroup"
+                    }
+                ],
+                "Subnets": [
+                    {
+                        "Ref": "PublicASubnet"
+                    },
+                    {
+                        "Ref": "PublicBSubnet"
+                    }
+                ]
+            },
+            "Type": "AWS::ElasticLoadBalancing::LoadBalancer"
+        },
+        "LoadBalancerStaging": {
+            "Properties": {
+                "CrossZone": "true",
+                "HealthCheck": {
+                    "HealthyThreshold": "2",
+                    "Interval": "10",
+                    "Target": {
+                        "Fn::If": [
+                            "TcpHealthCheckStaging",
+                            "TCP:80",
+                            {
+                                "Fn::Join": [
+                                    "",
+                                    [
+                                        "HTTPS:80",
+                                        {
+                                            "Ref": "WebWorkerHealthCheck"
+                                        }
+                                    ]
+                                ]
+                            }
+                        ]
+                    },
+                    "Timeout": "9",
+                    "UnhealthyThreshold": "2"
+                },
+                "Instances": [],
+                "Listeners": [
+                    {
+                        "InstancePort": 80,
+                        "InstanceProtocol": "HTTP",
+                        "LoadBalancerPort": 80,
+                        "Protocol": "HTTP"
+                    },
+                    {
+                        "InstancePort": 80,
+                        "InstanceProtocol": {
+                            "Fn::If": [
+                                "AcmCertConditionStaging",
+                                "HTTP",
+                                "TCP"
+                            ]
+                        },
+                        "LoadBalancerPort": 443,
+                        "Protocol": {
+                            "Fn::If": [
+                                "AcmCertConditionStaging",
+                                "HTTPS",
+                                "TCP"
+                            ]
+                        },
+                        "SSLCertificateId": {
+                            "Fn::If": [
+                                "AcmCertConditionStaging",
+                                {
+                                    "Ref": "AcmCertArnStaging"
+                                },
+                                {
+                                    "Ref": "AWS::NoValue"
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "SecurityGroups": [
+                    {
+                        "Ref": "AwsElbSecurityGroup"
+                    }
+                ],
+                "Subnets": [
+                    {
+                        "Ref": "PublicASubnet"
+                    },
+                    {
+                        "Ref": "PublicBSubnet"
+                    }
+                ]
+            },
+            "Type": "AWS::ElasticLoadBalancing::LoadBalancer"
+        },
+        "LogGroup": {
+            "DeletionPolicy": "Retain",
+            "Properties": {
+                "RetentionInDays": 731
+            },
+            "Type": "AWS::Logs::LogGroup"
+        },
+        "PrivateARouteTableAssociation": {
+            "Properties": {
+                "RouteTableId": {
+                    "Ref": "PrivateRouteTable"
+                },
+                "SubnetId": {
+                    "Ref": "PrivateASubnet"
+                }
+            },
+            "Type": "AWS::EC2::SubnetRouteTableAssociation"
+        },
+        "PrivateASubnet": {
+            "Properties": {
+                "AvailabilityZone": {
+                    "Ref": "PrimaryAZ"
+                },
+                "CidrBlock": "10.1.2.0/24",
+                "MapPublicIpOnLaunch": "false",
+                "VpcId": {
+                    "Ref": "Vpc"
+                }
+            },
+            "Type": "AWS::EC2::Subnet"
+        },
+        "PrivateBRouteTableAssociation": {
+            "Properties": {
+                "RouteTableId": {
+                    "Ref": "PrivateRouteTable"
+                },
+                "SubnetId": {
+                    "Ref": "PrivateBSubnet"
+                }
+            },
+            "Type": "AWS::EC2::SubnetRouteTableAssociation"
+        },
+        "PrivateBSubnet": {
+            "Properties": {
+                "AvailabilityZone": {
+                    "Ref": "SecondaryAZ"
+                },
+                "CidrBlock": "10.1.3.0/24",
+                "MapPublicIpOnLaunch": "false",
+                "VpcId": {
+                    "Ref": "Vpc"
+                }
+            },
+            "Type": "AWS::EC2::Subnet"
+        },
+        "PrivateBucketProduction": {
+            "DeletionPolicy": "Retain",
+            "Properties": {
+                "AccessControl": "Private",
+                "BucketEncryption": {
+                    "ServerSideEncryptionConfiguration": {
+                        "Fn::If": [
+                            "AssetsUseS3EncryptionCondition",
+                            [
+                                {
+                                    "ServerSideEncryptionByDefault": {
+                                        "SSEAlgorithm": "AES256"
+                                    }
+                                }
+                            ],
+                            [
+                                {}
+                            ]
+                        ]
+                    }
+                },
+                "CorsConfiguration": {
+                    "CorsRules": [
+                        {
+                            "AllowedHeaders": [
+                                "*"
+                            ],
+                            "AllowedMethods": [
+                                "POST",
+                                "PUT",
+                                "HEAD",
+                                "GET"
+                            ],
+                            "AllowedOrigins": {
+                                "Fn::Split": [
+                                    ";",
+                                    {
+                                        "Fn::Join": [
+                                            "",
+                                            [
+                                                "https://",
+                                                {
+                                                    "Ref": "DomainName"
+                                                },
+                                                {
+                                                    "Fn::If": [
+                                                        "NoAlternateDomains",
+                                                        "",
+                                                        ";https://"
+                                                    ]
+                                                },
+                                                {
+                                                    "Fn::Join": [
+                                                        ";https://",
+                                                        {
+                                                            "Ref": "DomainNameAlternates"
+                                                        }
+                                                    ]
+                                                }
+                                            ]
+                                        ]
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                },
+                "PublicAccessBlockConfiguration": {
+                    "IgnorePublicAcls": "true"
+                },
+                "VersioningConfiguration": {
+                    "Status": "Enabled"
+                }
+            },
+            "Type": "AWS::S3::Bucket"
+        },
+        "PrivateBucketStaging": {
+            "DeletionPolicy": "Retain",
+            "Properties": {
+                "AccessControl": "Private",
+                "BucketEncryption": {
+                    "ServerSideEncryptionConfiguration": {
+                        "Fn::If": [
+                            "AssetsUseS3EncryptionCondition",
+                            [
+                                {
+                                    "ServerSideEncryptionByDefault": {
+                                        "SSEAlgorithm": "AES256"
+                                    }
+                                }
+                            ],
+                            [
+                                {}
+                            ]
+                        ]
+                    }
+                },
+                "CorsConfiguration": {
+                    "CorsRules": [
+                        {
+                            "AllowedHeaders": [
+                                "*"
+                            ],
+                            "AllowedMethods": [
+                                "POST",
+                                "PUT",
+                                "HEAD",
+                                "GET"
+                            ],
+                            "AllowedOrigins": {
+                                "Fn::Split": [
+                                    ";",
+                                    {
+                                        "Fn::Join": [
+                                            "",
+                                            [
+                                                "https://",
+                                                {
+                                                    "Ref": "DomainName"
+                                                },
+                                                {
+                                                    "Fn::If": [
+                                                        "NoAlternateDomains",
+                                                        "",
+                                                        ";https://"
+                                                    ]
+                                                },
+                                                {
+                                                    "Fn::Join": [
+                                                        ";https://",
+                                                        {
+                                                            "Ref": "DomainNameAlternates"
+                                                        }
+                                                    ]
+                                                }
+                                            ]
+                                        ]
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                },
+                "PublicAccessBlockConfiguration": {
+                    "IgnorePublicAcls": "true"
+                },
+                "VersioningConfiguration": {
+                    "Status": "Enabled"
+                }
+            },
+            "Type": "AWS::S3::Bucket"
+        },
+        "PrivateNatRoute": {
+            "Properties": {
+                "DestinationCidrBlock": "0.0.0.0/0",
+                "InstanceId": {
+                    "Ref": "router"
+                },
+                "RouteTableId": {
+                    "Ref": "PrivateRouteTable"
+                }
+            },
+            "Type": "AWS::EC2::Route"
+        },
+        "PrivateRouteTable": {
+            "Properties": {
+                "VpcId": {
+                    "Ref": "Vpc"
+                }
+            },
+            "Type": "AWS::EC2::RouteTable"
+        },
+        "PublicASubnet": {
+            "Properties": {
+                "AvailabilityZone": {
+                    "Ref": "PrimaryAZ"
+                },
+                "CidrBlock": "10.1.0.0/24",
+                "MapPublicIpOnLaunch": "true",
+                "VpcId": {
+                    "Ref": "Vpc"
+                }
+            },
+            "Type": "AWS::EC2::Subnet"
+        },
+        "PublicASubnetRouteTableAssociation": {
+            "Properties": {
+                "RouteTableId": {
+                    "Ref": "PublicRouteTable"
+                },
+                "SubnetId": {
+                    "Ref": "PublicASubnet"
+                }
+            },
+            "Type": "AWS::EC2::SubnetRouteTableAssociation"
+        },
+        "PublicBSubnet": {
+            "Properties": {
+                "AvailabilityZone": {
+                    "Ref": "SecondaryAZ"
+                },
+                "CidrBlock": "10.1.1.0/24",
+                "MapPublicIpOnLaunch": "true",
+                "VpcId": {
+                    "Ref": "Vpc"
+                }
+            },
+            "Type": "AWS::EC2::Subnet"
+        },
+        "PublicBSubnetRouteTableAssociation": {
+            "Properties": {
+                "RouteTableId": {
+                    "Ref": "PublicRouteTable"
+                },
+                "SubnetId": {
+                    "Ref": "PublicBSubnet"
+                }
+            },
+            "Type": "AWS::EC2::SubnetRouteTableAssociation"
+        },
+        "PublicRoute": {
+            "Properties": {
+                "DestinationCidrBlock": "0.0.0.0/0",
+                "GatewayId": {
+                    "Ref": "InternetGateway"
+                },
+                "RouteTableId": {
+                    "Ref": "PublicRouteTable"
+                }
+            },
+            "Type": "AWS::EC2::Route"
+        },
+        "PublicRouteTable": {
+            "Properties": {
+                "VpcId": {
+                    "Ref": "Vpc"
+                }
+            },
+            "Type": "AWS::EC2::RouteTable"
+        },
+        "RouterEIP": {
+            "Properties": {
+                "Domain": "vpc"
+            },
+            "Type": "AWS::EC2::EIP"
+        },
+        "RouterEipAssociation": {
+            "Properties": {
+                "AllocationId": {
+                    "Fn::GetAtt": [
+                        "RouterEIP",
+                        "AllocationId"
+                    ]
+                },
+                "InstanceId": {
+                    "Ref": "router"
+                }
+            },
+            "Type": "AWS::EC2::EIPAssociation"
+        },
+        "RouterSecurityGroup": {
+            "Properties": {
+                "GroupDescription": "Allows SSH and HTTPS access from LocalCidr, and OpenVPN from anywhere.",
+                "SecurityGroupIngress": [
+                    {
+                        "CidrIp": {
+                            "Ref": "LocalCidr"
+                        },
+                        "FromPort": 22,
+                        "IpProtocol": "tcp",
+                        "ToPort": 22
+                    },
+                    {
+                        "CidrIp": {
+                            "Ref": "LocalCidr"
+                        },
+                        "FromPort": 443,
+                        "IpProtocol": "tcp",
+                        "ToPort": 443
+                    },
+                    {
+                        "CidrIp": "0.0.0.0/0",
+                        "FromPort": 1194,
+                        "IpProtocol": "udp",
+                        "ToPort": 1194
+                    },
+                    {
+                        "CidrIp": "10.1.0.0/22",
+                        "FromPort": "-1",
+                        "IpProtocol": "-1",
+                        "ToPort": "-1"
+                    }
+                ],
+                "VpcId": {
+                    "Ref": "Vpc"
+                }
+            },
+            "Type": "AWS::EC2::SecurityGroup"
+        },
+        "RouterToBackendSecurityGroupIngressRule": {
+            "Properties": {
+                "FromPort": "-1",
+                "GroupId": {
+                    "Ref": "BackendSecurityGroup"
+                },
+                "IpProtocol": "-1",
+                "SourceSecurityGroupId": {
+                    "Ref": "RouterSecurityGroup"
+                },
+                "ToPort": "-1"
+            },
+            "Type": "AWS::EC2::SecurityGroupIngress"
+        },
+        "Vpc": {
+            "Properties": {
+                "CidrBlock": "10.1.0.0/22",
+                "EnableDnsHostnames": "true",
+                "EnableDnsSupport": "true"
+            },
+            "Type": "AWS::EC2::VPC"
+        },
+        "WebServerSecurityGroup": {
+            "Properties": {
+                "GroupDescription": "Backend web server security group.",
+                "SecurityGroupIngress": [
+                    {
+                        "FromPort": "80",
+                        "IpProtocol": "tcp",
+                        "SourceSecurityGroupId": {
+                            "Ref": "AwsElbSecurityGroup"
+                        },
+                        "ToPort": "80"
+                    },
+                    {
+                        "FromPort": "443",
+                        "IpProtocol": "tcp",
+                        "SourceSecurityGroupId": {
+                            "Ref": "AwsElbSecurityGroup"
+                        },
+                        "ToPort": "443"
+                    }
+                ],
+                "VpcId": {
+                    "Ref": "Vpc"
+                }
+            },
+            "Type": "AWS::EC2::SecurityGroup"
+        },
+        "router": {
+            "Properties": {
+                "BlockDeviceMappings": [
+                    {
+                        "DeviceName": "/dev/sda1",
+                        "Ebs": {
+                            "VolumeSize": 8
+                        }
+                    }
+                ],
+                "ImageId": {
+                    "Ref": "RouterAMI"
+                },
+                "InstanceType": "t2.nano",
+                "KeyName": {
+                    "Ref": "KeyName"
+                },
+                "SecurityGroupIds": [
+                    {
+                        "Ref": "RouterSecurityGroup"
+                    }
+                ],
+                "SourceDestCheck": "false",
+                "SubnetId": {
+                    "Ref": "PublicASubnet"
+                },
+                "Tags": [
+                    {
+                        "Key": "Environment",
+                        "Value": ""
+                    },
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Join": [
+                                "-",
+                                [
+                                    {
+                                        "Ref": "AWS::StackName"
+                                    },
+                                    "router"
+                                ]
+                            ]
+                        }
+                    }
+                ]
+            },
+            "Type": "AWS::EC2::Instance"
+        }
+    }
+}
