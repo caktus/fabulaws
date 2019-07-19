@@ -190,13 +190,23 @@ class EC2Instance(object):
                 eph_name = 'ephemeral{}'.format(i)
                 bdm[dev] = blockdevicemapping.BlockDeviceType(ephemeral_name=eph_name)
             ebs_optimized = bool(self.ebs_optimized_regex.match(self.instance_type))
+            if hasattr(env, 'subnets'):
+                # We're in a VPC, so provide the 'subnet_id' and 'security_group_ids'.
+                extra_kwargs = {
+                    'subnet_id': env.subnets[placement],
+                    'security_group_ids': self.security_groups,
+                }
+            else:
+                # We're NOT in a VPC, so provide the 'placement' and 'security_groups'.
+                extra_kwargs = {
+                    'placement': placement,
+                    'security_groups': self.security_groups,
+                }
             res = self.conn.run_instances(image.id, key_name=key_name,
-                                          security_groups=self.security_groups,
                                           instance_type=self.instance_type,
-                                          placement=placement,
                                           block_device_map=bdm,
                                           min_count=count, max_count=count,
-                                          ebs_optimized=ebs_optimized)
+                                          ebs_optimized=ebs_optimized, **extra_kwargs)
             time.sleep(5) # wait for AWS to catch up
             created = True
         for inst in res.instances:

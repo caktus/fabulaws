@@ -159,6 +159,12 @@ avail_zones:
 - e
 - c
 
+# Optionally, you can specify the subnet IDs for each AZ, if the instances need
+# to be created in a non-default VPC:
+# subnets:
+#   e: subnet-12345
+#   c: subnet-67890
+
 # Mapping of role to security group(s):
 security_groups:
   db-master: [myproject-sg, myproject-db-sg]
@@ -166,6 +172,16 @@ security_groups:
   cache: [myproject-sg, myproject-session-sg, myproject-cache-sg, myproject-queue-sg]
   worker: [myproject-sg, myproject-worker-sg]
   web: [myproject-sg, myproject-web-sg]
+
+# If the instances need to be created in a non-default VPC, you'll need to provide
+# the security group IDs instead of names, like so:
+# security_groups:
+#   db-master: [sg-12345]
+#   db-slave: [sg-12345]
+#   cache: [sg-12345]
+#   worker: [sg-12345]
+#   # You might want an extra security group to allow traffic from the ELBs:
+#   web: [sg-12345, sg-67890]
 
 # Mapping of environment and role to EC2 instance types (sizes)
 instance_types:
