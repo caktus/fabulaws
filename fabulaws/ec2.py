@@ -332,8 +332,11 @@ class EC2Instance(object):
         """
         Adds this instance to the specified load balancer.
         """
-        # ensure that the load balancer accepts traffic to this AV
-        self.elb_conn.enable_availability_zones(elb_name, [self._placement])
+        try:
+            # ensure that the load balancer accepts traffic to this AV
+            self.elb_conn.enable_availability_zones(elb_name, [self._placement])
+        except BotoServerError:
+            logger.info('Failed to call enable_availability_zones(). IGNORE this error if using a VPC!')
         return self.elb_conn.register_instances(elb_name, [self.instance.id])
 
     def remove_from_elb(self, elb_name):

@@ -1912,8 +1912,8 @@ def deploy_full(deployment_tag, environment, launch_config_name=None, num_web=2)
                    "more.".format(waited, count, curr_minimum - count))
 
     # Wait to make sure that the encrypted drive is mounted.
-    print ("Waiting 120 seconds to make sure that the encrypted drive is "
-           "mounted on all new instances.")
+    print ("Waiting 120 seconds for nodes to launch and to ensure that the "
+           "encrypted drive is mounted on all new instances.")
     time.sleep(120)
 
     # Reload the environment to add the new web servers.
