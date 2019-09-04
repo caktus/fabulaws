@@ -55,8 +55,8 @@ for environment in environments:
         # If ACM is enabled, use the certificate here, otherwise pass TCP connections directly
         elb.Listener(
             LoadBalancerPort=443,
-            InstanceProtocol=If(acm_cert_condition, "HTTP", "TCP"),
-            InstancePort=80,
+            InstanceProtocol=If(acm_cert_condition, "HTTPS", "TCP"),
+            InstancePort=443,
             Protocol=If(acm_cert_condition, "HTTPS", "TCP"),
             SSLCertificateId=If(acm_cert_condition, acm_cert_arn, Ref("AWS::NoValue")),
         ),

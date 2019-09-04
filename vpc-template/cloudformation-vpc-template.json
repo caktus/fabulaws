@@ -696,7 +696,6 @@
         },
         "AutoScalingGroupProduction": {
             "Properties": {
-                "DesiredCapacity": "0",
                 "HealthCheckGracePeriod": 300,
                 "HealthCheckType": "EC2",
                 "LaunchConfigurationName": {
@@ -739,7 +738,6 @@
         },
         "AutoScalingGroupStaging": {
             "Properties": {
-                "DesiredCapacity": "0",
                 "HealthCheckGracePeriod": 300,
                 "HealthCheckType": "EC2",
                 "LaunchConfigurationName": {
@@ -909,11 +907,11 @@
                         "Protocol": "HTTP"
                     },
                     {
-                        "InstancePort": 80,
+                        "InstancePort": 443,
                         "InstanceProtocol": {
                             "Fn::If": [
                                 "AcmCertConditionProduction",
-                                "HTTP",
+                                "HTTPS",
                                 "TCP"
                             ]
                         },
@@ -989,11 +987,11 @@
                         "Protocol": "HTTP"
                     },
                     {
-                        "InstancePort": 80,
+                        "InstancePort": 443,
                         "InstanceProtocol": {
                             "Fn::If": [
                                 "AcmCertConditionStaging",
-                                "HTTP",
+                                "HTTPS",
                                 "TCP"
                             ]
                         },

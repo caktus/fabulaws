@@ -84,10 +84,7 @@ def ebs_block_device(volume_size):
     ]
 
 
-common_ec2_properties = dict(
-    KeyName=Ref(key_name),
-    # IamInstanceProfile=Ref(instance_profile)
-)
+common_ec2_properties = dict(KeyName=Ref(key_name))
 
 ec2_instance_definitions = {
     ("router", ""): dict(
@@ -162,7 +159,6 @@ for environment in environments:
         # We set the DesiredCapacity to 0 below, so none of these will actually get created.
         InstanceType=INSTANCE_TYPES[("router", "")],
         ImageId=Ref(router_ami),
-        # IamInstanceProfile=Ref(instance_profile),
         KeyName=Ref(key_name),
     )
 
@@ -173,7 +169,7 @@ for environment in environments:
         # Start with no instances (will be added by fabulaws)
         MinSize="0",
         MaxSize="32",
-        DesiredCapacity="0",
+        # Don't specify DesiredCapacity to avoid updating that attribute
         LaunchConfigurationName=Ref(container_instance_configuration),
         LoadBalancerNames=[Ref(load_balancer)],
         HealthCheckType="EC2",
