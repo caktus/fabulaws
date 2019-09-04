@@ -165,6 +165,11 @@ avail_zones:
 #   e: subnet-12345
 #   c: subnet-67890
 
+# Optionally, you can specify the attribute of the EC2 instance to use for
+# connecting via SSH, typically 'public_dns_name' or 'private_ip_address'. Defaults
+# to 'public_dns_name'.
+# ec2_attr_for_ssh: private_ip_address
+
 # Mapping of role to security group(s):
 security_groups:
   db-master: [myproject-sg, myproject-db-sg]

@@ -323,11 +323,14 @@ def _current_server():
 def _allowed_hosts():
     """Returns the allowed hosts that should be set for the current server."""
     server = _current_server()
-    return env.site_domains +\
-           [server.instance.private_dns_name,
-            server.instance.private_ip_address,
-            server.instance.public_dns_name,
-            server.instance.ip_address]
+    # Filter out None or '' (e.g., if the instance doesn't have a public IP)
+    server_addrs = filter(lambda addr: bool(addr), [
+        server.instance.private_dns_name,
+        server.instance.private_ip_address,
+        server.instance.public_dns_name,
+        server.instance.ip_address,
+    ])
+    return env.site_domains + server_addrs
 
 
 def _change_role(server, new_role):

@@ -244,8 +244,8 @@ class EC2Instance(object):
             try:
                 key = self.key_file and self.key_file.name or env.key_filename
                 user = self.user and self.user or env.user
-                ssh.connect(instance.public_dns_name, allow_agent=False,
-                            look_for_keys=False, username=user,
+                ssh.connect(getattr(instance, getattr(env, 'ec2_attr_for_ssh', 'public_dns_name')),
+                            allow_agent=False, look_for_keys=False, username=user,
                             key_filename=key, timeout=self.ssh_timeout)
                 break
             except (EOFError, socket.error, paramiko.SSHException), e:
@@ -273,9 +273,10 @@ class EC2Instance(object):
         if self.user:
             logger.debug('Setting env.user = "{0}"'.format(self.user))
             env.user = self.user
+        host_string = getattr(self.instance, getattr(env, 'ec2_attr_for_ssh', 'public_dns_name'))
         logger.debug('Setting env.host_string = "{0}"'
-                     ''.format(self.instance.public_dns_name))
-        env.host_string = self.instance.public_dns_name
+                     ''.format(host_string))
+        env.host_string = host_string
         env.current_server = self
 
     def _restore_context(self):
@@ -459,7 +460,7 @@ class EC2Instance(object):
     @property
     def hostname(self):
         if self.instance:
-            return self.instance.public_dns_name
+            return getattr(self.instance, getattr(env, 'ec2_attr_for_ssh', 'public_dns_name'))
         else:
             raise ValueError('No instance has been created yet, or the '
                              'instance has already been destroyed.')
