@@ -44,7 +44,7 @@ class BaseInstance(FirewallMixin, UbuntuInstance):
                     'app_root', 'deploy_user_home', 'fs_type', 'fs_encrypt',
                     'ubuntu_mirror', 'swap_multiplier', 'instance_type',
                     'deploy_user', 'volume_size', 'volume_type',
-                    'security_groups']:
+                    'security_groups', 'ebs_encrypt']:
             setattr(self, key, kwargs.pop(key, ''))
         if 'terminate' not in kwargs:
             kwargs['terminate'] = False

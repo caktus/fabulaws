@@ -8,7 +8,10 @@ instance_settings:
   secure_root: #/secure # no trailing /
   secure_home: #/home/secure
   fs_type: ext4
+  # Whether or not to encrypt the block device in Linux with LUKS (requires a mount script)
   fs_encrypt: false
+  # Whether or not to encrypt the underlying EBS volume (does NOT require a mount script)
+  ebs_encrypt: false
   ubuntu_mirror: us.archive.ubuntu.com
   # create swap of swap_multiplier * available RAM
   swap_multiplier: 1

@@ -28,6 +28,7 @@ class UbuntuInstance(BaseAptMixin, EC2Instance):
     volume_info = [] # tuples of (device, mount_point, size_in_GB, type, passwd)
     fs_type = 'ext3'
     fs_encrypt = False
+    ebs_encrypt = False
     ubuntu_mirror = None
     mount_script = '/mount-deferred.sh'
 
@@ -50,6 +51,9 @@ class UbuntuInstance(BaseAptMixin, EC2Instance):
                     logger.debug('Found device {0}'.format(device))
                     return device
             time.sleep(1)
+        # Device wasn't found; run dmesg to hopefully tell us where it is
+        run('dmesg')
+        raise ValueError('Devices {0} never appeared.'.format(','.join(devices)))
 
     @uses_fabric
     def _encrypt_device(self, device, passwd=None):
@@ -144,7 +148,8 @@ class UbuntuInstance(BaseAptMixin, EC2Instance):
         logger.info('Attaching {0}'.format(device))
         inst = self.instance
         # the placement is the availability zone
-        vol = self.conn.create_volume(vol_size, inst.placement, volume_type=vol_type)
+        vol = self.conn.create_volume(vol_size, inst.placement, volume_type=vol_type,
+                                      encrypted=self.ebs_encrypt)
         self._set_volume_tags(vol, device)
         try:
             logger.debug('Waiting for volume {0} to become AVAILABLE '
