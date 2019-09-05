@@ -72,7 +72,7 @@ for environment in environments:
             Target=If(
                 tcp_health_check_condition,
                 "TCP:80",
-                Join("", ["HTTPS:80", web_worker_health_check]),
+                Join("", ["HTTPS:443", web_worker_health_check]),
             ),
             HealthyThreshold="2",
             UnhealthyThreshold="2",

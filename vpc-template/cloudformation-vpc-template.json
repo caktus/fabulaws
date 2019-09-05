@@ -886,7 +886,7 @@
                                 "Fn::Join": [
                                     "",
                                     [
-                                        "HTTPS:80",
+                                        "HTTPS:443",
                                         {
                                             "Ref": "WebWorkerHealthCheck"
                                         }
@@ -966,7 +966,7 @@
                                 "Fn::Join": [
                                     "",
                                     [
-                                        "HTTPS:80",
+                                        "HTTPS:443",
                                         {
                                             "Ref": "WebWorkerHealthCheck"
                                         }
