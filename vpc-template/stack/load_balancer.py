@@ -20,7 +20,8 @@ web_worker_health_check = Ref(
     )
 )
 
-# Web load balancer
+# Web load balancers
+load_balancers = {}
 
 for environment in environments:
     acm_cert_arn = Ref(
@@ -62,7 +63,7 @@ for environment in environments:
         ),
     ]
 
-    load_balancer = elb.LoadBalancer(
+    load_balancers[environment] = elb.LoadBalancer(
         "LoadBalancer%s" % environment.title(),
         template=template,
         Subnets=[Ref(public_a_subnet), Ref(public_b_subnet)],
@@ -87,6 +88,6 @@ for environment in environments:
         Output(
             "LoadBalancer%sDNSName" % environment.title(),
             Description="Loadbalancer DNS",
-            Value=GetAtt(load_balancer, "DNSName"),
+            Value=GetAtt(load_balancers[environment], "DNSName"),
         )
     )

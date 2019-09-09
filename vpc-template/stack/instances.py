@@ -13,7 +13,7 @@ from troposphere import (
 
 from .assets import assets_management_policy
 from .common import environments
-from .load_balancer import load_balancer
+from .load_balancer import load_balancers
 from .logs import logging_policy
 from .security_groups import router_security_group, web_security_group
 from .template import template
@@ -171,8 +171,8 @@ for environment in environments:
         MaxSize="32",
         # Don't specify DesiredCapacity to avoid updating that attribute
         LaunchConfigurationName=Ref(container_instance_configuration),
-        LoadBalancerNames=[Ref(load_balancer)],
-        HealthCheckType="EC2",
+        LoadBalancerNames=[Ref(load_balancers[environment])],
+        HealthCheckType="ELB",
         HealthCheckGracePeriod=300,
         Tags=[
             {

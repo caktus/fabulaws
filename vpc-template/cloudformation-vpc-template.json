@@ -697,7 +697,7 @@
         "AutoScalingGroupProduction": {
             "Properties": {
                 "HealthCheckGracePeriod": 300,
-                "HealthCheckType": "EC2",
+                "HealthCheckType": "ELB",
                 "LaunchConfigurationName": {
                     "Ref": "LaunchConfigurationProduction"
                 },
@@ -739,13 +739,13 @@
         "AutoScalingGroupStaging": {
             "Properties": {
                 "HealthCheckGracePeriod": 300,
-                "HealthCheckType": "EC2",
+                "HealthCheckType": "ELB",
                 "LaunchConfigurationName": {
                     "Ref": "LaunchConfigurationStaging"
                 },
                 "LoadBalancerNames": [
                     {
-                        "Ref": "LoadBalancerProduction"
+                        "Ref": "LoadBalancerStaging"
                     }
                 ],
                 "MaxSize": "32",
