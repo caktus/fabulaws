@@ -64,7 +64,7 @@ for environment in environments:
     ]
 
     load_balancers[environment] = elb.LoadBalancer(
-        "LoadBalancer%s" % environment.title(),
+        "Elb%s" % environment.title(),
         template=template,
         Subnets=[Ref(public_a_subnet), Ref(public_b_subnet)],
         SecurityGroups=[Ref(aws_elb_security_group)],
@@ -86,7 +86,7 @@ for environment in environments:
 
     template.add_output(
         Output(
-            "LoadBalancer%sDNSName" % environment.title(),
+            "Elb%sDnsName" % environment.title(),
             Description="Loadbalancer DNS",
             Value=GetAtt(load_balancers[environment], "DNSName"),
         )

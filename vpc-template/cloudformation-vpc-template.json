@@ -264,20 +264,20 @@
                 ]
             }
         },
-        "LoadBalancerProductionDNSName": {
+        "ElbProductionDnsName": {
             "Description": "Loadbalancer DNS",
             "Value": {
                 "Fn::GetAtt": [
-                    "LoadBalancerProduction",
+                    "ElbProduction",
                     "DNSName"
                 ]
             }
         },
-        "LoadBalancerStagingDNSName": {
+        "ElbStagingDnsName": {
             "Description": "Loadbalancer DNS",
             "Value": {
                 "Fn::GetAtt": [
-                    "LoadBalancerStaging",
+                    "ElbStaging",
                     "DNSName"
                 ]
             }
@@ -703,7 +703,7 @@
                 },
                 "LoadBalancerNames": [
                     {
-                        "Ref": "LoadBalancerProduction"
+                        "Ref": "ElbProduction"
                     }
                 ],
                 "MaxSize": "32",
@@ -745,7 +745,7 @@
                 },
                 "LoadBalancerNames": [
                     {
-                        "Ref": "LoadBalancerStaging"
+                        "Ref": "ElbStaging"
                     }
                 ],
                 "MaxSize": "32",
@@ -824,55 +824,7 @@
             },
             "Type": "AWS::EC2::SecurityGroupIngress"
         },
-        "GatewayAttachement": {
-            "Properties": {
-                "InternetGatewayId": {
-                    "Ref": "InternetGateway"
-                },
-                "VpcId": {
-                    "Ref": "Vpc"
-                }
-            },
-            "Type": "AWS::EC2::VPCGatewayAttachment"
-        },
-        "InternetGateway": {
-            "Type": "AWS::EC2::InternetGateway"
-        },
-        "LaunchConfigurationProduction": {
-            "Properties": {
-                "ImageId": {
-                    "Ref": "RouterAMI"
-                },
-                "InstanceType": "t2.nano",
-                "KeyName": {
-                    "Ref": "KeyName"
-                },
-                "SecurityGroups": [
-                    {
-                        "Ref": "WebServerSecurityGroup"
-                    }
-                ]
-            },
-            "Type": "AWS::AutoScaling::LaunchConfiguration"
-        },
-        "LaunchConfigurationStaging": {
-            "Properties": {
-                "ImageId": {
-                    "Ref": "RouterAMI"
-                },
-                "InstanceType": "t2.nano",
-                "KeyName": {
-                    "Ref": "KeyName"
-                },
-                "SecurityGroups": [
-                    {
-                        "Ref": "WebServerSecurityGroup"
-                    }
-                ]
-            },
-            "Type": "AWS::AutoScaling::LaunchConfiguration"
-        },
-        "LoadBalancerProduction": {
+        "ElbProduction": {
             "Properties": {
                 "CrossZone": "true",
                 "HealthCheck": {
@@ -952,7 +904,7 @@
             },
             "Type": "AWS::ElasticLoadBalancing::LoadBalancer"
         },
-        "LoadBalancerStaging": {
+        "ElbStaging": {
             "Properties": {
                 "CrossZone": "true",
                 "HealthCheck": {
@@ -1031,6 +983,54 @@
                 ]
             },
             "Type": "AWS::ElasticLoadBalancing::LoadBalancer"
+        },
+        "GatewayAttachement": {
+            "Properties": {
+                "InternetGatewayId": {
+                    "Ref": "InternetGateway"
+                },
+                "VpcId": {
+                    "Ref": "Vpc"
+                }
+            },
+            "Type": "AWS::EC2::VPCGatewayAttachment"
+        },
+        "InternetGateway": {
+            "Type": "AWS::EC2::InternetGateway"
+        },
+        "LaunchConfigurationProduction": {
+            "Properties": {
+                "ImageId": {
+                    "Ref": "RouterAMI"
+                },
+                "InstanceType": "t2.nano",
+                "KeyName": {
+                    "Ref": "KeyName"
+                },
+                "SecurityGroups": [
+                    {
+                        "Ref": "WebServerSecurityGroup"
+                    }
+                ]
+            },
+            "Type": "AWS::AutoScaling::LaunchConfiguration"
+        },
+        "LaunchConfigurationStaging": {
+            "Properties": {
+                "ImageId": {
+                    "Ref": "RouterAMI"
+                },
+                "InstanceType": "t2.nano",
+                "KeyName": {
+                    "Ref": "KeyName"
+                },
+                "SecurityGroups": [
+                    {
+                        "Ref": "WebServerSecurityGroup"
+                    }
+                ]
+            },
+            "Type": "AWS::AutoScaling::LaunchConfiguration"
         },
         "LogGroup": {
             "DeletionPolicy": "Retain",
