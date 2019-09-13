@@ -386,7 +386,7 @@
         "AssetsBucketProduction": {
             "DeletionPolicy": "Retain",
             "Properties": {
-                "AccessControl": "PublicRead",
+                "AccessControl": "Private",
                 "BucketEncryption": {
                     "ServerSideEncryptionConfiguration": {
                         "Fn::If": [
@@ -459,7 +459,7 @@
         "AssetsBucketStaging": {
             "DeletionPolicy": "Retain",
             "Properties": {
-                "AccessControl": "PublicRead",
+                "AccessControl": "Private",
                 "BucketEncryption": {
                     "ServerSideEncryptionConfiguration": {
                         "Fn::If": [
@@ -1155,7 +1155,10 @@
                     ]
                 },
                 "PublicAccessBlockConfiguration": {
-                    "IgnorePublicAcls": "true"
+                    "BlockPublicAcls": "true",
+                    "BlockPublicPolicy": "true",
+                    "IgnorePublicAcls": "true",
+                    "RestrictPublicBuckets": "true"
                 },
                 "VersioningConfiguration": {
                     "Status": "Enabled"
@@ -1231,7 +1234,10 @@
                     ]
                 },
                 "PublicAccessBlockConfiguration": {
-                    "IgnorePublicAcls": "true"
+                    "BlockPublicAcls": "true",
+                    "BlockPublicPolicy": "true",
+                    "IgnorePublicAcls": "true",
+                    "RestrictPublicBuckets": "true"
                 },
                 "VersioningConfiguration": {
                     "Status": "Enabled"

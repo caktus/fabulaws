@@ -28,7 +28,6 @@ from troposphere.s3 import (
     CorsRules,
     Private,
     PublicAccessBlockConfiguration,
-    PublicRead,
     ServerSideEncryptionByDefault,
     ServerSideEncryptionRule,
     VersioningConfiguration,
@@ -111,7 +110,7 @@ for environment in environments:
     assets_bucket = template.add_resource(
         Bucket(
             "AssetsBucket%s" % environment.title(),
-            AccessControl=PublicRead,
+            AccessControl=Private,  # Objects can still be made public
             **common_bucket_conf,
         )
     )
@@ -130,7 +129,10 @@ for environment in environments:
             "PrivateBucket%s" % environment.title(),
             AccessControl=Private,
             PublicAccessBlockConfiguration=PublicAccessBlockConfiguration(
-                IgnorePublicAcls=True
+                BlockPublicAcls=True,
+                BlockPublicPolicy=True,
+                IgnorePublicAcls=True,
+                RestrictPublicBuckets=True,
             ),
             **common_bucket_conf,
         )
