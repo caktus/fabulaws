@@ -4,7 +4,7 @@ from troposphere import Equals, GetAtt, If, Join, Not, Output, Parameter, Ref
 from .common import environments
 from .security_groups import aws_elb_security_group
 from .template import template
-from .vpc import public_a_subnet, public_b_subnet
+from .vpc import public_subnet_a, public_subnet_b
 
 web_worker_health_check = Ref(
     template.add_parameter(
@@ -66,7 +66,7 @@ for environment in environments:
     load_balancers[environment] = elb.LoadBalancer(
         "Elb%s" % environment.title(),
         template=template,
-        Subnets=[Ref(public_a_subnet), Ref(public_b_subnet)],
+        Subnets=[Ref(public_subnet_a), Ref(public_subnet_b)],
         SecurityGroups=[Ref(aws_elb_security_group)],
         Listeners=listeners,
         HealthCheck=elb.HealthCheck(

@@ -17,7 +17,7 @@ from .load_balancer import load_balancers
 from .logs import logging_policy
 from .security_groups import router_security_group, web_security_group
 from .template import template
-from .vpc import private_a_subnet, private_b_subnet, public_a_subnet
+from .vpc import private_subnet_a, private_subnet_b, public_subnet_a
 
 router_ami = template.add_parameter(
     Parameter(
@@ -90,7 +90,7 @@ ec2_instance_definitions = {
     ("router", ""): dict(
         ImageId=Ref(router_ami),
         SecurityGroupIds=[Ref(router_security_group)],
-        SubnetId=Ref(public_a_subnet),
+        SubnetId=Ref(public_subnet_a),
         # https://docs.aws.amazon.com/AmazonVPC/latest/UserGuide/VPC_NAT_Instance.html#EIP_Disable_SrcDestCheck
         SourceDestCheck=False,
         # Prevent accidental deletion of the router (in case this stack ever needs to be deleted,
@@ -165,7 +165,7 @@ for environment in environments:
     autoscaling_group = autoscaling.AutoScalingGroup(
         autoscaling_group_name,
         template=template,
-        VPCZoneIdentifier=[Ref(private_a_subnet), Ref(private_b_subnet)],
+        VPCZoneIdentifier=[Ref(private_subnet_a), Ref(private_subnet_b)],
         # Start with no instances (will be added by fabulaws)
         MinSize="0",
         MaxSize="32",

@@ -36,7 +36,7 @@ router_security_group = template.add_resource(
             ),
             # Allow all traffic from our VPC, for NAT purposes
             SecurityGroupRule(
-                IpProtocol=ALL, FromPort=ALL, ToPort=ALL, CidrIp=vpc_cidr
+                IpProtocol=ALL, FromPort=ALL, ToPort=ALL, CidrIp=Ref(vpc_cidr)
             ),
         ],
     )
