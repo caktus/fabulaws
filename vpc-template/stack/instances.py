@@ -42,6 +42,26 @@ key_name = template.add_parameter(
     label="SSH Key Name",
 )
 
+target_cpu = template.add_parameter(
+    Parameter(
+        "AutoscalingTargetCPU",
+        Description="Target CPU utilization for the autoscaling group (e.g., \"40.0\" for 40%).",
+        Type="Number",
+    ),
+    group="EC2",
+    label="Autoscaling Target CPU",
+)
+
+autoscaling_notifications = template.add_parameter(
+    Parameter(
+        "AutoscalingNotificationsArn",
+        Description="ARN of SNS topic to receive autoscaling notifications",
+        Type="String",
+    ),
+    group="EC2",
+    label="Autoscaling Notifications ARN",
+)
+
 # # EC2 instance role
 # instance_role = iam.Role(
 #     "InstanceRole",
@@ -173,7 +193,18 @@ for environment in environments:
         LaunchConfigurationName=Ref(container_instance_configuration),
         LoadBalancerNames=[Ref(load_balancers[environment])],
         HealthCheckType="ELB",
-        HealthCheckGracePeriod=300,
+        HealthCheckGracePeriod=120,
+        NotificationConfigurations=[
+            autoscaling.NotificationConfigurations(
+                TopicARN=Ref(autoscaling_notifications),
+                NotificationTypes=[
+                    "autoscaling:EC2_INSTANCE_LAUNCH",
+                    "autoscaling:EC2_INSTANCE_LAUNCH_ERROR",
+                    "autoscaling:EC2_INSTANCE_TERMINATE",
+                    "autoscaling:EC2_INSTANCE_TERMINATE_ERROR",
+                ],
+            )
+        ],
         Tags=[
             {
                 "Key": "Name",
@@ -181,4 +212,17 @@ for environment in environments:
                 "PropagateAtLaunch": True,
             }
         ],
+    )
+
+    autoscaling.ScalingPolicy(
+        autoscaling_group_name + 'ScalingPolicy',
+        template=template,
+        AutoScalingGroupName=Ref(autoscaling_group),
+        PolicyType="TargetTrackingScaling",
+        TargetTrackingConfiguration=autoscaling.TargetTrackingConfiguration(
+            PredefinedMetricSpecification=autoscaling.PredefinedMetricSpecification(
+                PredefinedMetricType="ASGAverageCPUUtilization"
+            ),
+            TargetValue=Ref(target_cpu)
+        )
     )

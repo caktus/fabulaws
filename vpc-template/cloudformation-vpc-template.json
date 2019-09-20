@@ -180,7 +180,9 @@
                     },
                     "Parameters": [
                         "RouterAMI",
-                        "KeyName"
+                        "KeyName",
+                        "AutoscalingTargetCPU",
+                        "AutoscalingNotificationsArn"
                     ]
                 }
             ],
@@ -202,6 +204,12 @@
                 },
                 "AssetsUseCloudFront": {
                     "default": "Enable CloudFront"
+                },
+                "AutoscalingNotificationsArn": {
+                    "default": "Autoscaling Notifications ARN"
+                },
+                "AutoscalingTargetCPU": {
+                    "default": "Autoscaling Target CPU"
                 },
                 "DomainName": {
                     "default": "Domain Name"
@@ -364,6 +372,14 @@
             "Default": "true",
             "Description": "Whether or not to create a CloudFront distribution tied to the S3 assets bucket.",
             "Type": "String"
+        },
+        "AutoscalingNotificationsArn": {
+            "Description": "ARN of SNS topic to receive autoscaling notifications",
+            "Type": "String"
+        },
+        "AutoscalingTargetCPU": {
+            "Description": "Target CPU utilization for the autoscaling group (e.g., \"40.0\" for 40%).",
+            "Type": "Number"
         },
         "DomainName": {
             "Description": "The fully-qualified domain name for the application.",
@@ -751,7 +767,7 @@
         },
         "AutoScalingGroupProduction": {
             "Properties": {
-                "HealthCheckGracePeriod": 300,
+                "HealthCheckGracePeriod": 120,
                 "HealthCheckType": "ELB",
                 "LaunchConfigurationName": {
                     "Ref": "LaunchConfigurationProduction"
@@ -763,6 +779,19 @@
                 ],
                 "MaxSize": "32",
                 "MinSize": "0",
+                "NotificationConfigurations": [
+                    {
+                        "NotificationTypes": [
+                            "autoscaling:EC2_INSTANCE_LAUNCH",
+                            "autoscaling:EC2_INSTANCE_LAUNCH_ERROR",
+                            "autoscaling:EC2_INSTANCE_TERMINATE",
+                            "autoscaling:EC2_INSTANCE_TERMINATE_ERROR"
+                        ],
+                        "TopicARN": {
+                            "Ref": "AutoscalingNotificationsArn"
+                        }
+                    }
+                ],
                 "Tags": [
                     {
                         "Key": "Name",
@@ -791,9 +820,26 @@
             },
             "Type": "AWS::AutoScaling::AutoScalingGroup"
         },
+        "AutoScalingGroupProductionScalingPolicy": {
+            "Properties": {
+                "AutoScalingGroupName": {
+                    "Ref": "AutoScalingGroupProduction"
+                },
+                "PolicyType": "TargetTrackingScaling",
+                "TargetTrackingConfiguration": {
+                    "PredefinedMetricSpecification": {
+                        "PredefinedMetricType": "ASGAverageCPUUtilization"
+                    },
+                    "TargetValue": {
+                        "Ref": "AutoscalingTargetCPU"
+                    }
+                }
+            },
+            "Type": "AWS::AutoScaling::ScalingPolicy"
+        },
         "AutoScalingGroupStaging": {
             "Properties": {
-                "HealthCheckGracePeriod": 300,
+                "HealthCheckGracePeriod": 120,
                 "HealthCheckType": "ELB",
                 "LaunchConfigurationName": {
                     "Ref": "LaunchConfigurationStaging"
@@ -805,6 +851,19 @@
                 ],
                 "MaxSize": "32",
                 "MinSize": "0",
+                "NotificationConfigurations": [
+                    {
+                        "NotificationTypes": [
+                            "autoscaling:EC2_INSTANCE_LAUNCH",
+                            "autoscaling:EC2_INSTANCE_LAUNCH_ERROR",
+                            "autoscaling:EC2_INSTANCE_TERMINATE",
+                            "autoscaling:EC2_INSTANCE_TERMINATE_ERROR"
+                        ],
+                        "TopicARN": {
+                            "Ref": "AutoscalingNotificationsArn"
+                        }
+                    }
+                ],
                 "Tags": [
                     {
                         "Key": "Name",
@@ -832,6 +891,23 @@
                 ]
             },
             "Type": "AWS::AutoScaling::AutoScalingGroup"
+        },
+        "AutoScalingGroupStagingScalingPolicy": {
+            "Properties": {
+                "AutoScalingGroupName": {
+                    "Ref": "AutoScalingGroupStaging"
+                },
+                "PolicyType": "TargetTrackingScaling",
+                "TargetTrackingConfiguration": {
+                    "PredefinedMetricSpecification": {
+                        "PredefinedMetricType": "ASGAverageCPUUtilization"
+                    },
+                    "TargetValue": {
+                        "Ref": "AutoscalingTargetCPU"
+                    }
+                }
+            },
+            "Type": "AWS::AutoScaling::ScalingPolicy"
         },
         "AwsElbSecurityGroup": {
             "Properties": {

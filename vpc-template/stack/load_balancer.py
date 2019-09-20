@@ -6,18 +6,16 @@ from .security_groups import aws_elb_security_group
 from .template import template
 from .vpc import public_subnet_a, public_subnet_b
 
-web_worker_health_check = Ref(
-    template.add_parameter(
-        Parameter(
-            "WebWorkerHealthCheck",
-            Description='Web worker health check URL path, e.g., "/health-check"; '
-            "will default to TCP-only health check if left blank",
-            Type="String",
-            Default="",
-        ),
-        group="Load Balancer",
-        label="Health Check URL",
-    )
+web_worker_health_check = template.add_parameter(
+    Parameter(
+        "WebWorkerHealthCheck",
+        Description='Web worker health check URL path, e.g., "/health-check"; '
+        "will default to TCP-only health check if left blank",
+        Type="String",
+        Default="",
+    ),
+    group="Load Balancer",
+    label="Health Check URL",
 )
 
 # Web load balancers
@@ -40,7 +38,7 @@ for environment in environments:
 
     tcp_health_check_condition = "TcpHealthCheck%s" % environment.title()
     template.add_condition(
-        tcp_health_check_condition, Equals(web_worker_health_check, "")
+        tcp_health_check_condition, Equals(Ref(web_worker_health_check), "")
     )
 
     acm_cert_condition = "AcmCertCondition%s" % environment.title()
@@ -73,7 +71,7 @@ for environment in environments:
             Target=If(
                 tcp_health_check_condition,
                 "TCP:80",
-                Join("", ["HTTPS:443", web_worker_health_check]),
+                Join("", ["HTTPS:443", Ref(web_worker_health_check)]),
             ),
             HealthyThreshold="2",
             UnhealthyThreshold="2",
