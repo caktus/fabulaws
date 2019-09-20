@@ -1233,6 +1233,7 @@
             "Type": "AWS::S3::Bucket"
         },
         "ElbProduction": {
+            "DependsOn": "ElbLogsBucketPolicyProduction",
             "Properties": {
                 "AccessLoggingPolicy": {
                     "EmitInterval": 60,
@@ -1320,6 +1321,7 @@
             "Type": "AWS::ElasticLoadBalancing::LoadBalancer"
         },
         "ElbStaging": {
+            "DependsOn": "ElbLogsBucketPolicyStaging",
             "Properties": {
                 "AccessLoggingPolicy": {
                     "EmitInterval": 60,

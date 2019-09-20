@@ -117,6 +117,7 @@ for environment in environments:
         ),
         Instances=[],  # will be added by fabulaws
         CrossZone=True,
+        DependsOn=bucket_policy,
     )
 
     template.add_output(
