@@ -483,7 +483,6 @@ def _new(deployment, environment, role, avail_zone=None, count=1, terminate_on_f
         env.roledefs[role] = [server.hostname for server in servers]
         env.servers[role] = servers
         executel('update_server_passwords', hosts=env.roledefs[role])
-        executel('install_newrelic_sysmon', hosts=env.roledefs[role])
         executel('install_munin', hosts=env.roledefs[role])
         if env.gelf_log_host:
             executel('install_logstash', hosts=env.roledefs[role])
@@ -1276,8 +1275,6 @@ def promote_slave(index=0, override_servers={}):
                 sudo('service postgresql stop')
     _change_role(slave, 'db-master')
     _setup_env(override_servers=override_servers)
-    # make sure logging facilities know about the new db-master role
-    executel('upload_newrelic_sysmon_conf', roles=['db-master'])
     if env.gelf_log_host:
         executel('install_logstash', roles=['db-master'])
     if env.syslog_server:
@@ -1365,8 +1362,6 @@ def mount_encrypted(drive_letter='f'):
               'does not exist'.format(current_server.mount_script))
     if exists(current_server.default_swap_file):
         sudo('swapon %s' % current_server.default_swap_file)
-    # if we're being created from an image, make sure the hostname gets updated
-    upload_newrelic_sysmon_conf()
     if 'db-master' in _current_roles() or 'db-slave' in _current_roles():
         sudo('service postgresql start')
     if 'cache' in _current_roles():
@@ -1509,7 +1504,6 @@ def update_newrelic_keys(deployment_tag, environment):
     if answer != 'y':
         abort('Aborted.')
     executel('upload_newrelic_conf')
-    executel('upload_newrelic_sysmon_conf')
     executel('supervisor', 'restart', 'celery', roles=['worker'])
     executel('begin_upgrade')
     executel('supervisor', 'restart', 'web', roles=['web'])
@@ -1662,38 +1656,6 @@ def install_munin():
     sudo('apt-get -qq -y install munin-node munin-plugins-extra libdbd-pg-perl')
     append('/etc/munin/munin-node.conf', 'allow ^10\.\d+\.\d+\.\d+$', use_sudo=True)
     sudo('service munin-node restart')
-
-
-@task
-@parallel
-def install_newrelic_sysmon():
-    require('environment', provided_by=env.environments)
-    _load_passwords(['newrelic_license_key'])
-    sudo('echo deb http://apt.newrelic.com/debian/ newrelic non-free > /etc/apt/sources.list.d/newrelic.list', shell=True)
-    sudo('wget -O- https://download.newrelic.com/548C16BF.gpg | apt-key add -', shell=True)
-    with settings(warn_only=True):
-        sudo('apt-get -qq update || apt-get -qq update')
-    sudo('apt-get -qq -y -o Dpkg::Options::="--force-confnew" install newrelic-sysmond')
-    upload_newrelic_sysmon_conf()
-
-
-@task
-@parallel
-def upload_newrelic_sysmon_conf():
-    require('environment', provided_by=env.environments)
-    _load_passwords(['newrelic_license_key'])
-    context = dict(env)
-    context['current_role'] = _current_roles()[0]
-    hostname = '_'.join([_instance_name(_current_roles()[0]), run('hostname')])
-    context['hostname'] = hostname
-    # main, official monitoring agent
-    template = 'nrsysmond.cfg'
-    destination = '/etc/newrelic/%s' % template
-    upload_template(template, destination, context=context, use_sudo=True,
-                    use_jinja=True, template_dir=env.templates_dir)
-    # leave the hostname the same for the system monitoring so the servers
-    # can be linked up properly with the apps by New Relic
-    sudo('/etc/init.d/newrelic-sysmond restart')
 
 
 @task
