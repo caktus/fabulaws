@@ -2132,6 +2132,9 @@ def _create_launch_config(server=None):
             image_id=image.id,
             security_groups=server.get_security_groups_for_launch_configuration(),
             instance_type=_find(env.instance_types, env.environment, 'web'),
+            # Enable detailed monitoring for more responsive autoscaling; see:
+            # https://docs.aws.amazon.com/autoscaling/ec2/userguide/as-instance-monitoring.html#enable-as-instance-metrics
+            instance_monitoring=True,
         )
         AutoScaleConnection().create_launch_configuration(lc)
         print "Created a new launch config with name {0}.".format(lc.name)
