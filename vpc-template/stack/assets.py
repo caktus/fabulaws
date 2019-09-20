@@ -73,35 +73,6 @@ common_bucket_conf = dict(
     ),
     VersioningConfiguration=VersioningConfiguration(Status="Enabled"),
     DeletionPolicy="Retain",
-    CorsConfiguration=CorsConfiguration(
-        CorsRules=[
-            CorsRules(
-                AllowedOrigins=Split(
-                    ";",
-                    Join(
-                        "",
-                        [
-                            "https://",
-                            domain_name,
-                            If(
-                                no_alt_domains,
-                                # if we don't have any alternate domains, return an empty string
-                                "",
-                                # otherwise, return the ';https://' that will be needed by the first domain
-                                ";https://",
-                            ),
-                            # then, add all the alternate domains, joined together with ';https://'
-                            Join(";https://", domain_name_alternates),
-                            # now that we have a string of origins separated by ';',
-                            # Split() is used to make it into a list again
-                        ],
-                    ),
-                ),
-                AllowedMethods=["POST", "PUT", "HEAD", "GET"],
-                AllowedHeaders=["*"],
-            )
-        ]
-    ),
 )
 
 buckets = {env: {} for env in environments}
@@ -126,6 +97,36 @@ def add_bucket(environment, name, **extra_kwargs):
     )
 
 
+cors_configuration = CorsConfiguration(
+    CorsRules=[
+        CorsRules(
+            AllowedOrigins=Split(
+                ";",
+                Join(
+                    "",
+                    [
+                        "https://",
+                        domain_name,
+                        If(
+                            no_alt_domains,
+                            # if we don't have any alternate domains, return an empty string
+                            "",
+                            # otherwise, return the ';https://' that will be needed by the first domain
+                            ";https://",
+                        ),
+                        # then, add all the alternate domains, joined together with ';https://'
+                        Join(";https://", domain_name_alternates),
+                        # now that we have a string of origins separated by ';',
+                        # Split() is used to make it into a list again
+                    ],
+                ),
+            ),
+            AllowedMethods=["POST", "PUT", "HEAD", "GET"],
+            AllowedHeaders=["*"],
+        )
+    ]
+)
+
 private_access_block = PublicAccessBlockConfiguration(
     BlockPublicAcls=True,
     BlockPublicPolicy=True,
@@ -134,8 +135,15 @@ private_access_block = PublicAccessBlockConfiguration(
 )
 
 for environment in environments:
-    add_bucket(environment, "Assets")
-    add_bucket(environment, "Private", PublicAccessBlockConfiguration=private_access_block)
+    add_bucket(environment, "Assets", CorsConfiguration=cors_configuration)
+    add_bucket(
+        environment,
+        "Private",
+        CorsConfiguration=cors_configuration,
+        PublicAccessBlockConfiguration=private_access_block,
+    )
+    add_bucket(environment, "Backups", PublicAccessBlockConfiguration=private_access_block)
+    add_bucket(environment, "ElbLogs", PublicAccessBlockConfiguration=private_access_block)
 
 
 # central asset management policy for use in instance roles
@@ -162,7 +170,6 @@ assets_management_policy = iam.Policy(
         ]
     ),
 )
-
 
 distributions = []
 

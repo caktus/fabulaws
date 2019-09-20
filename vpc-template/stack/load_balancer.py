@@ -1,7 +1,8 @@
-from troposphere import elasticloadbalancing as elb
+from troposphere import elasticloadbalancing as elb, s3
 from troposphere import Equals, GetAtt, If, Join, Not, Output, Parameter, Ref
 
-from .common import environments
+from .assets import buckets
+from .common import arn_prefix, environments
 from .security_groups import aws_elb_security_group
 from .template import template
 from .vpc import public_subnet_a, public_subnet_b
@@ -16,6 +17,18 @@ web_worker_health_check = template.add_parameter(
     ),
     group="Load Balancer",
     label="Health Check URL",
+)
+
+elb_account_id = template.add_parameter(
+    Parameter(
+        "ElbAccountID",
+        Description="AWS account ID for ELBs for your region. See: "
+                    "https://docs.aws.amazon.com/elasticloadbalancing/latest/classic/enable-access-logs.html",
+        Type="String",
+        Default="",
+    ),
+    group="Load Balancer",
+    label="Elastic Load Balancing Account ID",
 )
 
 # Web load balancers
@@ -61,6 +74,25 @@ for environment in environments:
         ),
     ]
 
+    bucket_policy = s3.BucketPolicy(
+        "ElbLogsBucketPolicy%s" % environment.title(),
+        template=template,
+        Bucket=Ref(buckets[environment]["ElbLogs"]),
+        PolicyDocument={
+            "Version": "2012-10-17",
+            "Statement": [
+                {
+                    "Effect": "Allow",
+                    "Principal": {
+                        "AWS": Join("", ["arn:aws:iam::", Ref(elb_account_id), ":root"]),
+                    },
+                    "Action": "s3:PutObject",
+                    "Resource": Join("", [arn_prefix, ":s3:::", Ref(buckets[environment]["ElbLogs"]), "/*"]),
+                }
+            ]
+        }
+    )
+
     load_balancers[environment] = elb.LoadBalancer(
         "Elb%s" % environment.title(),
         template=template,
@@ -77,6 +109,11 @@ for environment in environments:
             UnhealthyThreshold="2",
             Interval="10",
             Timeout="9",
+        ),
+        AccessLoggingPolicy=elb.AccessLoggingPolicy(
+            EmitInterval=60,
+            Enabled=True,
+            S3BucketName=Ref(buckets[environment]["ElbLogs"])
         ),
         Instances=[],  # will be added by fabulaws
         CrossZone=True,

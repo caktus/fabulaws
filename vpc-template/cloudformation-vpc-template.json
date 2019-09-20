@@ -151,6 +151,7 @@
                     },
                     "Parameters": [
                         "WebWorkerHealthCheck",
+                        "ElbAccountID",
                         "AcmCertArnStaging",
                         "AcmCertArnProduction"
                     ]
@@ -216,6 +217,9 @@
                 },
                 "DomainNameAlternates": {
                     "default": "Alternate Domain Names"
+                },
+                "ElbAccountID": {
+                    "default": "Elastic Load Balancing Account ID"
                 },
                 "KeyName": {
                     "default": "SSH Key Name"
@@ -288,6 +292,42 @@
             "Value": {
                 "Fn::GetAtt": [
                     "AssetsDistributionStaging",
+                    "DomainName"
+                ]
+            }
+        },
+        "BackupsBucketProductionDomainName": {
+            "Description": "Backups bucket domain name (production)",
+            "Value": {
+                "Fn::GetAtt": [
+                    "BackupsBucketProduction",
+                    "DomainName"
+                ]
+            }
+        },
+        "BackupsBucketStagingDomainName": {
+            "Description": "Backups bucket domain name (staging)",
+            "Value": {
+                "Fn::GetAtt": [
+                    "BackupsBucketStaging",
+                    "DomainName"
+                ]
+            }
+        },
+        "ElbLogsBucketProductionDomainName": {
+            "Description": "ElbLogs bucket domain name (production)",
+            "Value": {
+                "Fn::GetAtt": [
+                    "ElbLogsBucketProduction",
+                    "DomainName"
+                ]
+            }
+        },
+        "ElbLogsBucketStagingDomainName": {
+            "Description": "ElbLogs bucket domain name (staging)",
+            "Value": {
+                "Fn::GetAtt": [
+                    "ElbLogsBucketStaging",
                     "DomainName"
                 ]
             }
@@ -388,6 +428,11 @@
         "DomainNameAlternates": {
             "Description": "A comma-separated list of Alternate FQDNs.",
             "Type": "CommaDelimitedList"
+        },
+        "ElbAccountID": {
+            "Default": "",
+            "Description": "AWS account ID for ELBs for your region. See: https://docs.aws.amazon.com/elasticloadbalancing/latest/classic/enable-access-logs.html",
+            "Type": "String"
         },
         "KeyName": {
             "ConstraintDescription": "must be the name of an existing EC2 KeyPair.",
@@ -955,8 +1000,247 @@
             },
             "Type": "AWS::EC2::SecurityGroupIngress"
         },
+        "BackupsBucketProduction": {
+            "DeletionPolicy": "Retain",
+            "Properties": {
+                "AccessControl": "Private",
+                "BucketEncryption": {
+                    "ServerSideEncryptionConfiguration": {
+                        "Fn::If": [
+                            "AssetsUseS3EncryptionCondition",
+                            [
+                                {
+                                    "ServerSideEncryptionByDefault": {
+                                        "SSEAlgorithm": "AES256"
+                                    }
+                                }
+                            ],
+                            [
+                                {}
+                            ]
+                        ]
+                    }
+                },
+                "PublicAccessBlockConfiguration": {
+                    "BlockPublicAcls": "true",
+                    "BlockPublicPolicy": "true",
+                    "IgnorePublicAcls": "true",
+                    "RestrictPublicBuckets": "true"
+                },
+                "VersioningConfiguration": {
+                    "Status": "Enabled"
+                }
+            },
+            "Type": "AWS::S3::Bucket"
+        },
+        "BackupsBucketStaging": {
+            "DeletionPolicy": "Retain",
+            "Properties": {
+                "AccessControl": "Private",
+                "BucketEncryption": {
+                    "ServerSideEncryptionConfiguration": {
+                        "Fn::If": [
+                            "AssetsUseS3EncryptionCondition",
+                            [
+                                {
+                                    "ServerSideEncryptionByDefault": {
+                                        "SSEAlgorithm": "AES256"
+                                    }
+                                }
+                            ],
+                            [
+                                {}
+                            ]
+                        ]
+                    }
+                },
+                "PublicAccessBlockConfiguration": {
+                    "BlockPublicAcls": "true",
+                    "BlockPublicPolicy": "true",
+                    "IgnorePublicAcls": "true",
+                    "RestrictPublicBuckets": "true"
+                },
+                "VersioningConfiguration": {
+                    "Status": "Enabled"
+                }
+            },
+            "Type": "AWS::S3::Bucket"
+        },
+        "ElbLogsBucketPolicyProduction": {
+            "Properties": {
+                "Bucket": {
+                    "Ref": "ElbLogsBucketProduction"
+                },
+                "PolicyDocument": {
+                    "Statement": [
+                        {
+                            "Action": "s3:PutObject",
+                            "Effect": "Allow",
+                            "Principal": {
+                                "AWS": {
+                                    "Fn::Join": [
+                                        "",
+                                        [
+                                            "arn:aws:iam::",
+                                            {
+                                                "Ref": "ElbAccountID"
+                                            },
+                                            ":root"
+                                        ]
+                                    ]
+                                }
+                            },
+                            "Resource": {
+                                "Fn::Join": [
+                                    "",
+                                    [
+                                        {
+                                            "Fn::If": [
+                                                "InGovCloudRegion",
+                                                "arn:aws-us-gov",
+                                                "arn:aws"
+                                            ]
+                                        },
+                                        ":s3:::",
+                                        {
+                                            "Ref": "ElbLogsBucketProduction"
+                                        },
+                                        "/*"
+                                    ]
+                                ]
+                            }
+                        }
+                    ],
+                    "Version": "2012-10-17"
+                }
+            },
+            "Type": "AWS::S3::BucketPolicy"
+        },
+        "ElbLogsBucketPolicyStaging": {
+            "Properties": {
+                "Bucket": {
+                    "Ref": "ElbLogsBucketStaging"
+                },
+                "PolicyDocument": {
+                    "Statement": [
+                        {
+                            "Action": "s3:PutObject",
+                            "Effect": "Allow",
+                            "Principal": {
+                                "AWS": {
+                                    "Fn::Join": [
+                                        "",
+                                        [
+                                            "arn:aws:iam::",
+                                            {
+                                                "Ref": "ElbAccountID"
+                                            },
+                                            ":root"
+                                        ]
+                                    ]
+                                }
+                            },
+                            "Resource": {
+                                "Fn::Join": [
+                                    "",
+                                    [
+                                        {
+                                            "Fn::If": [
+                                                "InGovCloudRegion",
+                                                "arn:aws-us-gov",
+                                                "arn:aws"
+                                            ]
+                                        },
+                                        ":s3:::",
+                                        {
+                                            "Ref": "ElbLogsBucketStaging"
+                                        },
+                                        "/*"
+                                    ]
+                                ]
+                            }
+                        }
+                    ],
+                    "Version": "2012-10-17"
+                }
+            },
+            "Type": "AWS::S3::BucketPolicy"
+        },
+        "ElbLogsBucketProduction": {
+            "DeletionPolicy": "Retain",
+            "Properties": {
+                "AccessControl": "Private",
+                "BucketEncryption": {
+                    "ServerSideEncryptionConfiguration": {
+                        "Fn::If": [
+                            "AssetsUseS3EncryptionCondition",
+                            [
+                                {
+                                    "ServerSideEncryptionByDefault": {
+                                        "SSEAlgorithm": "AES256"
+                                    }
+                                }
+                            ],
+                            [
+                                {}
+                            ]
+                        ]
+                    }
+                },
+                "PublicAccessBlockConfiguration": {
+                    "BlockPublicAcls": "true",
+                    "BlockPublicPolicy": "true",
+                    "IgnorePublicAcls": "true",
+                    "RestrictPublicBuckets": "true"
+                },
+                "VersioningConfiguration": {
+                    "Status": "Enabled"
+                }
+            },
+            "Type": "AWS::S3::Bucket"
+        },
+        "ElbLogsBucketStaging": {
+            "DeletionPolicy": "Retain",
+            "Properties": {
+                "AccessControl": "Private",
+                "BucketEncryption": {
+                    "ServerSideEncryptionConfiguration": {
+                        "Fn::If": [
+                            "AssetsUseS3EncryptionCondition",
+                            [
+                                {
+                                    "ServerSideEncryptionByDefault": {
+                                        "SSEAlgorithm": "AES256"
+                                    }
+                                }
+                            ],
+                            [
+                                {}
+                            ]
+                        ]
+                    }
+                },
+                "PublicAccessBlockConfiguration": {
+                    "BlockPublicAcls": "true",
+                    "BlockPublicPolicy": "true",
+                    "IgnorePublicAcls": "true",
+                    "RestrictPublicBuckets": "true"
+                },
+                "VersioningConfiguration": {
+                    "Status": "Enabled"
+                }
+            },
+            "Type": "AWS::S3::Bucket"
+        },
         "ElbProduction": {
             "Properties": {
+                "AccessLoggingPolicy": {
+                    "EmitInterval": 60,
+                    "Enabled": true,
+                    "S3BucketName": {
+                        "Ref": "ElbLogsBucketProduction"
+                    }
+                },
                 "CrossZone": "true",
                 "HealthCheck": {
                     "HealthyThreshold": "2",
@@ -1037,6 +1321,13 @@
         },
         "ElbStaging": {
             "Properties": {
+                "AccessLoggingPolicy": {
+                    "EmitInterval": 60,
+                    "Enabled": true,
+                    "S3BucketName": {
+                        "Ref": "ElbLogsBucketStaging"
+                    }
+                },
                 "CrossZone": "true",
                 "HealthCheck": {
                     "HealthyThreshold": "2",
