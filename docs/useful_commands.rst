@@ -103,7 +103,7 @@ Databases
 * ``fab reset_local_db:dbname``
 * ``fab environment reset_slaves`` - this resets the config & data on the db slaves and is a good
   way to get things back into a working state if the replication seems broken
-* ``fab environment promote_slave[:index]`` - change slave `index` to be the master. After this, run update_local_settings to make the web servers use the new settings.
+* ``fab environment promote_replica[:index]`` - change replica `index` to be the primary. After this, run update_local_settings to make the web servers use the new settings.
 
 
 Nginx

@@ -99,12 +99,12 @@ be saved before it will be added by S3.**
 Stopping EC2 machines while not in use
 --------------------------------------
 
-Some types of instances, included db-master, db-slave, and worker servers,
+Some types of instances, included db-primary, db-replica, and worker servers,
 can be stopped via the AWS console, later restarted, and then reconfigured
 by running the following commands (in order)::
 
-    fab <environment> mount_encrypted:roles=db-master
-    fab <environment> mount_encrypted:roles=db-slave
+    fab <environment> mount_encrypted:roles=db-primary
+    fab <environment> mount_encrypted:roles=db-replica
     fab <environment> mount_encrypted:roles=worker
 
 The cache server, due to an intricacy with how RabbitMQ stores its data
@@ -136,8 +136,8 @@ dictionary in ``fabulaws-config.yml`` to the sizes you'd like for the servers.
 Here are the minimum sizes for each server type:
 
 * cache: ``m1.small``
-* db-master: ``m1.small``
-* db-slave: ``m1.small``
+* db-primary: ``m1.small``
+* db-replica: ``m1.small``
 * web: ``m1.small``
 * worker: ``m1.medium``
 

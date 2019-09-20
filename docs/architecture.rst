@@ -29,7 +29,7 @@ Web Servers
 Web servers are created automatically using FabulAWS.  The web servers run
 Nginx, which proxies a lightweight Gunicorn-powered WSGI server for Django.
 Also running on the webservers are PgBouncer and Stunnel, which proxy
-connections to the database master and slave servers, both to speed up
+connections to the database primary and replica servers, both to speed up
 connection times and to decrease the load of creating and destroying connections
 on the actual database servers.
 
@@ -59,19 +59,19 @@ from the web servers and delegating them to the worker server for completion.
 
 * Sample security groups: myproject-sg, myproject-cache-sg, myproject-queue-sg
 
-Database Master
+Database Primary
 ---------------
 
-The database master server runs PostgreSQL.  It allows encrypted connections
+The database primary server runs PostgreSQL.  It allows encrypted connections
 from the web and worker servers.
 
 * Sample security groups: myproject-sg, myproject-db-sg
 
-Database Slave
+Database Replica
 --------------
 
-The database slave server also runs PostgreSQL, and is setup with streaming
-replication from the master database server.  This results in very fast
+The database replica server also runs PostgreSQL, and is setup with streaming
+replication from the primary database server.  This results in very fast
 (typically less than a few seconds) of lag time between the two machines.
 
 * Sample security groups: myproject-sg, myproject-db-sg

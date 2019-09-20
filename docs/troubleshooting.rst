@@ -50,30 +50,30 @@ Celery processes in ``ps auxww`` or ``top`` and killing them with::
 After doing this, be sure to run ``deploy_worker`` (or if it was already
 running, let it complete) so as to restore Celery to a running state again.
 
-Master database goes down
+Primary database goes down
 -------------------------
 
-If the master database goes down, manually make sure it's permanently lost
-before converting a slave into the master.  At this point you probably also
+If the primary database goes down, manually make sure it's permanently lost
+before converting a replica into the primary.  At this point you probably also
 want to enable the pretty upgrade message on all the web servers::
 
    fab <environment> begin_upgrade
 
-Any slave can be "promoted" to the master role via fabric, as follows::
+Any replica can be "promoted" to the primary role via fabric, as follows::
 
-    fab <environment> promote_slave
+    fab <environment> promote_replica
 
-This will tag the old master as "decommissioned" in AWS, tag the slave as
-the new master, and then run the Postgres command to promote a slave to the
-master role.
+This will tag the old primary as "decommissioned" in AWS, tag the replica as
+the new primary, and then run the Postgres command to promote a replica to the
+primary role.
 
-After promoting a slave, you need to reconfigure all the web servers to use
-the new master database.  The easiest way to do that is through a deployment::
+After promoting a replica, you need to reconfigure all the web servers to use
+the new primary database.  The easiest way to do that is through a deployment::
 
     fab <environment> deploy_worker deploy_web
 
-If you had more than one slave database before promoting a slave, the additional
-slaves need to be reset to stream from the new master.  This can be accomplished
+If you had more than one replica database before promoting a replica, the additional
+slaves need to be reset to stream from the new primary.  This can be accomplished
 with the ``reset_slaves`` command::
 
     fab <environment> reset_slaves
@@ -83,16 +83,16 @@ site::
 
     fab <environment> end_upgrade
 
-Slave database goes down
+Replica database goes down
 -------------------------
 
-If a slave database goes down, first enable the pretty upgrade message on all
+If a replica database goes down, first enable the pretty upgrade message on all
 the web servers::
 
    fab <environment> begin_upgrade
 
-The site can operate in a degraded state with only a master database.  To do
-that, navigate to the AWS console and stop or re-tag the old slave server so
+The site can operate in a degraded state with only a primary database.  To do
+that, navigate to the AWS console and stop or re-tag the old replica server so
 it can no longer be discovered by Fabric.  Then, run a deployment to update
 the local settings files on all the web servers::
 
@@ -103,22 +103,22 @@ site::
 
     fab <environment> end_upgrade
 
-Adding a new slave
+Adding a new replica
 ------------------
 
-If a slave database is lost (either due to promotion to the master role or
+If a replica database is lost (either due to promotion to the primary role or
 because it was itself lost), it is desirable to return the application to
-having two or more database servers as soon as possible.  To add a new slave
+having two or more database servers as soon as possible.  To add a new replica
 database to the Postgres cluster, first create a new server
 as follows::
 
-    fab new:myproject,<environment>,db-slave,X
+    fab new:myproject,<environment>,db-replica,X
 
 where X is the availability zone in which you wish to create the server (it
 should be created in a zone that doesn't already have a database server, or
 has the fewest database servers).
 
-Next, configure the web servers to begin using the new slave by doing a serial
+Next, configure the web servers to begin using the new replica by doing a serial
 deployment::
 
     fab deploy_serial:myproject,<environment>
@@ -126,13 +126,13 @@ deployment::
 This will take the web servers down one at a time, deploy the latest code,
 and update the settings file to use the newly added database server.
 
-Slave database loses replication connection
+Replica database loses replication connection
 -------------------------------------------
 
 While PostgreSQL administration is outside the scope of this guide, if you
-have determined that a slave database has lost the replication connection
-to the master database and you prefer not to simply create a new slave
-database server, you can re-sync the slave(s) with the master with the
+have determined that a replica database has lost the replication connection
+to the primary database and you prefer not to simply create a new replica
+database server, you can re-sync the replica(s) with the primary with the
 following command::
 
     fab <environment> reset_slaves
