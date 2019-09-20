@@ -19,13 +19,14 @@ __all__ = ['UbuntuInstance']
 
 logger = logging.getLogger('fabulaws.ubuntu.instances.base')
 
+
 class UbuntuInstance(BaseAptMixin, EC2Instance):
     """
     Base class for all Ubuntu instances.
     """
     user = 'ubuntu'
     admin_groups = ['admin']
-    volume_info = [] # tuples of (device, mount_point, size_in_GB, type, passwd)
+    volume_info = []  # tuples of (device, mount_point, size_in_GB, type, passwd)
     fs_type = 'ext3'
     fs_encrypt = False
     ebs_encrypt = False
@@ -37,6 +38,22 @@ class UbuntuInstance(BaseAptMixin, EC2Instance):
         super(UbuntuInstance, self).__init__(*args, **kwargs)
 
     @uses_fabric
+    def _get_nvme_devs(self):
+        """
+        Attempts to identify any nvme devices per:
+        https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/nvme-ebs-volumes.html
+        These are typically used on newer instance types (t3+, m5+, etc.).
+        """
+        nvme_devs = {}
+        for instance_dev in sudo("lsblk|grep '^nvme'|cut -d' ' -f 1").split("\n"):
+            instance_dev = instance_dev.strip()  # remove "\r" if it exists
+            devmap_dev = sudo(
+                "nvme id-ctrl -v /dev/%s|grep '^0000:'|cut -d'\"' -f2|tr -d '.'" % instance_dev
+            )
+            nvme_devs[devmap_dev] = '/dev/%s' % instance_dev
+        return nvme_devs
+
+    @uses_fabric
     def _wait_for_device(self, device, max_tries=30):
         """
         Waits for the given device to manifest in /dev, and returns the actual
@@ -45,15 +62,22 @@ class UbuntuInstance(BaseAptMixin, EC2Instance):
         # try all possible paths for the device in turn until one shows up
         devices = [device, device.replace('/dev/sd', '/dev/xvd')]
         logger.info('Waiting for device {0} to appear'.format(device))
+        self.install_packages(['nvme-cli'])
         for _ in range(max_tries):
+            nvme_devs = self._get_nvme_devs()
             for device in devices:
+                if device in nvme_devs:
+                    device = nvme_devs[device]
                 if files.exists(device):
                     logger.debug('Found device {0}'.format(device))
                     return device
             time.sleep(1)
         # Device wasn't found; run dmesg to hopefully tell us where it is
         run('dmesg')
-        raise ValueError('Devices {0} never appeared.'.format(','.join(devices)))
+        raise ValueError('Devices {0} never appeared; nvme_devs={1}.'.format(
+            ', '.join(devices),
+            str(nvme_devs),
+        ))
 
     @uses_fabric
     def _encrypt_device(self, device, passwd=None):
@@ -136,7 +160,7 @@ class UbuntuInstance(BaseAptMixin, EC2Instance):
         """
         super(UbuntuInstance, self).add_tags(tags)
         # allow super class to update self._tags and use that in _set_volume_tags
-        for vol, (device, _, _, _, _)  in zip(self.volumes, self.volume_info):
+        for vol, (device, _, _, _, _) in zip(self.volumes, self.volume_info):
             self._set_volume_tags(vol, device)
 
     @uses_fabric
