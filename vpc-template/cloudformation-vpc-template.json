@@ -726,7 +726,7 @@
                         {
                             "DomainName": {
                                 "Fn::GetAtt": [
-                                    "AssetsBucketProduction",
+                                    "AssetsBucketStaging",
                                     "DomainName"
                                 ]
                             },

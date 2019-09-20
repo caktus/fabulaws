@@ -1,3 +1,5 @@
+from itertools import chain
+
 from troposphere import (
     AWS_REGION,
     And,
@@ -102,50 +104,38 @@ common_bucket_conf = dict(
     ),
 )
 
-assets_buckets = []
-private_buckets = []
+buckets = {env: {} for env in environments}
+
+
+def add_bucket(environment, name, **extra_kwargs):
+    extra_kwargs.update(common_bucket_conf)
+    buckets[environment][name] = template.add_resource(
+        Bucket(
+            "%sBucket%s" % (name, environment.title()),
+            AccessControl=Private,  # Objects can still be made public
+            **extra_kwargs,
+        )
+    )
+    # Output S3 asset bucket name
+    template.add_output(
+        Output(
+            "%sBucket%sDomainName" % (name, environment.title()),
+            Description="%s bucket domain name (%s)" % (name, environment),
+            Value=GetAtt(buckets[environment][name], "DomainName"),
+        )
+    )
+
+
+private_access_block = PublicAccessBlockConfiguration(
+    BlockPublicAcls=True,
+    BlockPublicPolicy=True,
+    IgnorePublicAcls=True,
+    RestrictPublicBuckets=True,
+)
 
 for environment in environments:
-    # Create an S3 bucket that holds statics and media
-    assets_bucket = template.add_resource(
-        Bucket(
-            "AssetsBucket%s" % environment.title(),
-            AccessControl=Private,  # Objects can still be made public
-            **common_bucket_conf,
-        )
-    )
-    # Output S3 asset bucket name
-    template.add_output(
-        Output(
-            "AssetsBucket%sDomainName" % environment.title(),
-            Description="Assets bucket domain name (%s)" % environment,
-            Value=GetAtt(assets_bucket, "DomainName"),
-        )
-    )
-    assets_buckets.append(assets_bucket)
-    # Create an S3 bucket that holds user uploads or other non-public files
-    private_bucket = template.add_resource(
-        Bucket(
-            "PrivateBucket%s" % environment.title(),
-            AccessControl=Private,
-            PublicAccessBlockConfiguration=PublicAccessBlockConfiguration(
-                BlockPublicAcls=True,
-                BlockPublicPolicy=True,
-                IgnorePublicAcls=True,
-                RestrictPublicBuckets=True,
-            ),
-            **common_bucket_conf,
-        )
-    )
-    # Output S3 asset bucket name
-    template.add_output(
-        Output(
-            "PrivateBucket%sDomainName" % environment.title(),
-            Description="Private bucket domain name (%s)" % environment,
-            Value=GetAtt(private_bucket, "DomainName"),
-        )
-    )
-    private_buckets.append(private_bucket)
+    add_bucket(environment, "Assets")
+    add_bucket(environment, "Private", PublicAccessBlockConfiguration=private_access_block)
 
 
 # central asset management policy for use in instance roles
@@ -159,7 +149,7 @@ assets_management_policy = iam.Policy(
                     Action=["s3:ListBucket"],
                     Resource=Join("", [arn_prefix, ":s3:::", Ref(bucket)]),
                 )
-                for bucket in assets_buckets + private_buckets
+                for bucket in chain(*[bucket_map.values() for _, bucket_map in buckets.items()])
             ],
             *[
                 dict(
@@ -167,7 +157,7 @@ assets_management_policy = iam.Policy(
                     Action=["s3:*"],
                     Resource=Join("", [arn_prefix, ":s3:::", Ref(bucket), "/*"]),
                 )
-                for bucket in assets_buckets + private_buckets
+                for bucket in chain(*[bucket_map.values() for _, bucket_map in buckets.items()])
             ],
         ]
     ),
@@ -251,7 +241,7 @@ template.add_condition(
     assets_certificate_arn_condition, Not(Equals(Ref(assets_certificate_arn), ""))
 )
 
-for environment in environments:
+for environment, bucket_map in buckets.items():
     # Create a CloudFront CDN distribution
     distribution = template.add_resource(
         Distribution(
@@ -283,7 +273,7 @@ for environment in environments:
                 Origins=[
                     Origin(
                         Id="Assets",
-                        DomainName=GetAtt(assets_bucket, "DomainName"),
+                        DomainName=GetAtt(bucket_map["Assets"], "DomainName"),
                         S3OriginConfig=S3OriginConfig(OriginAccessIdentity=""),
                     )
                 ],
