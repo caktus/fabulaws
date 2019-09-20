@@ -208,7 +208,7 @@ class PostgresMixin(AptMixin):
     def pg_allow_replication(self, user, password, ip_ranges, restart=True):
         """Creates a user for replication and enables replication in pg_hba.conf."""
 
-        # XXX: does not support differing master/slave pg versions
+        # XXX: does not support differing primary/replica pg versions
         self.create_db_user(user, password, replication=True)
         files.uncomment(self.pg_hba, 'local +replication', use_sudo=True)
         for ip_range in ip_ranges:

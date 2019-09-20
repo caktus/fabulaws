@@ -33,8 +33,8 @@ from argyle.supervisor import supervisor_command
 
 from fabulaws.api import answer_sudo, ec2_instances, sshagent_run
 
-from .servers import (CacheInstance, DbMasterInstance,
-    DbSlaveInstance, WebInstance, WorkerInstance,
+from .servers import (CacheInstance, DbPrimaryInstance,
+    DbReplicaInstance, WebInstance, WorkerInstance,
     CombinedInstance)
 
 
@@ -50,8 +50,8 @@ def _reset_hosts():
 # Mapping of Fabric roles to FabulAWS server class names
 env.role_class_map = {
     'cache': CacheInstance,
-    'db-master': DbMasterInstance,
-    'db-slave': DbSlaveInstance,
+    'db-primary': DbPrimaryInstance,
+    'db-replica': DbReplicaInstance,
     'web': WebInstance,
     'worker': WorkerInstance,
     'combo': CombinedInstance,
@@ -156,10 +156,10 @@ def _setup_env(deployment_tag=None, environment=None, override_servers={}):
             env.roles.append(role)
         env.roledefs[role] = hostnames
         env.servers[role] = servers
-        # combo instances also fulfill the db-master and web roles
+        # combo instances also fulfill the db-primary and web roles
         if role == 'combo':
-            env.roledefs['db-master'].extend(hostnames)
-            env.servers['db-master'].extend(servers)
+            env.roledefs['db-primary'].extend(hostnames)
+            env.servers['db-primary'].extend(servers)
             env.roledefs['web'].extend(hostnames)
             env.servers['web'].extend(servers)
             env.roledefs['worker'].extend(hostnames)
@@ -171,14 +171,14 @@ def _setup_env(deployment_tag=None, environment=None, override_servers={}):
     except IndexError:
         env.cache_server = None
     try:
-        env.master_database = env.servers['db-master'][0]
+        env.master_database = env.servers['db-primary'][0]
         env.master_database.database_key = 'default'
         env.master_database.database_local_name = env.database_name
     except IndexError:
         env.master_database = None
     env.slave_databases = []
-    for i, server in enumerate(env.servers['db-slave']):
-        server.database_key = 'slave%s' % i
+    for i, server in enumerate(env.servers['db-replica']):
+        server.database_key = 'replica%s' % i
         server.database_local_name = '_'.join([env.database_name, server.database_key])
         env.slave_databases.append(server)
     env.all_databases = []
@@ -862,13 +862,13 @@ def update_local_settings():
 
     require('environment', provided_by=env.environments)
     _load_passwords(env.password_names)
-    assert env.master_database, 'Master database missing'
+    assert env.master_database, 'Primary database missing'
     assert env.cache_server, 'Cache server missing'
     # must update pgbouncer configuration at the same time to ensure ports stay
     # in sync
     upload_pgbouncer_conf()
     if not env.slave_databases:
-        print 'WARNING: No slave DBs found; using master DB as read DB'
+        print 'WARNING: No replica DBs found; using primary DB as read DB'
         env.slave_databases.append(env.master_database)
     context = env.copy()
     context['current_changeset'] = current_changeset()
@@ -1007,7 +1007,7 @@ def dbrestore(filepath):
         executel('supervisor', 'stop', 'pgbouncer')
         with env.master_database:
             sudo('dropdb {0}'.format(env.database_name), user='postgres')
-        env.servers['db-master'][0].create_db(env.database_name, owner=env.database_user)
+        env.servers['db-primary'][0].create_db(env.database_name, owner=env.database_user)
         executel('supervisor', 'start', 'pgbouncer')
         with cd(dest):
             put(private_key, dest)
@@ -1189,7 +1189,7 @@ def add_all_to_elb():
 
 
 @task
-@roles('db-master') # only supported on combo web & database servers
+@roles('db-primary') # only supported on combo web & database servers
 def reload_production_db(prod_env=env.default_deployment, src_env='production'):
     """ Replace the testing or staging database with the production database """
     if env.environment not in ('staging', 'testing'):
@@ -1201,8 +1201,8 @@ def reload_production_db(prod_env=env.default_deployment, src_env='production'):
     executel('supervisor', 'stop', 'pgbouncer')
     with settings(warn_only=True):
         sudo('dropdb {0}'.format(env.database_name), user='postgres')
-    env.servers['db-master'][0].create_db(env.database_name, owner=env.database_user)
-    prod_servers = _get_servers(prod_env, src_env, 'db-master')
+    env.servers['db-primary'][0].create_db(env.database_name, owner=env.database_user)
+    prod_servers = _get_servers(prod_env, src_env, 'db-primary')
     prod_hosts = [server.hostname for server in prod_servers]
     dump_cmd = 'ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=60 '\
                '-C {user}@{host} pg_dump -Ox {db_name}'.format(
@@ -1224,7 +1224,7 @@ def reload_production_db(prod_env=env.default_deployment, src_env='production'):
 
 
 @task
-@roles('db-master')
+@roles('db-primary')
 def reset_local_db(db_name):
     """ Replace the local database with the remote database """
 
@@ -1248,41 +1248,41 @@ def reset_local_db(db_name):
 
 
 @task
-@roles('db-slave')
+@roles('db-replica')
 def reset_slaves():
-    """Manually copy the current master database to the slaves."""
+    """Manually copy the current primary database to the slaves."""
 
     require('environment', provided_by=env.environments)
     _load_passwords(['database_password'])
-    master = env.servers['db-master'][0]
-    _current_server().pg_copy_master(master, '%s_repl' % env.database_user, env.database_password)
+    primary = env.servers['db-primary'][0]
+    _current_server().pg_copy_master(primary, '%s_repl' % env.database_user, env.database_password)
 
 
 @task
 @runs_once
-@roles('db-slave')
-def promote_slave(index=0, override_servers={}):
-    """Promotes a slave to the db-master role and decommissions the old master."""
+@roles('db-replica')
+def promote_replica(index=0, override_servers={}):
+    """Promotes a replica to the db-primary role and decommissions the old primary."""
 
     require('environment', provided_by=env.environments)
-    slave = env.servers['db-slave'][int(index)]
-    slave.pg_promote()
-    for server in env.servers['db-master']:
-        _change_role(server, 'db-master-OLD')
+    replica = env.servers['db-replica'][int(index)]
+    replica.pg_promote()
+    for server in env.servers['db-primary']:
+        _change_role(server, 'db-primary-OLD')
         with server:
             with settings(warn_only=True):
                 # Shoot The Other Node In The Head:
                 sudo('service postgresql stop')
-    _change_role(slave, 'db-master')
+    _change_role(replica, 'db-primary')
     _setup_env(override_servers=override_servers)
     if env.gelf_log_host:
-        executel('install_logstash', roles=['db-master'])
+        executel('install_logstash', roles=['db-primary'])
     if env.syslog_server:
-        executel('install_rsyslog', roles=['db-master'])
+        executel('install_rsyslog', roles=['db-primary'])
     if env.awslogs_access_key_id:
-        executel('install_awslogs', roles=['db-master'])
+        executel('install_awslogs', roles=['db-primary'])
     print 'NOTE: you must now update the local_settings.py files on the web'\
-          'servers to point to the new master DB ({0}).'.format(slave.hostname)
+          'servers to point to the new primary DB ({0}).'.format(replica.hostname)
 
 
 ###### ROUTINE MAINTENANCE ######
@@ -1362,7 +1362,7 @@ def mount_encrypted(drive_letter='f'):
               'does not exist'.format(current_server.mount_script))
     if exists(current_server.default_swap_file):
         sudo('swapon %s' % current_server.default_swap_file)
-    if 'db-master' in _current_roles() or 'db-slave' in _current_roles():
+    if 'db-primary' in _current_roles() or 'db-replica' in _current_roles():
         sudo('service postgresql start')
     if 'cache' in _current_roles():
         sudo('service redis-server start', pty=False)
@@ -1431,15 +1431,15 @@ def create_environment(deployment_tag, environment, num_web=2):
     az_1 = env.avail_zones[0]
     az_2 = env.avail_zones[1]
     servers = [
-        (deployment_tag, environment, 'db-master', az_1),
-        (deployment_tag, environment, 'db-slave', az_2),
+        (deployment_tag, environment, 'db-primary', az_1),
+        (deployment_tag, environment, 'db-replica', az_2),
         (deployment_tag, environment, 'cache', az_2),
         (deployment_tag, environment, 'worker', az_1),
     ]
     _create_many(servers)
     env.roles = []
     executel(environment, deployment_tag)
-    # if we create all servers at once, the slave won't be sync'ed yet
+    # if we create all servers at once, the replica won't be sync'ed yet
     executel('reset_slaves')
 
     print 'Waiting for launch config creation to complete...'
@@ -1488,8 +1488,8 @@ def reboot_environment(deployment_tag, environment, sleep_time=180):
             server.reboot()
     logger.info('Sleeping for %s seconds' % sleep_time)
     time.sleep(sleep_time)
-    executel('mount_encrypted', roles=['db-master', 'cache'])
-    executel('mount_encrypted', roles=['db-slave'])
+    executel('mount_encrypted', roles=['db-primary', 'cache'])
+    executel('mount_encrypted', roles=['db-replica'])
     executel('mount_encrypted', roles=['web', 'worker'])
 
 
@@ -1594,27 +1594,27 @@ def recreate_servers(deployment_tag, environment, wait=30):
     lc_creator = BackgroundCommand(_create_server_for_image, capture_result=True)
     lc_creator.start()
     print 'Recreating servers for: %s' % config
-    # first, create a new slave & cache to replace the current master & cache servers
-    servers = [(deployment_tag, environment, 'db-slave', config['db-master'][0])]
+    # first, create a new replica & cache to replace the current primary & cache servers
+    servers = [(deployment_tag, environment, 'db-replica', config['db-primary'][0])]
     servers += [(deployment_tag, environment, 'cache', z) for z in config['cache']]
     _create_many(servers)
     start_time = datetime.datetime.now()
     executel('begin_upgrade')
     _stop_all()
     print 'Decommisioning old servers...'
-    # rename the original slave server(s)
-    for slave in orig_servers['db-slave']:
-        _change_role(slave, 'db-slave-OLD')
+    # rename the original replica server(s)
+    for replica in orig_servers['db-replica']:
+        _change_role(replica, 'db-replica-OLD')
     for cache in orig_servers['cache']:
         _change_role(cache, 'cache-OLD')
-    # reload the environment with the new slave (soon to be master),
+    # reload the environment with the new replica (soon to be primary),
     # but ensure the web server being created in the background is
     # not added
     override = {'web': orig_servers['web']}
     _setup_env(deployment_tag, environment, override_servers=override)
-    # promote that slave to the master role
-    executel('promote_slave', override_servers=override)
-    # update local_settings.py with new, single master
+    # promote that replica to the primary role
+    executel('promote_replica', override_servers=override)
+    # update local_settings.py with new, single primary
     executel('update_local_settings')
     _start_all()
     executel('end_upgrade')
@@ -1622,8 +1622,8 @@ def recreate_servers(deployment_tag, environment, wait=30):
     downtime = end_time - start_time
     print 'downtime complete; total = %s secs' % downtime.total_seconds()
 
-    # next, create the new slave, worker, and web servers
-    servers = [(deployment_tag, environment, 'db-slave', z) for z in config['db-slave']]
+    # next, create the new replica, worker, and web servers
+    servers = [(deployment_tag, environment, 'db-replica', z) for z in config['db-replica']]
     servers += [(deployment_tag, environment, 'worker', config['worker'][0])]
     _create_many(servers)
     for worker in orig_servers['worker']:

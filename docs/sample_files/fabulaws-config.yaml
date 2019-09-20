@@ -150,8 +150,8 @@ production_environments:
 - production
 valid_roles:
 - cache
-- db-master
-- db-slave
+- db-primary
+- db-replica
 - web
 - worker
 
@@ -175,8 +175,8 @@ avail_zones:
 
 # Mapping of role to security group(s):
 security_groups:
-  db-master: [myproject-sg, myproject-db-sg]
-  db-slave: [myproject-sg, myproject-db-sg]
+  db-primary: [myproject-sg, myproject-db-sg]
+  db-replica: [myproject-sg, myproject-db-sg]
   cache: [myproject-sg, myproject-session-sg, myproject-cache-sg, myproject-queue-sg]
   worker: [myproject-sg, myproject-worker-sg]
   web: [myproject-sg, myproject-web-sg]
@@ -184,8 +184,8 @@ security_groups:
 # If the instances need to be created in a non-default VPC, you'll need to provide
 # the security group IDs instead of names, like so:
 # security_groups:
-#   db-master: [sg-12345]
-#   db-slave: [sg-12345]
+#   db-primary: [sg-12345]
+#   db-replica: [sg-12345]
 #   cache: [sg-12345]
 #   worker: [sg-12345]
 #   # You might want an extra security group to allow traffic from the ELBs:
@@ -195,20 +195,20 @@ security_groups:
 instance_types:
   production:
     cache: c3.large
-    db-master: m3.xlarge
-    db-slave: m3.xlarge
+    db-primary: m3.xlarge
+    db-replica: m3.xlarge
     web: c3.large
     worker: m3.large
   staging:
     cache: t1.micro
-    db-master: m1.small
-    db-slave: m1.small
+    db-primary: m1.small
+    db-replica: m1.small
     web: m1.small
     worker: m3.large
   testing:
     cache: t1.micro
-    db-master: t1.micro
-    db-slave: t1.micro
+    db-primary: t1.micro
+    db-replica: t1.micro
     web: m1.small
     worker: m1.small
 
@@ -235,20 +235,20 @@ auto_scaling_groups:
 volume_sizes:
   production:
     cache: 10
-    db-master: 100
-    db-slave: 100
+    db-primary: 100
+    db-replica: 100
     web: 10
     worker: 50
   staging:
     cache: 10
-    db-master: 100
-    db-slave: 100
+    db-primary: 100
+    db-replica: 100
     web: 10
     worker: 50
   testing:
     cache: 10
-    db-master: 100
-    db-slave: 100
+    db-primary: 100
+    db-replica: 100
     web: 10
     worker: 50
 
@@ -257,8 +257,8 @@ volume_sizes:
 # magnetic storage.
 volume_types:
   cache: gp2
-  db-master: gp2
-  db-slave: gp2
+  db-primary: gp2
+  db-replica: gp2
   web: gp2
   worker: gp2
 

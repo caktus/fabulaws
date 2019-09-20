@@ -23,8 +23,8 @@ from fabulaws.ubuntu.packages.rabbitmq import RabbitMqMixin
 
 __all__ = [
     'CacheInstance',
-    'DbMasterInstance',
-    'DbSlaveInstance',
+    'DbPrimaryInstance',
+    'DbReplicaInstance',
     'WorkerInstance',
     'WebInstance',
     'CombinedInstance',
@@ -248,27 +248,27 @@ class DbMixin(PostgresMixin):
                                   self.postgresql_networks)
 
 
-class DbMasterMixin(DbMixin):
+class DbPrimaryMixin(DbMixin):
     """Mixin that creates a database based on the Fabric env."""
 
     def setup(self):
         """Create the Postgres user and database based on the Fabric env."""
 
-        super(DbMasterMixin, self).setup()
+        super(DbPrimaryMixin, self).setup()
         self.create_db_user(env.database_user, password=env.database_password)
         self.create_db(env.database_name, owner=env.database_user)
 
 
-class DbSlaveMixin(DbMixin):
+class DbReplicaMixin(DbMixin):
     """Mixin that creates a database based on the Fabric env."""
 
     def setup(self):
         """Create the Postgres user and database based on the Fabric env."""
 
-        super(DbSlaveMixin, self).setup()
-        if len(env.servers['db-master']) > 0:
-            master = env.servers['db-master'][0]
-            self.pg_copy_master(master, '%s_repl' % env.database_user,
+        super(DbReplicaMixin, self).setup()
+        if len(env.servers['db-primary']) > 0:
+            primary = env.servers['db-primary'][0]
+            self.pg_copy_master(primary, '%s_repl' % env.database_user,
                                 env.database_password)
 
 
@@ -359,11 +359,11 @@ class CacheInstance(QueueMixin, CacheMixin, SessionMixin, BaseInstance):
     pass
 
 
-class DbMasterInstance(DbMasterMixin, BaseInstance):
+class DbPrimaryInstance(DbPrimaryMixin, BaseInstance):
     pass
 
 
-class DbSlaveInstance(DbSlaveMixin, BaseInstance):
+class DbReplicaInstance(DbReplicaMixin, BaseInstance):
     pass
 
 
@@ -375,6 +375,6 @@ class WebInstance(WebMixin, BaseInstance):
     pass
 
 
-class CombinedInstance(DbMasterMixin, WebMixin, BaseInstance):
+class CombinedInstance(DbPrimaryMixin, WebMixin, BaseInstance):
     pass
 
