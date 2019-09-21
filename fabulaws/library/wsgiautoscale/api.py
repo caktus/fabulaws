@@ -1654,9 +1654,9 @@ def recreate_servers(deployment_tag, environment, wait=30):
 def install_munin():
     require('environment', provided_by=env.environments)
     sudo('apt-get -qq -y install munin-node munin-plugins-extra libdbd-pg-perl')
-    append('/etc/munin/munin-node.conf', 'allow_cidr 10.0.0.0/8', use_sudo=True)
-    append('/etc/munin/munin-node.conf', 'allow_cidr 172.16.0.0/12', use_sudo=True)
-    append('/etc/munin/munin-node.conf', 'allow_cidr 192.168.0.0/16', use_sudo=True)
+    append('/etc/munin/munin-node.conf', 'cidr_allow 10.0.0.0/8', use_sudo=True)
+    append('/etc/munin/munin-node.conf', 'cidr_allow 172.16.0.0/12', use_sudo=True)
+    append('/etc/munin/munin-node.conf', 'cidr_allow 192.168.0.0/16', use_sudo=True)
     sudo('service munin-node restart')
 
 
