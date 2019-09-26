@@ -17,6 +17,7 @@ import yaml
 
 from getpass import getpass
 
+from boto.cloudfront import CloudFrontConnection
 from boto.ec2.elb import ELBConnection
 from boto.ec2.autoscale import AutoScaleConnection, LaunchConfiguration, Tag
 from boto.exception import BotoServerError
@@ -971,6 +972,11 @@ def collectstatic():
 
     require('environment', provided_by=env.environments)
     _call_managepy('collectstatic --noinput')
+    distribution_id = getattr(env, 'cloudfront_distribution_ids', {}).get(env.deployment_tag, {}).get(env.environment, '')
+    if distribution_id:
+        conn = CloudFrontConnection()
+        print('Creating invalidation request for CloudFront Distribution %s' % distribution_id)
+        conn.create_invalidation_request(distribution_id, ['/*'])
 
 
 @task
