@@ -956,7 +956,7 @@
                     "DestinationBucketName": {
                         "Ref": "BucketLogsBucket"
                     },
-                    "LogFilePrefix": "ProductionBackups"
+                    "LogFilePrefix": "ProductionBackups/"
                 },
                 "PublicAccessBlockConfiguration": {
                     "BlockPublicAcls": "true",
@@ -995,7 +995,7 @@
                     "DestinationBucketName": {
                         "Ref": "BucketLogsBucket"
                     },
-                    "LogFilePrefix": "StagingBackups"
+                    "LogFilePrefix": "StagingBackups/"
                 },
                 "PublicAccessBlockConfiguration": {
                     "BlockPublicAcls": "true",
@@ -1042,10 +1042,49 @@
             },
             "Type": "AWS::S3::Bucket"
         },
-        "ElbLogsBucketPolicyProduction": {
+        "ElbLogsBucket": {
+            "DeletionPolicy": "Retain",
+            "Properties": {
+                "AccessControl": "Private",
+                "BucketEncryption": {
+                    "ServerSideEncryptionConfiguration": {
+                        "Fn::If": [
+                            "AssetsUseS3EncryptionCondition",
+                            [
+                                {
+                                    "ServerSideEncryptionByDefault": {
+                                        "SSEAlgorithm": "AES256"
+                                    }
+                                }
+                            ],
+                            [
+                                {}
+                            ]
+                        ]
+                    }
+                },
+                "LoggingConfiguration": {
+                    "DestinationBucketName": {
+                        "Ref": "BucketLogsBucket"
+                    },
+                    "LogFilePrefix": "ElbLogs/"
+                },
+                "PublicAccessBlockConfiguration": {
+                    "BlockPublicAcls": "true",
+                    "BlockPublicPolicy": "true",
+                    "IgnorePublicAcls": "true",
+                    "RestrictPublicBuckets": "true"
+                },
+                "VersioningConfiguration": {
+                    "Status": "Enabled"
+                }
+            },
+            "Type": "AWS::S3::Bucket"
+        },
+        "ElbLogsBucketPolicy": {
             "Properties": {
                 "Bucket": {
-                    "Ref": "ElbLogsBucketProduction"
+                    "Ref": "ElbLogsBucket"
                 },
                 "PolicyDocument": {
                     "Statement": [
@@ -1079,7 +1118,7 @@
                                         },
                                         ":s3:::",
                                         {
-                                            "Ref": "ElbLogsBucketProduction"
+                                            "Ref": "ElbLogsBucket"
                                         },
                                         "/*"
                                     ]
@@ -1091,144 +1130,17 @@
                 }
             },
             "Type": "AWS::S3::BucketPolicy"
-        },
-        "ElbLogsBucketPolicyStaging": {
-            "Properties": {
-                "Bucket": {
-                    "Ref": "ElbLogsBucketStaging"
-                },
-                "PolicyDocument": {
-                    "Statement": [
-                        {
-                            "Action": "s3:PutObject",
-                            "Effect": "Allow",
-                            "Principal": {
-                                "AWS": {
-                                    "Fn::Join": [
-                                        "",
-                                        [
-                                            "arn:aws:iam::",
-                                            {
-                                                "Ref": "ElbAccountID"
-                                            },
-                                            ":root"
-                                        ]
-                                    ]
-                                }
-                            },
-                            "Resource": {
-                                "Fn::Join": [
-                                    "",
-                                    [
-                                        {
-                                            "Fn::If": [
-                                                "InGovCloudRegion",
-                                                "arn:aws-us-gov",
-                                                "arn:aws"
-                                            ]
-                                        },
-                                        ":s3:::",
-                                        {
-                                            "Ref": "ElbLogsBucketStaging"
-                                        },
-                                        "/*"
-                                    ]
-                                ]
-                            }
-                        }
-                    ],
-                    "Version": "2012-10-17"
-                }
-            },
-            "Type": "AWS::S3::BucketPolicy"
-        },
-        "ElbLogsBucketProduction": {
-            "DeletionPolicy": "Retain",
-            "Properties": {
-                "AccessControl": "Private",
-                "BucketEncryption": {
-                    "ServerSideEncryptionConfiguration": {
-                        "Fn::If": [
-                            "AssetsUseS3EncryptionCondition",
-                            [
-                                {
-                                    "ServerSideEncryptionByDefault": {
-                                        "SSEAlgorithm": "AES256"
-                                    }
-                                }
-                            ],
-                            [
-                                {}
-                            ]
-                        ]
-                    }
-                },
-                "LoggingConfiguration": {
-                    "DestinationBucketName": {
-                        "Ref": "BucketLogsBucket"
-                    },
-                    "LogFilePrefix": "ProductionElbLogs"
-                },
-                "PublicAccessBlockConfiguration": {
-                    "BlockPublicAcls": "true",
-                    "BlockPublicPolicy": "true",
-                    "IgnorePublicAcls": "true",
-                    "RestrictPublicBuckets": "true"
-                },
-                "VersioningConfiguration": {
-                    "Status": "Enabled"
-                }
-            },
-            "Type": "AWS::S3::Bucket"
-        },
-        "ElbLogsBucketStaging": {
-            "DeletionPolicy": "Retain",
-            "Properties": {
-                "AccessControl": "Private",
-                "BucketEncryption": {
-                    "ServerSideEncryptionConfiguration": {
-                        "Fn::If": [
-                            "AssetsUseS3EncryptionCondition",
-                            [
-                                {
-                                    "ServerSideEncryptionByDefault": {
-                                        "SSEAlgorithm": "AES256"
-                                    }
-                                }
-                            ],
-                            [
-                                {}
-                            ]
-                        ]
-                    }
-                },
-                "LoggingConfiguration": {
-                    "DestinationBucketName": {
-                        "Ref": "BucketLogsBucket"
-                    },
-                    "LogFilePrefix": "StagingElbLogs"
-                },
-                "PublicAccessBlockConfiguration": {
-                    "BlockPublicAcls": "true",
-                    "BlockPublicPolicy": "true",
-                    "IgnorePublicAcls": "true",
-                    "RestrictPublicBuckets": "true"
-                },
-                "VersioningConfiguration": {
-                    "Status": "Enabled"
-                }
-            },
-            "Type": "AWS::S3::Bucket"
         },
         "ElbProduction": {
-            "DependsOn": "ElbLogsBucketPolicyProduction",
+            "DependsOn": "ElbLogsBucketPolicy",
             "Properties": {
                 "AccessLoggingPolicy": {
                     "EmitInterval": 60,
                     "Enabled": true,
                     "S3BucketName": {
-                        "Ref": "ElbLogsBucketProduction"
-                    }
+                        "Ref": "ElbLogsBucket"
+                    },
+                    "S3BucketPrefix": "production"
                 },
                 "CrossZone": "true",
                 "HealthCheck": {
@@ -1309,14 +1221,15 @@
             "Type": "AWS::ElasticLoadBalancing::LoadBalancer"
         },
         "ElbStaging": {
-            "DependsOn": "ElbLogsBucketPolicyStaging",
+            "DependsOn": "ElbLogsBucketPolicy",
             "Properties": {
                 "AccessLoggingPolicy": {
                     "EmitInterval": 60,
                     "Enabled": true,
                     "S3BucketName": {
-                        "Ref": "ElbLogsBucketStaging"
-                    }
+                        "Ref": "ElbLogsBucket"
+                    },
+                    "S3BucketPrefix": "staging"
                 },
                 "CrossZone": "true",
                 "HealthCheck": {
@@ -1530,7 +1443,7 @@
                     "DestinationBucketName": {
                         "Ref": "BucketLogsBucket"
                     },
-                    "LogFilePrefix": "ProductionPrivate"
+                    "LogFilePrefix": "ProductionPrivate/"
                 },
                 "PublicAccessBlockConfiguration": {
                     "BlockPublicAcls": "true",
@@ -1605,7 +1518,7 @@
                     "DestinationBucketName": {
                         "Ref": "BucketLogsBucket"
                     },
-                    "LogFilePrefix": "StagingPrivate"
+                    "LogFilePrefix": "StagingPrivate/"
                 },
                 "PublicAccessBlockConfiguration": {
                     "BlockPublicAcls": "true",

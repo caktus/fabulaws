@@ -85,7 +85,7 @@ def add_bucket(environment, name, include_output=False, logs_bucket=None, **extr
     if logs_bucket:
         extra_kwargs["LoggingConfiguration"] = LoggingConfiguration(
             DestinationBucketName=Ref(logs_bucket),
-            LogFilePrefix="".join([environment.title(), name]),
+            LogFilePrefix="%s%s/" % (environment.title(), name),
         )
     if "AccessControl" not in extra_kwargs:
         extra_kwargs["AccessControl"] = Private  # Objects can still be made public
@@ -116,11 +116,18 @@ private_access_block = PublicAccessBlockConfiguration(
     RestrictPublicBuckets=True,
 )
 
-logs_bucket = add_bucket(
+s3_logs_bucket = add_bucket(
     "",  # empty environment name
     "BucketLogs",
     PublicAccessBlockConfiguration=private_access_block,
     AccessControl=LogDeliveryWrite,
+)
+
+elb_logs_bucket = add_bucket(
+    "",  # empty environment name
+    "ElbLogs",
+    logs_bucket=s3_logs_bucket,
+    PublicAccessBlockConfiguration=private_access_block,
 )
 
 for environment in environments:
@@ -152,12 +159,11 @@ for environment in environments:
         environment,
         "Private",
         include_output=True,
-        logs_bucket=logs_bucket,
+        logs_bucket=s3_logs_bucket,
         CorsConfiguration=cors_configuration,
         PublicAccessBlockConfiguration=private_access_block,
     )
-    add_bucket(environment, "Backups", logs_bucket=logs_bucket, PublicAccessBlockConfiguration=private_access_block)
-    add_bucket(environment, "ElbLogs", logs_bucket=logs_bucket, PublicAccessBlockConfiguration=private_access_block)
+    add_bucket(environment, "Backups", logs_bucket=s3_logs_bucket, PublicAccessBlockConfiguration=private_access_block)
 
 
 # central asset management policy for use in instance roles
