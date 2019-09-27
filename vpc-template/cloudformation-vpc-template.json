@@ -952,6 +952,38 @@
                         ]
                     }
                 },
+                "LifecycleConfiguration": {
+                    "Rules": [
+                        {
+                            "ExpirationInDays": 14,
+                            "Id": "Keep Hourly for 14 days",
+                            "Prefix": "_hourly",
+                            "Status": "Enabled"
+                        },
+                        {
+                            "Id": "Transition to IA after 30 days",
+                            "Status": "Enabled",
+                            "Transitions": [
+                                {
+                                    "StorageClass": "STANDARD_IA",
+                                    "TransitionInDays": 30
+                                }
+                            ]
+                        },
+                        {
+                            "ExpirationInDays": 90,
+                            "Id": "Keep Daily for 90 days",
+                            "Prefix": "__daily",
+                            "Status": "Enabled"
+                        },
+                        {
+                            "ExpirationInDays": 365,
+                            "Id": "Keep Weekly for 365 days",
+                            "Prefix": "___weekly",
+                            "Status": "Enabled"
+                        }
+                    ]
+                },
                 "LoggingConfiguration": {
                     "DestinationBucketName": {
                         "Ref": "BucketLogsBucket"
@@ -990,6 +1022,38 @@
                             ]
                         ]
                     }
+                },
+                "LifecycleConfiguration": {
+                    "Rules": [
+                        {
+                            "ExpirationInDays": 14,
+                            "Id": "Keep Hourly for 14 days",
+                            "Prefix": "_hourly",
+                            "Status": "Enabled"
+                        },
+                        {
+                            "Id": "Transition to IA after 30 days",
+                            "Status": "Enabled",
+                            "Transitions": [
+                                {
+                                    "StorageClass": "STANDARD_IA",
+                                    "TransitionInDays": 30
+                                }
+                            ]
+                        },
+                        {
+                            "ExpirationInDays": 90,
+                            "Id": "Keep Daily for 90 days",
+                            "Prefix": "__daily",
+                            "Status": "Enabled"
+                        },
+                        {
+                            "ExpirationInDays": 365,
+                            "Id": "Keep Weekly for 365 days",
+                            "Prefix": "___weekly",
+                            "Status": "Enabled"
+                        }
+                    ]
                 },
                 "LoggingConfiguration": {
                     "DestinationBucketName": {
@@ -1030,6 +1094,20 @@
                         ]
                     }
                 },
+                "LifecycleConfiguration": {
+                    "Rules": [
+                        {
+                            "Id": "Transition to IA after 30 days",
+                            "Status": "Enabled",
+                            "Transitions": [
+                                {
+                                    "StorageClass": "STANDARD_IA",
+                                    "TransitionInDays": 30
+                                }
+                            ]
+                        }
+                    ]
+                },
                 "PublicAccessBlockConfiguration": {
                     "BlockPublicAcls": "true",
                     "BlockPublicPolicy": "true",
@@ -1062,6 +1140,20 @@
                             ]
                         ]
                     }
+                },
+                "LifecycleConfiguration": {
+                    "Rules": [
+                        {
+                            "Id": "Transition to IA after 30 days",
+                            "Status": "Enabled",
+                            "Transitions": [
+                                {
+                                    "StorageClass": "STANDARD_IA",
+                                    "TransitionInDays": 30
+                                }
+                            ]
+                        }
+                    ]
                 },
                 "LoggingConfiguration": {
                     "DestinationBucketName": {
@@ -1439,6 +1531,20 @@
                         }
                     ]
                 },
+                "LifecycleConfiguration": {
+                    "Rules": [
+                        {
+                            "Id": "Transition to IA after 365 days",
+                            "Status": "Enabled",
+                            "Transitions": [
+                                {
+                                    "StorageClass": "STANDARD_IA",
+                                    "TransitionInDays": 365
+                                }
+                            ]
+                        }
+                    ]
+                },
                 "LoggingConfiguration": {
                     "DestinationBucketName": {
                         "Ref": "BucketLogsBucket"
@@ -1511,6 +1617,20 @@
                                     }
                                 ]
                             }
+                        }
+                    ]
+                },
+                "LifecycleConfiguration": {
+                    "Rules": [
+                        {
+                            "Id": "Transition to IA after 365 days",
+                            "Status": "Enabled",
+                            "Transitions": [
+                                {
+                                    "StorageClass": "STANDARD_IA",
+                                    "TransitionInDays": 365
+                                }
+                            ]
                         }
                     ]
                 },

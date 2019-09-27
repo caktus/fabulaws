@@ -28,6 +28,9 @@ from troposphere.s3 import (
     BucketEncryption,
     CorsConfiguration,
     CorsRules,
+    LifecycleConfiguration,
+    LifecycleRule,
+    LifecycleRuleTransition,
     LogDeliveryWrite,
     LoggingConfiguration,
     Private,
@@ -116,11 +119,26 @@ private_access_block = PublicAccessBlockConfiguration(
     RestrictPublicBuckets=True,
 )
 
+
+def transition_to_ia_rule(days):
+    return LifecycleRule(
+        Id="Transition to IA after %s days" % days,  # 30 is the minimum
+        Status="Enabled",
+        Transitions=[
+            LifecycleRuleTransition(
+                StorageClass="STANDARD_IA",
+                TransitionInDays=days,
+            )
+        ]
+    )
+
+
 s3_logs_bucket = add_bucket(
     "",  # empty environment name
     "BucketLogs",
     PublicAccessBlockConfiguration=private_access_block,
     AccessControl=LogDeliveryWrite,
+    LifecycleConfiguration=LifecycleConfiguration(Rules=[transition_to_ia_rule(30)]),
 )
 
 elb_logs_bucket = add_bucket(
@@ -128,6 +146,7 @@ elb_logs_bucket = add_bucket(
     "ElbLogs",
     logs_bucket=s3_logs_bucket,
     PublicAccessBlockConfiguration=private_access_block,
+    LifecycleConfiguration=LifecycleConfiguration(Rules=[transition_to_ia_rule(30)])
 )
 
 for environment in environments:
@@ -162,8 +181,37 @@ for environment in environments:
         logs_bucket=s3_logs_bucket,
         CorsConfiguration=cors_configuration,
         PublicAccessBlockConfiguration=private_access_block,
+        LifecycleConfiguration=LifecycleConfiguration(Rules=[transition_to_ia_rule(365)]),
     )
-    add_bucket(environment, "Backups", logs_bucket=s3_logs_bucket, PublicAccessBlockConfiguration=private_access_block)
+    backups_bucket = add_bucket(
+        environment,
+        "Backups",
+        logs_bucket=s3_logs_bucket,
+        PublicAccessBlockConfiguration=private_access_block,
+        LifecycleConfiguration=LifecycleConfiguration(
+            Rules=[
+                LifecycleRule(
+                    Id="Keep Hourly for 14 days",
+                    ExpirationInDays=14,
+                    Prefix="_hourly",
+                    Status="Enabled",
+                ),
+                transition_to_ia_rule(30),
+                LifecycleRule(
+                    Id="Keep Daily for 90 days",
+                    ExpirationInDays=90,
+                    Prefix="__daily",
+                    Status="Enabled",
+                ),
+                LifecycleRule(
+                    Id="Keep Weekly for 365 days",
+                    ExpirationInDays=365,
+                    Prefix="___weekly",
+                    Status="Enabled",
+                ),
+            ]
+        )
+    )
 
 
 # central asset management policy for use in instance roles
