@@ -1954,6 +1954,22 @@
             },
             "Type": "AWS::EC2::SecurityGroupIngress"
         },
+        "VPCS3Endpoint": {
+            "Properties": {
+                "RouteTableIds": [
+                    {
+                        "Ref": "PrivateRouteTable"
+                    }
+                ],
+                "ServiceName": {
+                    "Fn::Sub": "com.amazonaws.${AWS::Region}.s3"
+                },
+                "VpcId": {
+                    "Ref": "Vpc"
+                }
+            },
+            "Type": "AWS::EC2::VPCEndpoint"
+        },
         "Vpc": {
             "Properties": {
                 "CidrBlock": {

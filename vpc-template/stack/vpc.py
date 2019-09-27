@@ -1,6 +1,6 @@
 import os
 
-from troposphere import GetAtt, Join, Ref, Tags
+from troposphere import GetAtt, Join, Ref, Sub, Tags
 from troposphere.ec2 import (
     EIP,
     VPC,
@@ -10,6 +10,7 @@ from troposphere.ec2 import (
     RouteTable,
     Subnet,
     SubnetRouteTableAssociation,
+    VPCEndpoint,
     VPCGatewayAttachment,
 )
 
@@ -277,4 +278,13 @@ SubnetRouteTableAssociation(
     template=template,
     SubnetId=Ref(private_subnet_b),
     RouteTableId=Ref(private_route_table),
+)
+
+
+VPCEndpoint(
+    "VPCS3Endpoint",
+    template=template,
+    ServiceName=Sub("com.amazonaws.${AWS::Region}.s3"),
+    VpcId=Ref(vpc),
+    RouteTableIds=[Ref(private_route_table)],
 )
