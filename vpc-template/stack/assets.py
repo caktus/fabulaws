@@ -36,7 +36,7 @@ from troposphere.s3 import (
 )
 
 from .common import arn_prefix, environments
-from .domain import domain_name, domain_name_alternates, no_alt_domains
+from .domain import domains
 from .template import template
 from .utils import ParameterWithDefaults as Parameter
 
@@ -97,36 +97,6 @@ def add_bucket(environment, name, **extra_kwargs):
     )
 
 
-cors_configuration = CorsConfiguration(
-    CorsRules=[
-        CorsRules(
-            AllowedOrigins=Split(
-                ";",
-                Join(
-                    "",
-                    [
-                        "https://",
-                        domain_name,
-                        If(
-                            no_alt_domains,
-                            # if we don't have any alternate domains, return an empty string
-                            "",
-                            # otherwise, return the ';https://' that will be needed by the first domain
-                            ";https://",
-                        ),
-                        # then, add all the alternate domains, joined together with ';https://'
-                        Join(";https://", domain_name_alternates),
-                        # now that we have a string of origins separated by ';',
-                        # Split() is used to make it into a list again
-                    ],
-                ),
-            ),
-            AllowedMethods=["POST", "PUT", "HEAD", "GET"],
-            AllowedHeaders=["*"],
-        )
-    ]
-)
-
 private_access_block = PublicAccessBlockConfiguration(
     BlockPublicAcls=True,
     BlockPublicPolicy=True,
@@ -135,6 +105,28 @@ private_access_block = PublicAccessBlockConfiguration(
 )
 
 for environment in environments:
+    cors_configuration = CorsConfiguration(
+        CorsRules=[
+            CorsRules(
+                AllowedOrigins=Split(
+                    ";",
+                    Join(
+                        "",
+                        [
+                            # prepend "https://"
+                            "https://",
+                            # join all domains for this environment with ';https://'
+                            Join(";https://", domains[environment]),
+                            # now that we have a string of origins separated by ';',
+                            # Split() is used to make it into a list again
+                        ],
+                    ),
+                ),
+                AllowedMethods=["POST", "PUT", "HEAD", "GET"],
+                AllowedHeaders=["*"],
+            )
+        ]
+    )
     add_bucket(environment, "Assets", CorsConfiguration=cors_configuration)
     add_bucket(
         environment,

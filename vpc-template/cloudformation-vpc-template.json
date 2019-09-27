@@ -96,19 +96,6 @@
                 "us-gov-west-1"
             ]
         },
-        "NoAlternateDomains": {
-            "Fn::Equals": [
-                {
-                    "Fn::Join": [
-                        "",
-                        {
-                            "Ref": "DomainNameAlternates"
-                        }
-                    ]
-                },
-                ""
-            ]
-        },
         "TcpHealthCheckProduction": {
             "Fn::Equals": [
                 {
@@ -134,8 +121,8 @@
                         "default": "Global"
                     },
                     "Parameters": [
-                        "DomainName",
-                        "DomainNameAlternates",
+                        "DomainNamesStaging",
+                        "DomainNamesProduction",
                         "PrimaryAZ",
                         "SecondaryAZ",
                         "VpcCidr",
@@ -212,11 +199,11 @@
                 "AutoscalingTargetCPU": {
                     "default": "Autoscaling Target CPU"
                 },
-                "DomainName": {
-                    "default": "Domain Name"
+                "DomainNamesProduction": {
+                    "default": "Domain Names (production)"
                 },
-                "DomainNameAlternates": {
-                    "default": "Alternate Domain Names"
+                "DomainNamesStaging": {
+                    "default": "Domain Names (staging)"
                 },
                 "ElbAccountID": {
                     "default": "Elastic Load Balancing Account ID"
@@ -421,12 +408,12 @@
             "Description": "Target CPU utilization for the autoscaling group (e.g., \"40.0\" for 40%).",
             "Type": "Number"
         },
-        "DomainName": {
-            "Description": "The fully-qualified domain name for the application.",
-            "Type": "String"
+        "DomainNamesProduction": {
+            "Description": "A comma-separated list of FQDNs for production.",
+            "Type": "CommaDelimitedList"
         },
-        "DomainNameAlternates": {
-            "Description": "A comma-separated list of Alternate FQDNs.",
+        "DomainNamesStaging": {
+            "Description": "A comma-separated list of FQDNs for staging.",
             "Type": "CommaDelimitedList"
         },
         "ElbAccountID": {
@@ -541,20 +528,10 @@
                                             [
                                                 "https://",
                                                 {
-                                                    "Ref": "DomainName"
-                                                },
-                                                {
-                                                    "Fn::If": [
-                                                        "NoAlternateDomains",
-                                                        "",
-                                                        ";https://"
-                                                    ]
-                                                },
-                                                {
                                                     "Fn::Join": [
                                                         ";https://",
                                                         {
-                                                            "Ref": "DomainNameAlternates"
+                                                            "Ref": "DomainNamesProduction"
                                                         }
                                                     ]
                                                 }
@@ -614,20 +591,10 @@
                                             [
                                                 "https://",
                                                 {
-                                                    "Ref": "DomainName"
-                                                },
-                                                {
-                                                    "Fn::If": [
-                                                        "NoAlternateDomains",
-                                                        "",
-                                                        ";https://"
-                                                    ]
-                                                },
-                                                {
                                                     "Fn::Join": [
                                                         ";https://",
                                                         {
-                                                            "Ref": "DomainNameAlternates"
+                                                            "Ref": "DomainNamesStaging"
                                                         }
                                                     ]
                                                 }
@@ -1523,20 +1490,10 @@
                                             [
                                                 "https://",
                                                 {
-                                                    "Ref": "DomainName"
-                                                },
-                                                {
-                                                    "Fn::If": [
-                                                        "NoAlternateDomains",
-                                                        "",
-                                                        ";https://"
-                                                    ]
-                                                },
-                                                {
                                                     "Fn::Join": [
                                                         ";https://",
                                                         {
-                                                            "Ref": "DomainNameAlternates"
+                                                            "Ref": "DomainNamesProduction"
                                                         }
                                                     ]
                                                 }
@@ -1602,20 +1559,10 @@
                                             [
                                                 "https://",
                                                 {
-                                                    "Ref": "DomainName"
-                                                },
-                                                {
-                                                    "Fn::If": [
-                                                        "NoAlternateDomains",
-                                                        "",
-                                                        ";https://"
-                                                    ]
-                                                },
-                                                {
                                                     "Fn::Join": [
                                                         ";https://",
                                                         {
-                                                            "Ref": "DomainNameAlternates"
+                                                            "Ref": "DomainNamesStaging"
                                                         }
                                                     ]
                                                 }
