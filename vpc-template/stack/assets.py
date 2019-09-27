@@ -28,6 +28,8 @@ from troposphere.s3 import (
     BucketEncryption,
     CorsConfiguration,
     CorsRules,
+    LogDeliveryWrite,
+    LoggingConfiguration,
     Private,
     PublicAccessBlockConfiguration,
     ServerSideEncryptionByDefault,
@@ -78,23 +80,33 @@ common_bucket_conf = dict(
 buckets = {env: {} for env in environments}
 
 
-def add_bucket(environment, name, **extra_kwargs):
+def add_bucket(environment, name, include_output=False, logs_bucket=None, **extra_kwargs):
     extra_kwargs.update(common_bucket_conf)
-    buckets[environment][name] = template.add_resource(
+    if logs_bucket:
+        extra_kwargs["LoggingConfiguration"] = LoggingConfiguration(
+            DestinationBucketName=Ref(logs_bucket),
+            LogFilePrefix="".join([environment.title(), name]),
+        )
+    if "AccessControl" not in extra_kwargs:
+        extra_kwargs["AccessControl"] = Private  # Objects can still be made public
+    bucket = template.add_resource(
         Bucket(
             "%sBucket%s" % (name, environment.title()),
-            AccessControl=Private,  # Objects can still be made public
             **extra_kwargs,
         )
     )
-    # Output S3 asset bucket name
-    template.add_output(
-        Output(
-            "%sBucket%sDomainName" % (name, environment.title()),
-            Description="%s bucket domain name (%s)" % (name, environment),
-            Value=GetAtt(buckets[environment][name], "DomainName"),
+    if environment:
+        buckets[environment][name] = bucket
+    if include_output:
+        # Output S3 asset bucket name
+        template.add_output(
+            Output(
+                "%sBucket%sDomainName" % (name, environment.title()),
+                Description="%s bucket domain name (%s)" % (name, environment),
+                Value=GetAtt(bucket, "DomainName"),
+            )
         )
-    )
+    return bucket
 
 
 private_access_block = PublicAccessBlockConfiguration(
@@ -102,6 +114,13 @@ private_access_block = PublicAccessBlockConfiguration(
     BlockPublicPolicy=True,
     IgnorePublicAcls=True,
     RestrictPublicBuckets=True,
+)
+
+logs_bucket = add_bucket(
+    "",  # empty environment name
+    "BucketLogs",
+    PublicAccessBlockConfiguration=private_access_block,
+    AccessControl=LogDeliveryWrite,
 )
 
 for environment in environments:
@@ -127,15 +146,18 @@ for environment in environments:
             )
         ]
     )
-    add_bucket(environment, "Assets", CorsConfiguration=cors_configuration)
+    # no logging for public assets (no protected information in this bucket)
+    add_bucket(environment, "Assets", CorsConfiguration=cors_configuration, include_output=True)
     add_bucket(
         environment,
         "Private",
+        include_output=True,
+        logs_bucket=logs_bucket,
         CorsConfiguration=cors_configuration,
         PublicAccessBlockConfiguration=private_access_block,
     )
-    add_bucket(environment, "Backups", PublicAccessBlockConfiguration=private_access_block)
-    add_bucket(environment, "ElbLogs", PublicAccessBlockConfiguration=private_access_block)
+    add_bucket(environment, "Backups", logs_bucket=logs_bucket, PublicAccessBlockConfiguration=private_access_block)
+    add_bucket(environment, "ElbLogs", logs_bucket=logs_bucket, PublicAccessBlockConfiguration=private_access_block)
 
 
 # central asset management policy for use in instance roles

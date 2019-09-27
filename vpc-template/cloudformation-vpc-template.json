@@ -283,42 +283,6 @@
                 ]
             }
         },
-        "BackupsBucketProductionDomainName": {
-            "Description": "Backups bucket domain name (production)",
-            "Value": {
-                "Fn::GetAtt": [
-                    "BackupsBucketProduction",
-                    "DomainName"
-                ]
-            }
-        },
-        "BackupsBucketStagingDomainName": {
-            "Description": "Backups bucket domain name (staging)",
-            "Value": {
-                "Fn::GetAtt": [
-                    "BackupsBucketStaging",
-                    "DomainName"
-                ]
-            }
-        },
-        "ElbLogsBucketProductionDomainName": {
-            "Description": "ElbLogs bucket domain name (production)",
-            "Value": {
-                "Fn::GetAtt": [
-                    "ElbLogsBucketProduction",
-                    "DomainName"
-                ]
-            }
-        },
-        "ElbLogsBucketStagingDomainName": {
-            "Description": "ElbLogs bucket domain name (staging)",
-            "Value": {
-                "Fn::GetAtt": [
-                    "ElbLogsBucketStaging",
-                    "DomainName"
-                ]
-            }
-        },
         "ElbProductionDnsName": {
             "Description": "Loadbalancer DNS",
             "Value": {
@@ -988,6 +952,12 @@
                         ]
                     }
                 },
+                "LoggingConfiguration": {
+                    "DestinationBucketName": {
+                        "Ref": "BucketLogsBucket"
+                    },
+                    "LogFilePrefix": "ProductionBackups"
+                },
                 "PublicAccessBlockConfiguration": {
                     "BlockPublicAcls": "true",
                     "BlockPublicPolicy": "true",
@@ -1004,6 +974,45 @@
             "DeletionPolicy": "Retain",
             "Properties": {
                 "AccessControl": "Private",
+                "BucketEncryption": {
+                    "ServerSideEncryptionConfiguration": {
+                        "Fn::If": [
+                            "AssetsUseS3EncryptionCondition",
+                            [
+                                {
+                                    "ServerSideEncryptionByDefault": {
+                                        "SSEAlgorithm": "AES256"
+                                    }
+                                }
+                            ],
+                            [
+                                {}
+                            ]
+                        ]
+                    }
+                },
+                "LoggingConfiguration": {
+                    "DestinationBucketName": {
+                        "Ref": "BucketLogsBucket"
+                    },
+                    "LogFilePrefix": "StagingBackups"
+                },
+                "PublicAccessBlockConfiguration": {
+                    "BlockPublicAcls": "true",
+                    "BlockPublicPolicy": "true",
+                    "IgnorePublicAcls": "true",
+                    "RestrictPublicBuckets": "true"
+                },
+                "VersioningConfiguration": {
+                    "Status": "Enabled"
+                }
+            },
+            "Type": "AWS::S3::Bucket"
+        },
+        "BucketLogsBucket": {
+            "DeletionPolicy": "Retain",
+            "Properties": {
+                "AccessControl": "LogDeliveryWrite",
                 "BucketEncryption": {
                     "ServerSideEncryptionConfiguration": {
                         "Fn::If": [
@@ -1154,6 +1163,12 @@
                         ]
                     }
                 },
+                "LoggingConfiguration": {
+                    "DestinationBucketName": {
+                        "Ref": "BucketLogsBucket"
+                    },
+                    "LogFilePrefix": "ProductionElbLogs"
+                },
                 "PublicAccessBlockConfiguration": {
                     "BlockPublicAcls": "true",
                     "BlockPublicPolicy": "true",
@@ -1186,6 +1201,12 @@
                             ]
                         ]
                     }
+                },
+                "LoggingConfiguration": {
+                    "DestinationBucketName": {
+                        "Ref": "BucketLogsBucket"
+                    },
+                    "LogFilePrefix": "StagingElbLogs"
                 },
                 "PublicAccessBlockConfiguration": {
                     "BlockPublicAcls": "true",
@@ -1505,6 +1526,12 @@
                         }
                     ]
                 },
+                "LoggingConfiguration": {
+                    "DestinationBucketName": {
+                        "Ref": "BucketLogsBucket"
+                    },
+                    "LogFilePrefix": "ProductionPrivate"
+                },
                 "PublicAccessBlockConfiguration": {
                     "BlockPublicAcls": "true",
                     "BlockPublicPolicy": "true",
@@ -1573,6 +1600,12 @@
                             }
                         }
                     ]
+                },
+                "LoggingConfiguration": {
+                    "DestinationBucketName": {
+                        "Ref": "BucketLogsBucket"
+                    },
+                    "LogFilePrefix": "StagingPrivate"
                 },
                 "PublicAccessBlockConfiguration": {
                     "BlockPublicAcls": "true",
