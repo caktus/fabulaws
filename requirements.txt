@@ -1,4 +1,4 @@
-fabric==1.10.2
-boto==2.39.0
-pyyaml==3.11
-argyle==0.2.1
+fabric<2
+boto3
+pyyaml
+argyle>=0.2.1,<1

@@ -14,7 +14,7 @@ class BaseAptMixin(object):
     def _read_lines_from_file(self, file_name):
         with open(file_name) as f:
             packages = f.readlines()
-        return map(lambda x: x.strip('\n\r'), packages)
+        return [x.strip('\n\r') for x in packages]
 
     @uses_fabric
     def install_packages(self, packages):

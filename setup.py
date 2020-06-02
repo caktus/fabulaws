@@ -18,10 +18,16 @@ setup(
         'Topic :: Software Development :: Libraries :: Python Modules',
         'Development Status :: 4 - Beta',
         'Operating System :: OS Independent',
+        "Programming Language :: Python",
+        "Programming Language :: Python :: 2.7",
+        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
     ],
     long_description=open('README.rst').read(),
     install_requires=[
-        'pyyaml>=3,<4',
+        'pyyaml',
         'boto>=2.39,<3',
         'fabric>=1.10,<2',
         'argyle>=0.2.1,<1'
