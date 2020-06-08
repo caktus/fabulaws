@@ -1,0 +1,2638 @@
+{
+    "Conditions": {
+        "AcmCertConditionProduction": {
+            "Fn::Not": [
+                {
+                    "Fn::Equals": [
+                        {
+                            "Ref": "AcmCertArnProduction"
+                        },
+                        ""
+                    ]
+                }
+            ]
+        },
+        "AcmCertConditionStaging": {
+            "Fn::Not": [
+                {
+                    "Fn::Equals": [
+                        {
+                            "Ref": "AcmCertArnStaging"
+                        },
+                        ""
+                    ]
+                }
+            ]
+        },
+        "AcmCertConditionTesting": {
+            "Fn::Not": [
+                {
+                    "Fn::Equals": [
+                        {
+                            "Ref": "AcmCertArnTesting"
+                        },
+                        ""
+                    ]
+                }
+            ]
+        },
+        "AssetsCloudFrontCertArnCondition": {
+            "Fn::Not": [
+                {
+                    "Fn::Equals": [
+                        {
+                            "Ref": "AssetsCloudFrontCertArn"
+                        },
+                        ""
+                    ]
+                }
+            ]
+        },
+        "AssetsCloudFrontDomainAndUsEast1Condition": {
+            "Fn::And": [
+                {
+                    "Fn::Not": [
+                        {
+                            "Fn::Equals": [
+                                {
+                                    "Ref": "AssetsCloudFrontDomain"
+                                },
+                                ""
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "Fn::Equals": [
+                        {
+                            "Ref": "AWS::Region"
+                        },
+                        "us-east-1"
+                    ]
+                }
+            ]
+        },
+        "AssetsCloudFrontDomainCondition": {
+            "Fn::Not": [
+                {
+                    "Fn::Equals": [
+                        {
+                            "Ref": "AssetsCloudFrontDomain"
+                        },
+                        ""
+                    ]
+                }
+            ]
+        },
+        "AssetsUseCloudFrontCondition": {
+            "Fn::Equals": [
+                {
+                    "Ref": "AssetsUseCloudFront"
+                },
+                "true"
+            ]
+        },
+        "AssetsUseS3EncryptionCondition": {
+            "Fn::Equals": [
+                {
+                    "Ref": "AssetsUseAES256Encryption"
+                },
+                "true"
+            ]
+        },
+        "InGovCloudRegion": {
+            "Fn::Equals": [
+                {
+                    "Ref": "AWS::Region"
+                },
+                "us-gov-west-1"
+            ]
+        },
+        "TcpHealthCheckProduction": {
+            "Fn::Equals": [
+                {
+                    "Ref": "WebWorkerHealthCheck"
+                },
+                ""
+            ]
+        },
+        "TcpHealthCheckStaging": {
+            "Fn::Equals": [
+                {
+                    "Ref": "WebWorkerHealthCheck"
+                },
+                ""
+            ]
+        },
+        "TcpHealthCheckTesting": {
+            "Fn::Equals": [
+                {
+                    "Ref": "WebWorkerHealthCheck"
+                },
+                ""
+            ]
+        }
+    },
+    "Metadata": {
+        "AWS::CloudFormation::Interface": {
+            "ParameterGroups": [
+                {
+                    "Label": {
+                        "default": "Global"
+                    },
+                    "Parameters": [
+                        "DomainNamesTesting",
+                        "DomainNamesStaging",
+                        "DomainNamesProduction",
+                        "PrimaryAZ",
+                        "SecondaryAZ",
+                        "VpcCidr",
+                        "PublicSubnetACidr",
+                        "PublicSubnetBCidr",
+                        "PrivateSubnetACidr",
+                        "PrivateSubnetBCidr"
+                    ]
+                },
+                {
+                    "Label": {
+                        "default": "Load Balancer"
+                    },
+                    "Parameters": [
+                        "WebWorkerHealthCheck",
+                        "ElbAccountID",
+                        "AcmCertArnTesting",
+                        "AcmCertArnStaging",
+                        "AcmCertArnProduction"
+                    ]
+                },
+                {
+                    "Label": {
+                        "default": "Static Media"
+                    },
+                    "Parameters": [
+                        "AssetsUseAES256Encryption",
+                        "AssetsUseCloudFront",
+                        "AssetsCloudFrontDomain",
+                        "AssetsCloudFrontCertArn"
+                    ]
+                },
+                {
+                    "Label": {
+                        "default": "Networking"
+                    },
+                    "Parameters": [
+                        "LocalCidr"
+                    ]
+                },
+                {
+                    "Label": {
+                        "default": "EC2"
+                    },
+                    "Parameters": [
+                        "RouterAMI",
+                        "KeyName",
+                        "AutoscalingTargetCPU",
+                        "AutoscalingNotificationsArn"
+                    ]
+                }
+            ],
+            "ParameterLabels": {
+                "AcmCertArnProduction": {
+                    "default": "ACM Certificate ARN (production)"
+                },
+                "AcmCertArnStaging": {
+                    "default": "ACM Certificate ARN (staging)"
+                },
+                "AcmCertArnTesting": {
+                    "default": "ACM Certificate ARN (testing)"
+                },
+                "AssetsCloudFrontCertArn": {
+                    "default": "CloudFront SSL Certificate ARN"
+                },
+                "AssetsCloudFrontDomain": {
+                    "default": "CloudFront Custom Domain"
+                },
+                "AssetsUseAES256Encryption": {
+                    "default": "Enable AES256 Encryption"
+                },
+                "AssetsUseCloudFront": {
+                    "default": "Enable CloudFront"
+                },
+                "AutoscalingNotificationsArn": {
+                    "default": "Autoscaling Notifications ARN"
+                },
+                "AutoscalingTargetCPU": {
+                    "default": "Autoscaling Target CPU"
+                },
+                "DomainNamesProduction": {
+                    "default": "Domain Names (production)"
+                },
+                "DomainNamesStaging": {
+                    "default": "Domain Names (staging)"
+                },
+                "DomainNamesTesting": {
+                    "default": "Domain Names (testing)"
+                },
+                "ElbAccountID": {
+                    "default": "Elastic Load Balancing Account ID"
+                },
+                "KeyName": {
+                    "default": "SSH Key Name"
+                },
+                "LocalCidr": {
+                    "default": "Local CIDR"
+                },
+                "PrimaryAZ": {
+                    "default": "Primary Availability Zone"
+                },
+                "PrivateSubnetACidr": {
+                    "default": "Private Subnet A CIDR Block"
+                },
+                "PrivateSubnetBCidr": {
+                    "default": "Private Subnet B CIDR Block"
+                },
+                "PublicSubnetACidr": {
+                    "default": "Public Subnet A CIDR Block"
+                },
+                "PublicSubnetBCidr": {
+                    "default": "Public Subnet B CIDR Block"
+                },
+                "RouterAMI": {
+                    "default": "Router AMI"
+                },
+                "SecondaryAZ": {
+                    "default": "Secondary Availability Zone"
+                },
+                "VpcCidr": {
+                    "default": "VPC IPv4 CIDR Block"
+                },
+                "WebWorkerHealthCheck": {
+                    "default": "Health Check URL"
+                }
+            }
+        }
+    },
+    "Outputs": {
+        "AssetsBucketProductionDomainName": {
+            "Description": "Assets bucket domain name (production)",
+            "Value": {
+                "Fn::GetAtt": [
+                    "AssetsBucketProduction",
+                    "DomainName"
+                ]
+            }
+        },
+        "AssetsBucketStagingDomainName": {
+            "Description": "Assets bucket domain name (staging)",
+            "Value": {
+                "Fn::GetAtt": [
+                    "AssetsBucketStaging",
+                    "DomainName"
+                ]
+            }
+        },
+        "AssetsBucketTestingDomainName": {
+            "Description": "Assets bucket domain name (testing)",
+            "Value": {
+                "Fn::GetAtt": [
+                    "AssetsBucketTesting",
+                    "DomainName"
+                ]
+            }
+        },
+        "AssetsDistributionProductionDomainName": {
+            "Condition": "AssetsUseCloudFrontCondition",
+            "Description": "The assets bucket CDN domain name (production)",
+            "Value": {
+                "Fn::GetAtt": [
+                    "AssetsDistributionProduction",
+                    "DomainName"
+                ]
+            }
+        },
+        "AssetsDistributionStagingDomainName": {
+            "Condition": "AssetsUseCloudFrontCondition",
+            "Description": "The assets bucket CDN domain name (staging)",
+            "Value": {
+                "Fn::GetAtt": [
+                    "AssetsDistributionStaging",
+                    "DomainName"
+                ]
+            }
+        },
+        "AssetsDistributionTestingDomainName": {
+            "Condition": "AssetsUseCloudFrontCondition",
+            "Description": "The assets bucket CDN domain name (testing)",
+            "Value": {
+                "Fn::GetAtt": [
+                    "AssetsDistributionTesting",
+                    "DomainName"
+                ]
+            }
+        },
+        "ElbProductionDnsName": {
+            "Description": "Loadbalancer DNS",
+            "Value": {
+                "Fn::GetAtt": [
+                    "ElbProduction",
+                    "DNSName"
+                ]
+            }
+        },
+        "ElbStagingDnsName": {
+            "Description": "Loadbalancer DNS",
+            "Value": {
+                "Fn::GetAtt": [
+                    "ElbStaging",
+                    "DNSName"
+                ]
+            }
+        },
+        "ElbTestingDnsName": {
+            "Description": "Loadbalancer DNS",
+            "Value": {
+                "Fn::GetAtt": [
+                    "ElbTesting",
+                    "DNSName"
+                ]
+            }
+        },
+        "PrivateBucketProductionDomainName": {
+            "Description": "Private bucket domain name (production)",
+            "Value": {
+                "Fn::GetAtt": [
+                    "PrivateBucketProduction",
+                    "DomainName"
+                ]
+            }
+        },
+        "PrivateBucketStagingDomainName": {
+            "Description": "Private bucket domain name (staging)",
+            "Value": {
+                "Fn::GetAtt": [
+                    "PrivateBucketStaging",
+                    "DomainName"
+                ]
+            }
+        },
+        "PrivateBucketTestingDomainName": {
+            "Description": "Private bucket domain name (testing)",
+            "Value": {
+                "Fn::GetAtt": [
+                    "PrivateBucketTesting",
+                    "DomainName"
+                ]
+            }
+        },
+        "RouterPublicIP": {
+            "Description": "Public IP address of router",
+            "Value": {
+                "Ref": "RouterEIP"
+            }
+        }
+    },
+    "Parameters": {
+        "AcmCertArnProduction": {
+            "Default": "",
+            "Description": "ARN of the AWS Certificate Manager certificate (optional). If omitted, TCP connections will be passed directly to the backend instances on port 443.",
+            "Type": "String"
+        },
+        "AcmCertArnStaging": {
+            "Default": "",
+            "Description": "ARN of the AWS Certificate Manager certificate (optional). If omitted, TCP connections will be passed directly to the backend instances on port 443.",
+            "Type": "String"
+        },
+        "AcmCertArnTesting": {
+            "Default": "",
+            "Description": "ARN of the AWS Certificate Manager certificate (optional). If omitted, TCP connections will be passed directly to the backend instances on port 443.",
+            "Type": "String"
+        },
+        "AssetsCloudFrontCertArn": {
+            "Description": "If (1) you specified a custom static media domain, (2) your stack is NOT in the us-east-1 region, and (3) you wish to serve static media over HTTPS, you must manually create an ACM certificate in the us-east-1 region and provide its ARN here.",
+            "Type": "String"
+        },
+        "AssetsCloudFrontDomain": {
+            "Default": "",
+            "Description": "A custom domain name (CNAME) for your CloudFront distribution, e.g., \"static.example.com\".",
+            "Type": "String"
+        },
+        "AssetsUseAES256Encryption": {
+            "AllowedValues": [
+                "true",
+                "false"
+            ],
+            "Default": "true",
+            "Description": "Whether or not to use server side encryption for S3 buckets. When true, AES256 encryption is enabled for all asset buckets.",
+            "Type": "String"
+        },
+        "AssetsUseCloudFront": {
+            "AllowedValues": [
+                "true",
+                "false"
+            ],
+            "Default": "true",
+            "Description": "Whether or not to create a CloudFront distribution tied to the S3 assets bucket.",
+            "Type": "String"
+        },
+        "AutoscalingNotificationsArn": {
+            "Description": "ARN of SNS topic to receive autoscaling notifications",
+            "Type": "String"
+        },
+        "AutoscalingTargetCPU": {
+            "Description": "Target CPU utilization for the autoscaling group (e.g., \"40.0\" for 40%).",
+            "Type": "Number"
+        },
+        "DomainNamesProduction": {
+            "Description": "A comma-separated list of FQDNs for production.",
+            "Type": "CommaDelimitedList"
+        },
+        "DomainNamesStaging": {
+            "Description": "A comma-separated list of FQDNs for staging.",
+            "Type": "CommaDelimitedList"
+        },
+        "DomainNamesTesting": {
+            "Description": "A comma-separated list of FQDNs for testing.",
+            "Type": "CommaDelimitedList"
+        },
+        "ElbAccountID": {
+            "Default": "",
+            "Description": "AWS account ID for ELBs for your region. See: https://docs.aws.amazon.com/elasticloadbalancing/latest/classic/enable-access-logs.html",
+            "Type": "String"
+        },
+        "KeyName": {
+            "ConstraintDescription": "must be the name of an existing EC2 KeyPair.",
+            "Description": "Name of an existing EC2 KeyPair to enable SSH access to the AWS EC2 instances",
+            "Type": "AWS::EC2::KeyPair::KeyName"
+        },
+        "LocalCidr": {
+            "Default": "0.0.0.0/0",
+            "Description": "CIDR block from which to allow restricted access. Set this to \"<your IP>/32\".",
+            "Type": "String"
+        },
+        "PrimaryAZ": {
+            "Description": "The primary availability zone for creating resources.",
+            "Type": "AWS::EC2::AvailabilityZone::Name"
+        },
+        "PrivateSubnetACidr": {
+            "AllowedPattern": "^((10\\.([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.)|(172\\.(1[6-9]|2[0-9]|3[0-1])\\.)|192\\.168\\.)(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.)([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\\/(1[6-9]|2[0-8]))$",
+            "ConstraintDescription": "Must be a private IPv4 range with size /16 and /28.",
+            "Default": "10.0.8.0/22",
+            "Description": "IPv4 CIDR block for the private subnet in the primary AZ. [Possibly not modifiable after stack creation]",
+            "Type": "String"
+        },
+        "PrivateSubnetBCidr": {
+            "AllowedPattern": "^((10\\.([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.)|(172\\.(1[6-9]|2[0-9]|3[0-1])\\.)|192\\.168\\.)(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.)([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\\/(1[6-9]|2[0-8]))$",
+            "ConstraintDescription": "Must be a private IPv4 range with size /16 and /28.",
+            "Default": "10.0.12.0/22",
+            "Description": "IPv4 CIDR block for the private subnet in the secondary AZ. [Possibly not modifiable after stack creation]",
+            "Type": "String"
+        },
+        "PublicSubnetACidr": {
+            "AllowedPattern": "^((10\\.([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.)|(172\\.(1[6-9]|2[0-9]|3[0-1])\\.)|192\\.168\\.)(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.)([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\\/(1[6-9]|2[0-8]))$",
+            "ConstraintDescription": "Must be a private IPv4 range with size /16 and /28.",
+            "Default": "10.0.0.0/22",
+            "Description": "IPv4 CIDR block for the public subnet in the primary AZ. [Possibly not modifiable after stack creation]",
+            "Type": "String"
+        },
+        "PublicSubnetBCidr": {
+            "AllowedPattern": "^((10\\.([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.)|(172\\.(1[6-9]|2[0-9]|3[0-1])\\.)|192\\.168\\.)(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.)([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\\/(1[6-9]|2[0-8]))$",
+            "ConstraintDescription": "Must be a private IPv4 range with size /16 and /28.",
+            "Default": "10.0.4.0/22",
+            "Description": "IPv4 CIDR block for the public subnet in the secondary AZ. [Possibly not modifiable after stack creation]",
+            "Type": "String"
+        },
+        "RouterAMI": {
+            "Default": "ami-089c333c4d9b09ffc",
+            "Description": "pfSense AMI from the AWS marketplace in the same region as this stack",
+            "Type": "String"
+        },
+        "SecondaryAZ": {
+            "Description": "The secondary availability zone for creating resources. Must differ from primary zone.",
+            "Type": "AWS::EC2::AvailabilityZone::Name"
+        },
+        "VpcCidr": {
+            "AllowedPattern": "^((10\\.([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.)|(172\\.(1[6-9]|2[0-9]|3[0-1])\\.)|192\\.168\\.)(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.)([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\\/(1[6-9]|2[0-8]))$",
+            "ConstraintDescription": "Must be a private IPv4 range with size /16 and /28.",
+            "Default": "10.0.0.0/20",
+            "Description": "The primary IPv4 CIDR block for the VPC. [Possibly not modifiable after stack creation]",
+            "Type": "String"
+        },
+        "WebWorkerHealthCheck": {
+            "Default": "",
+            "Description": "Web worker health check URL path, e.g., \"/health-check\"; will default to TCP-only health check if left blank",
+            "Type": "String"
+        }
+    },
+    "Resources": {
+        "AssetsBucketProduction": {
+            "DeletionPolicy": "Retain",
+            "Properties": {
+                "AccessControl": "Private",
+                "BucketEncryption": {
+                    "ServerSideEncryptionConfiguration": {
+                        "Fn::If": [
+                            "AssetsUseS3EncryptionCondition",
+                            [
+                                {
+                                    "ServerSideEncryptionByDefault": {
+                                        "SSEAlgorithm": "AES256"
+                                    }
+                                }
+                            ],
+                            [
+                                {}
+                            ]
+                        ]
+                    }
+                },
+                "CorsConfiguration": {
+                    "CorsRules": [
+                        {
+                            "AllowedHeaders": [
+                                "*"
+                            ],
+                            "AllowedMethods": [
+                                "POST",
+                                "PUT",
+                                "HEAD",
+                                "GET"
+                            ],
+                            "AllowedOrigins": {
+                                "Fn::Split": [
+                                    ";",
+                                    {
+                                        "Fn::Join": [
+                                            "",
+                                            [
+                                                "https://",
+                                                {
+                                                    "Fn::Join": [
+                                                        ";https://",
+                                                        {
+                                                            "Ref": "DomainNamesProduction"
+                                                        }
+                                                    ]
+                                                }
+                                            ]
+                                        ]
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                },
+                "VersioningConfiguration": {
+                    "Status": "Enabled"
+                }
+            },
+            "Type": "AWS::S3::Bucket"
+        },
+        "AssetsBucketStaging": {
+            "DeletionPolicy": "Retain",
+            "Properties": {
+                "AccessControl": "Private",
+                "BucketEncryption": {
+                    "ServerSideEncryptionConfiguration": {
+                        "Fn::If": [
+                            "AssetsUseS3EncryptionCondition",
+                            [
+                                {
+                                    "ServerSideEncryptionByDefault": {
+                                        "SSEAlgorithm": "AES256"
+                                    }
+                                }
+                            ],
+                            [
+                                {}
+                            ]
+                        ]
+                    }
+                },
+                "CorsConfiguration": {
+                    "CorsRules": [
+                        {
+                            "AllowedHeaders": [
+                                "*"
+                            ],
+                            "AllowedMethods": [
+                                "POST",
+                                "PUT",
+                                "HEAD",
+                                "GET"
+                            ],
+                            "AllowedOrigins": {
+                                "Fn::Split": [
+                                    ";",
+                                    {
+                                        "Fn::Join": [
+                                            "",
+                                            [
+                                                "https://",
+                                                {
+                                                    "Fn::Join": [
+                                                        ";https://",
+                                                        {
+                                                            "Ref": "DomainNamesStaging"
+                                                        }
+                                                    ]
+                                                }
+                                            ]
+                                        ]
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                },
+                "VersioningConfiguration": {
+                    "Status": "Enabled"
+                }
+            },
+            "Type": "AWS::S3::Bucket"
+        },
+        "AssetsBucketTesting": {
+            "DeletionPolicy": "Retain",
+            "Properties": {
+                "AccessControl": "Private",
+                "BucketEncryption": {
+                    "ServerSideEncryptionConfiguration": {
+                        "Fn::If": [
+                            "AssetsUseS3EncryptionCondition",
+                            [
+                                {
+                                    "ServerSideEncryptionByDefault": {
+                                        "SSEAlgorithm": "AES256"
+                                    }
+                                }
+                            ],
+                            [
+                                {}
+                            ]
+                        ]
+                    }
+                },
+                "CorsConfiguration": {
+                    "CorsRules": [
+                        {
+                            "AllowedHeaders": [
+                                "*"
+                            ],
+                            "AllowedMethods": [
+                                "POST",
+                                "PUT",
+                                "HEAD",
+                                "GET"
+                            ],
+                            "AllowedOrigins": {
+                                "Fn::Split": [
+                                    ";",
+                                    {
+                                        "Fn::Join": [
+                                            "",
+                                            [
+                                                "https://",
+                                                {
+                                                    "Fn::Join": [
+                                                        ";https://",
+                                                        {
+                                                            "Ref": "DomainNamesTesting"
+                                                        }
+                                                    ]
+                                                }
+                                            ]
+                                        ]
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                },
+                "VersioningConfiguration": {
+                    "Status": "Enabled"
+                }
+            },
+            "Type": "AWS::S3::Bucket"
+        },
+        "AssetsCertificate": {
+            "Condition": "AssetsCloudFrontDomainAndUsEast1Condition",
+            "Properties": {
+                "DomainName": {
+                    "Ref": "AssetsCloudFrontDomain"
+                },
+                "DomainValidationOptions": [
+                    {
+                        "DomainName": {
+                            "Ref": "AssetsCloudFrontDomain"
+                        },
+                        "ValidationDomain": {
+                            "Ref": "AssetsCloudFrontDomain"
+                        }
+                    }
+                ]
+            },
+            "Type": "AWS::CertificateManager::Certificate"
+        },
+        "AssetsDistributionProduction": {
+            "Condition": "AssetsUseCloudFrontCondition",
+            "Properties": {
+                "DistributionConfig": {
+                    "Aliases": {
+                        "Fn::If": [
+                            "AssetsCloudFrontDomainCondition",
+                            [
+                                {
+                                    "Ref": "AssetsCloudFrontDomain"
+                                }
+                            ],
+                            {
+                                "Ref": "AWS::NoValue"
+                            }
+                        ]
+                    },
+                    "DefaultCacheBehavior": {
+                        "ForwardedValues": {
+                            "Headers": [
+                                "Origin",
+                                "Access-Control-Request-Headers",
+                                "Access-Control-Request-Method"
+                            ],
+                            "QueryString": "true"
+                        },
+                        "TargetOriginId": "Assets",
+                        "ViewerProtocolPolicy": "allow-all"
+                    },
+                    "Enabled": "true",
+                    "Origins": [
+                        {
+                            "DomainName": {
+                                "Fn::GetAtt": [
+                                    "AssetsBucketProduction",
+                                    "DomainName"
+                                ]
+                            },
+                            "Id": "Assets",
+                            "S3OriginConfig": {
+                                "OriginAccessIdentity": ""
+                            }
+                        }
+                    ],
+                    "ViewerCertificate": {
+                        "Fn::If": [
+                            "AssetsCloudFrontDomainAndUsEast1Condition",
+                            {
+                                "AcmCertificateArn": {
+                                    "Ref": "AssetsCertificate"
+                                },
+                                "SslSupportMethod": "sni-only"
+                            },
+                            {
+                                "Fn::If": [
+                                    "AssetsCloudFrontCertArnCondition",
+                                    {
+                                        "AcmCertificateArn": {
+                                            "Ref": "AssetsCloudFrontCertArn"
+                                        },
+                                        "SslSupportMethod": "sni-only"
+                                    },
+                                    {
+                                        "Ref": "AWS::NoValue"
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                }
+            },
+            "Type": "AWS::CloudFront::Distribution"
+        },
+        "AssetsDistributionStaging": {
+            "Condition": "AssetsUseCloudFrontCondition",
+            "Properties": {
+                "DistributionConfig": {
+                    "Aliases": {
+                        "Fn::If": [
+                            "AssetsCloudFrontDomainCondition",
+                            [
+                                {
+                                    "Ref": "AssetsCloudFrontDomain"
+                                }
+                            ],
+                            {
+                                "Ref": "AWS::NoValue"
+                            }
+                        ]
+                    },
+                    "DefaultCacheBehavior": {
+                        "ForwardedValues": {
+                            "Headers": [
+                                "Origin",
+                                "Access-Control-Request-Headers",
+                                "Access-Control-Request-Method"
+                            ],
+                            "QueryString": "true"
+                        },
+                        "TargetOriginId": "Assets",
+                        "ViewerProtocolPolicy": "allow-all"
+                    },
+                    "Enabled": "true",
+                    "Origins": [
+                        {
+                            "DomainName": {
+                                "Fn::GetAtt": [
+                                    "AssetsBucketStaging",
+                                    "DomainName"
+                                ]
+                            },
+                            "Id": "Assets",
+                            "S3OriginConfig": {
+                                "OriginAccessIdentity": ""
+                            }
+                        }
+                    ],
+                    "ViewerCertificate": {
+                        "Fn::If": [
+                            "AssetsCloudFrontDomainAndUsEast1Condition",
+                            {
+                                "AcmCertificateArn": {
+                                    "Ref": "AssetsCertificate"
+                                },
+                                "SslSupportMethod": "sni-only"
+                            },
+                            {
+                                "Fn::If": [
+                                    "AssetsCloudFrontCertArnCondition",
+                                    {
+                                        "AcmCertificateArn": {
+                                            "Ref": "AssetsCloudFrontCertArn"
+                                        },
+                                        "SslSupportMethod": "sni-only"
+                                    },
+                                    {
+                                        "Ref": "AWS::NoValue"
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                }
+            },
+            "Type": "AWS::CloudFront::Distribution"
+        },
+        "AssetsDistributionTesting": {
+            "Condition": "AssetsUseCloudFrontCondition",
+            "Properties": {
+                "DistributionConfig": {
+                    "Aliases": {
+                        "Fn::If": [
+                            "AssetsCloudFrontDomainCondition",
+                            [
+                                {
+                                    "Ref": "AssetsCloudFrontDomain"
+                                }
+                            ],
+                            {
+                                "Ref": "AWS::NoValue"
+                            }
+                        ]
+                    },
+                    "DefaultCacheBehavior": {
+                        "ForwardedValues": {
+                            "Headers": [
+                                "Origin",
+                                "Access-Control-Request-Headers",
+                                "Access-Control-Request-Method"
+                            ],
+                            "QueryString": "true"
+                        },
+                        "TargetOriginId": "Assets",
+                        "ViewerProtocolPolicy": "allow-all"
+                    },
+                    "Enabled": "true",
+                    "Origins": [
+                        {
+                            "DomainName": {
+                                "Fn::GetAtt": [
+                                    "AssetsBucketTesting",
+                                    "DomainName"
+                                ]
+                            },
+                            "Id": "Assets",
+                            "S3OriginConfig": {
+                                "OriginAccessIdentity": ""
+                            }
+                        }
+                    ],
+                    "ViewerCertificate": {
+                        "Fn::If": [
+                            "AssetsCloudFrontDomainAndUsEast1Condition",
+                            {
+                                "AcmCertificateArn": {
+                                    "Ref": "AssetsCertificate"
+                                },
+                                "SslSupportMethod": "sni-only"
+                            },
+                            {
+                                "Fn::If": [
+                                    "AssetsCloudFrontCertArnCondition",
+                                    {
+                                        "AcmCertificateArn": {
+                                            "Ref": "AssetsCloudFrontCertArn"
+                                        },
+                                        "SslSupportMethod": "sni-only"
+                                    },
+                                    {
+                                        "Ref": "AWS::NoValue"
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                }
+            },
+            "Type": "AWS::CloudFront::Distribution"
+        },
+        "AutoScalingGroupProduction": {
+            "Properties": {
+                "HealthCheckGracePeriod": 120,
+                "HealthCheckType": "ELB",
+                "LaunchConfigurationName": {
+                    "Ref": "LaunchConfigurationProduction"
+                },
+                "LoadBalancerNames": [
+                    {
+                        "Ref": "ElbProduction"
+                    }
+                ],
+                "MaxSize": "32",
+                "MinSize": "0",
+                "NotificationConfigurations": [
+                    {
+                        "NotificationTypes": [
+                            "autoscaling:EC2_INSTANCE_LAUNCH",
+                            "autoscaling:EC2_INSTANCE_LAUNCH_ERROR",
+                            "autoscaling:EC2_INSTANCE_TERMINATE",
+                            "autoscaling:EC2_INSTANCE_TERMINATE_ERROR"
+                        ],
+                        "TopicARN": {
+                            "Ref": "AutoscalingNotificationsArn"
+                        }
+                    }
+                ],
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "PropagateAtLaunch": true,
+                        "Value": {
+                            "Fn::Join": [
+                                "-",
+                                [
+                                    {
+                                        "Ref": "AWS::StackName"
+                                    },
+                                    "web_worker"
+                                ]
+                            ]
+                        }
+                    }
+                ],
+                "VPCZoneIdentifier": [
+                    {
+                        "Ref": "PrivateSubnetA"
+                    },
+                    {
+                        "Ref": "PrivateSubnetB"
+                    }
+                ]
+            },
+            "Type": "AWS::AutoScaling::AutoScalingGroup"
+        },
+        "AutoScalingGroupProductionScalingPolicy": {
+            "Properties": {
+                "AutoScalingGroupName": {
+                    "Ref": "AutoScalingGroupProduction"
+                },
+                "PolicyType": "TargetTrackingScaling",
+                "TargetTrackingConfiguration": {
+                    "PredefinedMetricSpecification": {
+                        "PredefinedMetricType": "ASGAverageCPUUtilization"
+                    },
+                    "TargetValue": {
+                        "Ref": "AutoscalingTargetCPU"
+                    }
+                }
+            },
+            "Type": "AWS::AutoScaling::ScalingPolicy"
+        },
+        "AutoScalingGroupStaging": {
+            "Properties": {
+                "HealthCheckGracePeriod": 120,
+                "HealthCheckType": "ELB",
+                "LaunchConfigurationName": {
+                    "Ref": "LaunchConfigurationStaging"
+                },
+                "LoadBalancerNames": [
+                    {
+                        "Ref": "ElbStaging"
+                    }
+                ],
+                "MaxSize": "32",
+                "MinSize": "0",
+                "NotificationConfigurations": [
+                    {
+                        "NotificationTypes": [
+                            "autoscaling:EC2_INSTANCE_LAUNCH",
+                            "autoscaling:EC2_INSTANCE_LAUNCH_ERROR",
+                            "autoscaling:EC2_INSTANCE_TERMINATE",
+                            "autoscaling:EC2_INSTANCE_TERMINATE_ERROR"
+                        ],
+                        "TopicARN": {
+                            "Ref": "AutoscalingNotificationsArn"
+                        }
+                    }
+                ],
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "PropagateAtLaunch": true,
+                        "Value": {
+                            "Fn::Join": [
+                                "-",
+                                [
+                                    {
+                                        "Ref": "AWS::StackName"
+                                    },
+                                    "web_worker"
+                                ]
+                            ]
+                        }
+                    }
+                ],
+                "VPCZoneIdentifier": [
+                    {
+                        "Ref": "PrivateSubnetA"
+                    },
+                    {
+                        "Ref": "PrivateSubnetB"
+                    }
+                ]
+            },
+            "Type": "AWS::AutoScaling::AutoScalingGroup"
+        },
+        "AutoScalingGroupStagingScalingPolicy": {
+            "Properties": {
+                "AutoScalingGroupName": {
+                    "Ref": "AutoScalingGroupStaging"
+                },
+                "PolicyType": "TargetTrackingScaling",
+                "TargetTrackingConfiguration": {
+                    "PredefinedMetricSpecification": {
+                        "PredefinedMetricType": "ASGAverageCPUUtilization"
+                    },
+                    "TargetValue": {
+                        "Ref": "AutoscalingTargetCPU"
+                    }
+                }
+            },
+            "Type": "AWS::AutoScaling::ScalingPolicy"
+        },
+        "AutoScalingGroupTesting": {
+            "Properties": {
+                "HealthCheckGracePeriod": 120,
+                "HealthCheckType": "ELB",
+                "LaunchConfigurationName": {
+                    "Ref": "LaunchConfigurationTesting"
+                },
+                "LoadBalancerNames": [
+                    {
+                        "Ref": "ElbTesting"
+                    }
+                ],
+                "MaxSize": "32",
+                "MinSize": "0",
+                "NotificationConfigurations": [
+                    {
+                        "NotificationTypes": [
+                            "autoscaling:EC2_INSTANCE_LAUNCH",
+                            "autoscaling:EC2_INSTANCE_LAUNCH_ERROR",
+                            "autoscaling:EC2_INSTANCE_TERMINATE",
+                            "autoscaling:EC2_INSTANCE_TERMINATE_ERROR"
+                        ],
+                        "TopicARN": {
+                            "Ref": "AutoscalingNotificationsArn"
+                        }
+                    }
+                ],
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "PropagateAtLaunch": true,
+                        "Value": {
+                            "Fn::Join": [
+                                "-",
+                                [
+                                    {
+                                        "Ref": "AWS::StackName"
+                                    },
+                                    "web_worker"
+                                ]
+                            ]
+                        }
+                    }
+                ],
+                "VPCZoneIdentifier": [
+                    {
+                        "Ref": "PrivateSubnetA"
+                    },
+                    {
+                        "Ref": "PrivateSubnetB"
+                    }
+                ]
+            },
+            "Type": "AWS::AutoScaling::AutoScalingGroup"
+        },
+        "AutoScalingGroupTestingScalingPolicy": {
+            "Properties": {
+                "AutoScalingGroupName": {
+                    "Ref": "AutoScalingGroupTesting"
+                },
+                "PolicyType": "TargetTrackingScaling",
+                "TargetTrackingConfiguration": {
+                    "PredefinedMetricSpecification": {
+                        "PredefinedMetricType": "ASGAverageCPUUtilization"
+                    },
+                    "TargetValue": {
+                        "Ref": "AutoscalingTargetCPU"
+                    }
+                }
+            },
+            "Type": "AWS::AutoScaling::ScalingPolicy"
+        },
+        "AwsElbSecurityGroup": {
+            "Properties": {
+                "GroupDescription": "AWS elastic load balancer security group.",
+                "SecurityGroupIngress": [
+                    {
+                        "CidrIp": "0.0.0.0/0",
+                        "FromPort": "80",
+                        "IpProtocol": "tcp",
+                        "ToPort": "80"
+                    },
+                    {
+                        "CidrIp": "0.0.0.0/0",
+                        "FromPort": "443",
+                        "IpProtocol": "tcp",
+                        "ToPort": "443"
+                    }
+                ],
+                "VpcId": {
+                    "Ref": "Vpc"
+                }
+            },
+            "Type": "AWS::EC2::SecurityGroup"
+        },
+        "BackendSecurityGroup": {
+            "Properties": {
+                "GroupDescription": "Allow full access between the Backend Instances",
+                "VpcId": {
+                    "Ref": "Vpc"
+                }
+            },
+            "Type": "AWS::EC2::SecurityGroup"
+        },
+        "BackendSecurityGroupIngressRule": {
+            "Properties": {
+                "FromPort": "-1",
+                "GroupId": {
+                    "Ref": "BackendSecurityGroup"
+                },
+                "IpProtocol": "-1",
+                "SourceSecurityGroupId": {
+                    "Ref": "BackendSecurityGroup"
+                },
+                "ToPort": "-1"
+            },
+            "Type": "AWS::EC2::SecurityGroupIngress"
+        },
+        "BackupsBucketProduction": {
+            "DeletionPolicy": "Retain",
+            "Properties": {
+                "AccessControl": "Private",
+                "BucketEncryption": {
+                    "ServerSideEncryptionConfiguration": {
+                        "Fn::If": [
+                            "AssetsUseS3EncryptionCondition",
+                            [
+                                {
+                                    "ServerSideEncryptionByDefault": {
+                                        "SSEAlgorithm": "AES256"
+                                    }
+                                }
+                            ],
+                            [
+                                {}
+                            ]
+                        ]
+                    }
+                },
+                "LifecycleConfiguration": {
+                    "Rules": [
+                        {
+                            "ExpirationInDays": 14,
+                            "Id": "Keep Hourly for 14 days",
+                            "Prefix": "_hourly",
+                            "Status": "Enabled"
+                        },
+                        {
+                            "Id": "Transition to IA after 30 days",
+                            "Status": "Enabled",
+                            "Transitions": [
+                                {
+                                    "StorageClass": "STANDARD_IA",
+                                    "TransitionInDays": 30
+                                }
+                            ]
+                        },
+                        {
+                            "ExpirationInDays": 90,
+                            "Id": "Keep Daily for 90 days",
+                            "Prefix": "__daily",
+                            "Status": "Enabled"
+                        },
+                        {
+                            "ExpirationInDays": 365,
+                            "Id": "Keep Weekly for 365 days",
+                            "Prefix": "___weekly",
+                            "Status": "Enabled"
+                        }
+                    ]
+                },
+                "LoggingConfiguration": {
+                    "DestinationBucketName": {
+                        "Ref": "BucketLogsBucket"
+                    },
+                    "LogFilePrefix": "ProductionBackups/"
+                },
+                "PublicAccessBlockConfiguration": {
+                    "BlockPublicAcls": "true",
+                    "BlockPublicPolicy": "true",
+                    "IgnorePublicAcls": "true",
+                    "RestrictPublicBuckets": "true"
+                },
+                "VersioningConfiguration": {
+                    "Status": "Enabled"
+                }
+            },
+            "Type": "AWS::S3::Bucket"
+        },
+        "BackupsBucketStaging": {
+            "DeletionPolicy": "Retain",
+            "Properties": {
+                "AccessControl": "Private",
+                "BucketEncryption": {
+                    "ServerSideEncryptionConfiguration": {
+                        "Fn::If": [
+                            "AssetsUseS3EncryptionCondition",
+                            [
+                                {
+                                    "ServerSideEncryptionByDefault": {
+                                        "SSEAlgorithm": "AES256"
+                                    }
+                                }
+                            ],
+                            [
+                                {}
+                            ]
+                        ]
+                    }
+                },
+                "LifecycleConfiguration": {
+                    "Rules": [
+                        {
+                            "ExpirationInDays": 14,
+                            "Id": "Keep Hourly for 14 days",
+                            "Prefix": "_hourly",
+                            "Status": "Enabled"
+                        },
+                        {
+                            "Id": "Transition to IA after 30 days",
+                            "Status": "Enabled",
+                            "Transitions": [
+                                {
+                                    "StorageClass": "STANDARD_IA",
+                                    "TransitionInDays": 30
+                                }
+                            ]
+                        },
+                        {
+                            "ExpirationInDays": 90,
+                            "Id": "Keep Daily for 90 days",
+                            "Prefix": "__daily",
+                            "Status": "Enabled"
+                        },
+                        {
+                            "ExpirationInDays": 365,
+                            "Id": "Keep Weekly for 365 days",
+                            "Prefix": "___weekly",
+                            "Status": "Enabled"
+                        }
+                    ]
+                },
+                "LoggingConfiguration": {
+                    "DestinationBucketName": {
+                        "Ref": "BucketLogsBucket"
+                    },
+                    "LogFilePrefix": "StagingBackups/"
+                },
+                "PublicAccessBlockConfiguration": {
+                    "BlockPublicAcls": "true",
+                    "BlockPublicPolicy": "true",
+                    "IgnorePublicAcls": "true",
+                    "RestrictPublicBuckets": "true"
+                },
+                "VersioningConfiguration": {
+                    "Status": "Enabled"
+                }
+            },
+            "Type": "AWS::S3::Bucket"
+        },
+        "BackupsBucketTesting": {
+            "DeletionPolicy": "Retain",
+            "Properties": {
+                "AccessControl": "Private",
+                "BucketEncryption": {
+                    "ServerSideEncryptionConfiguration": {
+                        "Fn::If": [
+                            "AssetsUseS3EncryptionCondition",
+                            [
+                                {
+                                    "ServerSideEncryptionByDefault": {
+                                        "SSEAlgorithm": "AES256"
+                                    }
+                                }
+                            ],
+                            [
+                                {}
+                            ]
+                        ]
+                    }
+                },
+                "LifecycleConfiguration": {
+                    "Rules": [
+                        {
+                            "ExpirationInDays": 14,
+                            "Id": "Keep Hourly for 14 days",
+                            "Prefix": "_hourly",
+                            "Status": "Enabled"
+                        },
+                        {
+                            "Id": "Transition to IA after 30 days",
+                            "Status": "Enabled",
+                            "Transitions": [
+                                {
+                                    "StorageClass": "STANDARD_IA",
+                                    "TransitionInDays": 30
+                                }
+                            ]
+                        },
+                        {
+                            "ExpirationInDays": 90,
+                            "Id": "Keep Daily for 90 days",
+                            "Prefix": "__daily",
+                            "Status": "Enabled"
+                        },
+                        {
+                            "ExpirationInDays": 365,
+                            "Id": "Keep Weekly for 365 days",
+                            "Prefix": "___weekly",
+                            "Status": "Enabled"
+                        }
+                    ]
+                },
+                "LoggingConfiguration": {
+                    "DestinationBucketName": {
+                        "Ref": "BucketLogsBucket"
+                    },
+                    "LogFilePrefix": "TestingBackups/"
+                },
+                "PublicAccessBlockConfiguration": {
+                    "BlockPublicAcls": "true",
+                    "BlockPublicPolicy": "true",
+                    "IgnorePublicAcls": "true",
+                    "RestrictPublicBuckets": "true"
+                },
+                "VersioningConfiguration": {
+                    "Status": "Enabled"
+                }
+            },
+            "Type": "AWS::S3::Bucket"
+        },
+        "BucketLogsBucket": {
+            "DeletionPolicy": "Retain",
+            "Properties": {
+                "AccessControl": "LogDeliveryWrite",
+                "BucketEncryption": {
+                    "ServerSideEncryptionConfiguration": {
+                        "Fn::If": [
+                            "AssetsUseS3EncryptionCondition",
+                            [
+                                {
+                                    "ServerSideEncryptionByDefault": {
+                                        "SSEAlgorithm": "AES256"
+                                    }
+                                }
+                            ],
+                            [
+                                {}
+                            ]
+                        ]
+                    }
+                },
+                "LifecycleConfiguration": {
+                    "Rules": [
+                        {
+                            "Id": "Transition to IA after 30 days",
+                            "Status": "Enabled",
+                            "Transitions": [
+                                {
+                                    "StorageClass": "STANDARD_IA",
+                                    "TransitionInDays": 30
+                                }
+                            ]
+                        }
+                    ]
+                },
+                "PublicAccessBlockConfiguration": {
+                    "BlockPublicAcls": "true",
+                    "BlockPublicPolicy": "true",
+                    "IgnorePublicAcls": "true",
+                    "RestrictPublicBuckets": "true"
+                },
+                "VersioningConfiguration": {
+                    "Status": "Enabled"
+                }
+            },
+            "Type": "AWS::S3::Bucket"
+        },
+        "ElbLogsBucket": {
+            "DeletionPolicy": "Retain",
+            "Properties": {
+                "AccessControl": "Private",
+                "BucketEncryption": {
+                    "ServerSideEncryptionConfiguration": {
+                        "Fn::If": [
+                            "AssetsUseS3EncryptionCondition",
+                            [
+                                {
+                                    "ServerSideEncryptionByDefault": {
+                                        "SSEAlgorithm": "AES256"
+                                    }
+                                }
+                            ],
+                            [
+                                {}
+                            ]
+                        ]
+                    }
+                },
+                "LifecycleConfiguration": {
+                    "Rules": [
+                        {
+                            "Id": "Transition to IA after 30 days",
+                            "Status": "Enabled",
+                            "Transitions": [
+                                {
+                                    "StorageClass": "STANDARD_IA",
+                                    "TransitionInDays": 30
+                                }
+                            ]
+                        }
+                    ]
+                },
+                "LoggingConfiguration": {
+                    "DestinationBucketName": {
+                        "Ref": "BucketLogsBucket"
+                    },
+                    "LogFilePrefix": "ElbLogs/"
+                },
+                "PublicAccessBlockConfiguration": {
+                    "BlockPublicAcls": "true",
+                    "BlockPublicPolicy": "true",
+                    "IgnorePublicAcls": "true",
+                    "RestrictPublicBuckets": "true"
+                },
+                "VersioningConfiguration": {
+                    "Status": "Enabled"
+                }
+            },
+            "Type": "AWS::S3::Bucket"
+        },
+        "ElbLogsBucketPolicy": {
+            "Properties": {
+                "Bucket": {
+                    "Ref": "ElbLogsBucket"
+                },
+                "PolicyDocument": {
+                    "Statement": [
+                        {
+                            "Action": "s3:PutObject",
+                            "Effect": "Allow",
+                            "Principal": {
+                                "AWS": {
+                                    "Fn::Join": [
+                                        "",
+                                        [
+                                            "arn:aws:iam::",
+                                            {
+                                                "Ref": "ElbAccountID"
+                                            },
+                                            ":root"
+                                        ]
+                                    ]
+                                }
+                            },
+                            "Resource": {
+                                "Fn::Join": [
+                                    "",
+                                    [
+                                        {
+                                            "Fn::If": [
+                                                "InGovCloudRegion",
+                                                "arn:aws-us-gov",
+                                                "arn:aws"
+                                            ]
+                                        },
+                                        ":s3:::",
+                                        {
+                                            "Ref": "ElbLogsBucket"
+                                        },
+                                        "/*"
+                                    ]
+                                ]
+                            }
+                        }
+                    ],
+                    "Version": "2012-10-17"
+                }
+            },
+            "Type": "AWS::S3::BucketPolicy"
+        },
+        "ElbProduction": {
+            "DependsOn": "ElbLogsBucketPolicy",
+            "Properties": {
+                "AccessLoggingPolicy": {
+                    "EmitInterval": 60,
+                    "Enabled": true,
+                    "S3BucketName": {
+                        "Ref": "ElbLogsBucket"
+                    },
+                    "S3BucketPrefix": "production"
+                },
+                "CrossZone": "true",
+                "HealthCheck": {
+                    "HealthyThreshold": "2",
+                    "Interval": "10",
+                    "Target": {
+                        "Fn::If": [
+                            "TcpHealthCheckProduction",
+                            "TCP:80",
+                            {
+                                "Fn::Join": [
+                                    "",
+                                    [
+                                        "HTTPS:443",
+                                        {
+                                            "Ref": "WebWorkerHealthCheck"
+                                        }
+                                    ]
+                                ]
+                            }
+                        ]
+                    },
+                    "Timeout": "9",
+                    "UnhealthyThreshold": "2"
+                },
+                "Instances": [],
+                "Listeners": [
+                    {
+                        "InstancePort": 80,
+                        "InstanceProtocol": "HTTP",
+                        "LoadBalancerPort": 80,
+                        "Protocol": "HTTP"
+                    },
+                    {
+                        "InstancePort": 443,
+                        "InstanceProtocol": {
+                            "Fn::If": [
+                                "AcmCertConditionProduction",
+                                "HTTPS",
+                                "TCP"
+                            ]
+                        },
+                        "LoadBalancerPort": 443,
+                        "Protocol": {
+                            "Fn::If": [
+                                "AcmCertConditionProduction",
+                                "HTTPS",
+                                "TCP"
+                            ]
+                        },
+                        "SSLCertificateId": {
+                            "Fn::If": [
+                                "AcmCertConditionProduction",
+                                {
+                                    "Ref": "AcmCertArnProduction"
+                                },
+                                {
+                                    "Ref": "AWS::NoValue"
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "SecurityGroups": [
+                    {
+                        "Ref": "AwsElbSecurityGroup"
+                    }
+                ],
+                "Subnets": [
+                    {
+                        "Ref": "PublicSubnetA"
+                    },
+                    {
+                        "Ref": "PublicSubnetB"
+                    }
+                ]
+            },
+            "Type": "AWS::ElasticLoadBalancing::LoadBalancer"
+        },
+        "ElbStaging": {
+            "DependsOn": "ElbLogsBucketPolicy",
+            "Properties": {
+                "AccessLoggingPolicy": {
+                    "EmitInterval": 60,
+                    "Enabled": true,
+                    "S3BucketName": {
+                        "Ref": "ElbLogsBucket"
+                    },
+                    "S3BucketPrefix": "staging"
+                },
+                "CrossZone": "true",
+                "HealthCheck": {
+                    "HealthyThreshold": "2",
+                    "Interval": "10",
+                    "Target": {
+                        "Fn::If": [
+                            "TcpHealthCheckStaging",
+                            "TCP:80",
+                            {
+                                "Fn::Join": [
+                                    "",
+                                    [
+                                        "HTTPS:443",
+                                        {
+                                            "Ref": "WebWorkerHealthCheck"
+                                        }
+                                    ]
+                                ]
+                            }
+                        ]
+                    },
+                    "Timeout": "9",
+                    "UnhealthyThreshold": "2"
+                },
+                "Instances": [],
+                "Listeners": [
+                    {
+                        "InstancePort": 80,
+                        "InstanceProtocol": "HTTP",
+                        "LoadBalancerPort": 80,
+                        "Protocol": "HTTP"
+                    },
+                    {
+                        "InstancePort": 443,
+                        "InstanceProtocol": {
+                            "Fn::If": [
+                                "AcmCertConditionStaging",
+                                "HTTPS",
+                                "TCP"
+                            ]
+                        },
+                        "LoadBalancerPort": 443,
+                        "Protocol": {
+                            "Fn::If": [
+                                "AcmCertConditionStaging",
+                                "HTTPS",
+                                "TCP"
+                            ]
+                        },
+                        "SSLCertificateId": {
+                            "Fn::If": [
+                                "AcmCertConditionStaging",
+                                {
+                                    "Ref": "AcmCertArnStaging"
+                                },
+                                {
+                                    "Ref": "AWS::NoValue"
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "SecurityGroups": [
+                    {
+                        "Ref": "AwsElbSecurityGroup"
+                    }
+                ],
+                "Subnets": [
+                    {
+                        "Ref": "PublicSubnetA"
+                    },
+                    {
+                        "Ref": "PublicSubnetB"
+                    }
+                ]
+            },
+            "Type": "AWS::ElasticLoadBalancing::LoadBalancer"
+        },
+        "ElbTesting": {
+            "DependsOn": "ElbLogsBucketPolicy",
+            "Properties": {
+                "AccessLoggingPolicy": {
+                    "EmitInterval": 60,
+                    "Enabled": true,
+                    "S3BucketName": {
+                        "Ref": "ElbLogsBucket"
+                    },
+                    "S3BucketPrefix": "testing"
+                },
+                "CrossZone": "true",
+                "HealthCheck": {
+                    "HealthyThreshold": "2",
+                    "Interval": "10",
+                    "Target": {
+                        "Fn::If": [
+                            "TcpHealthCheckTesting",
+                            "TCP:80",
+                            {
+                                "Fn::Join": [
+                                    "",
+                                    [
+                                        "HTTPS:443",
+                                        {
+                                            "Ref": "WebWorkerHealthCheck"
+                                        }
+                                    ]
+                                ]
+                            }
+                        ]
+                    },
+                    "Timeout": "9",
+                    "UnhealthyThreshold": "2"
+                },
+                "Instances": [],
+                "Listeners": [
+                    {
+                        "InstancePort": 80,
+                        "InstanceProtocol": "HTTP",
+                        "LoadBalancerPort": 80,
+                        "Protocol": "HTTP"
+                    },
+                    {
+                        "InstancePort": 443,
+                        "InstanceProtocol": {
+                            "Fn::If": [
+                                "AcmCertConditionTesting",
+                                "HTTPS",
+                                "TCP"
+                            ]
+                        },
+                        "LoadBalancerPort": 443,
+                        "Protocol": {
+                            "Fn::If": [
+                                "AcmCertConditionTesting",
+                                "HTTPS",
+                                "TCP"
+                            ]
+                        },
+                        "SSLCertificateId": {
+                            "Fn::If": [
+                                "AcmCertConditionTesting",
+                                {
+                                    "Ref": "AcmCertArnTesting"
+                                },
+                                {
+                                    "Ref": "AWS::NoValue"
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "SecurityGroups": [
+                    {
+                        "Ref": "AwsElbSecurityGroup"
+                    }
+                ],
+                "Subnets": [
+                    {
+                        "Ref": "PublicSubnetA"
+                    },
+                    {
+                        "Ref": "PublicSubnetB"
+                    }
+                ]
+            },
+            "Type": "AWS::ElasticLoadBalancing::LoadBalancer"
+        },
+        "GatewayAttachement": {
+            "Properties": {
+                "InternetGatewayId": {
+                    "Ref": "InternetGateway"
+                },
+                "VpcId": {
+                    "Ref": "Vpc"
+                }
+            },
+            "Type": "AWS::EC2::VPCGatewayAttachment"
+        },
+        "InternetGateway": {
+            "Properties": {
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Join": [
+                                "-",
+                                [
+                                    {
+                                        "Ref": "AWS::StackName"
+                                    },
+                                    "igw"
+                                ]
+                            ]
+                        }
+                    }
+                ]
+            },
+            "Type": "AWS::EC2::InternetGateway"
+        },
+        "LaunchConfigurationProduction": {
+            "Properties": {
+                "ImageId": {
+                    "Ref": "RouterAMI"
+                },
+                "InstanceType": "t2.nano",
+                "KeyName": {
+                    "Ref": "KeyName"
+                },
+                "SecurityGroups": [
+                    {
+                        "Ref": "WebServerSecurityGroup"
+                    }
+                ]
+            },
+            "Type": "AWS::AutoScaling::LaunchConfiguration"
+        },
+        "LaunchConfigurationStaging": {
+            "Properties": {
+                "ImageId": {
+                    "Ref": "RouterAMI"
+                },
+                "InstanceType": "t2.nano",
+                "KeyName": {
+                    "Ref": "KeyName"
+                },
+                "SecurityGroups": [
+                    {
+                        "Ref": "WebServerSecurityGroup"
+                    }
+                ]
+            },
+            "Type": "AWS::AutoScaling::LaunchConfiguration"
+        },
+        "LaunchConfigurationTesting": {
+            "Properties": {
+                "ImageId": {
+                    "Ref": "RouterAMI"
+                },
+                "InstanceType": "t2.nano",
+                "KeyName": {
+                    "Ref": "KeyName"
+                },
+                "SecurityGroups": [
+                    {
+                        "Ref": "WebServerSecurityGroup"
+                    }
+                ]
+            },
+            "Type": "AWS::AutoScaling::LaunchConfiguration"
+        },
+        "LogGroup": {
+            "DeletionPolicy": "Retain",
+            "Properties": {
+                "RetentionInDays": 731
+            },
+            "Type": "AWS::Logs::LogGroup"
+        },
+        "PrivateBucketProduction": {
+            "DeletionPolicy": "Retain",
+            "Properties": {
+                "AccessControl": "Private",
+                "BucketEncryption": {
+                    "ServerSideEncryptionConfiguration": {
+                        "Fn::If": [
+                            "AssetsUseS3EncryptionCondition",
+                            [
+                                {
+                                    "ServerSideEncryptionByDefault": {
+                                        "SSEAlgorithm": "AES256"
+                                    }
+                                }
+                            ],
+                            [
+                                {}
+                            ]
+                        ]
+                    }
+                },
+                "CorsConfiguration": {
+                    "CorsRules": [
+                        {
+                            "AllowedHeaders": [
+                                "*"
+                            ],
+                            "AllowedMethods": [
+                                "POST",
+                                "PUT",
+                                "HEAD",
+                                "GET"
+                            ],
+                            "AllowedOrigins": {
+                                "Fn::Split": [
+                                    ";",
+                                    {
+                                        "Fn::Join": [
+                                            "",
+                                            [
+                                                "https://",
+                                                {
+                                                    "Fn::Join": [
+                                                        ";https://",
+                                                        {
+                                                            "Ref": "DomainNamesProduction"
+                                                        }
+                                                    ]
+                                                }
+                                            ]
+                                        ]
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                },
+                "LifecycleConfiguration": {
+                    "Rules": [
+                        {
+                            "Id": "Transition to IA after 365 days",
+                            "Status": "Enabled",
+                            "Transitions": [
+                                {
+                                    "StorageClass": "STANDARD_IA",
+                                    "TransitionInDays": 365
+                                }
+                            ]
+                        }
+                    ]
+                },
+                "LoggingConfiguration": {
+                    "DestinationBucketName": {
+                        "Ref": "BucketLogsBucket"
+                    },
+                    "LogFilePrefix": "ProductionPrivate/"
+                },
+                "PublicAccessBlockConfiguration": {
+                    "BlockPublicAcls": "true",
+                    "BlockPublicPolicy": "true",
+                    "IgnorePublicAcls": "true",
+                    "RestrictPublicBuckets": "true"
+                },
+                "VersioningConfiguration": {
+                    "Status": "Enabled"
+                }
+            },
+            "Type": "AWS::S3::Bucket"
+        },
+        "PrivateBucketStaging": {
+            "DeletionPolicy": "Retain",
+            "Properties": {
+                "AccessControl": "Private",
+                "BucketEncryption": {
+                    "ServerSideEncryptionConfiguration": {
+                        "Fn::If": [
+                            "AssetsUseS3EncryptionCondition",
+                            [
+                                {
+                                    "ServerSideEncryptionByDefault": {
+                                        "SSEAlgorithm": "AES256"
+                                    }
+                                }
+                            ],
+                            [
+                                {}
+                            ]
+                        ]
+                    }
+                },
+                "CorsConfiguration": {
+                    "CorsRules": [
+                        {
+                            "AllowedHeaders": [
+                                "*"
+                            ],
+                            "AllowedMethods": [
+                                "POST",
+                                "PUT",
+                                "HEAD",
+                                "GET"
+                            ],
+                            "AllowedOrigins": {
+                                "Fn::Split": [
+                                    ";",
+                                    {
+                                        "Fn::Join": [
+                                            "",
+                                            [
+                                                "https://",
+                                                {
+                                                    "Fn::Join": [
+                                                        ";https://",
+                                                        {
+                                                            "Ref": "DomainNamesStaging"
+                                                        }
+                                                    ]
+                                                }
+                                            ]
+                                        ]
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                },
+                "LifecycleConfiguration": {
+                    "Rules": [
+                        {
+                            "Id": "Transition to IA after 365 days",
+                            "Status": "Enabled",
+                            "Transitions": [
+                                {
+                                    "StorageClass": "STANDARD_IA",
+                                    "TransitionInDays": 365
+                                }
+                            ]
+                        }
+                    ]
+                },
+                "LoggingConfiguration": {
+                    "DestinationBucketName": {
+                        "Ref": "BucketLogsBucket"
+                    },
+                    "LogFilePrefix": "StagingPrivate/"
+                },
+                "PublicAccessBlockConfiguration": {
+                    "BlockPublicAcls": "true",
+                    "BlockPublicPolicy": "true",
+                    "IgnorePublicAcls": "true",
+                    "RestrictPublicBuckets": "true"
+                },
+                "VersioningConfiguration": {
+                    "Status": "Enabled"
+                }
+            },
+            "Type": "AWS::S3::Bucket"
+        },
+        "PrivateBucketTesting": {
+            "DeletionPolicy": "Retain",
+            "Properties": {
+                "AccessControl": "Private",
+                "BucketEncryption": {
+                    "ServerSideEncryptionConfiguration": {
+                        "Fn::If": [
+                            "AssetsUseS3EncryptionCondition",
+                            [
+                                {
+                                    "ServerSideEncryptionByDefault": {
+                                        "SSEAlgorithm": "AES256"
+                                    }
+                                }
+                            ],
+                            [
+                                {}
+                            ]
+                        ]
+                    }
+                },
+                "CorsConfiguration": {
+                    "CorsRules": [
+                        {
+                            "AllowedHeaders": [
+                                "*"
+                            ],
+                            "AllowedMethods": [
+                                "POST",
+                                "PUT",
+                                "HEAD",
+                                "GET"
+                            ],
+                            "AllowedOrigins": {
+                                "Fn::Split": [
+                                    ";",
+                                    {
+                                        "Fn::Join": [
+                                            "",
+                                            [
+                                                "https://",
+                                                {
+                                                    "Fn::Join": [
+                                                        ";https://",
+                                                        {
+                                                            "Ref": "DomainNamesTesting"
+                                                        }
+                                                    ]
+                                                }
+                                            ]
+                                        ]
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                },
+                "LifecycleConfiguration": {
+                    "Rules": [
+                        {
+                            "Id": "Transition to IA after 365 days",
+                            "Status": "Enabled",
+                            "Transitions": [
+                                {
+                                    "StorageClass": "STANDARD_IA",
+                                    "TransitionInDays": 365
+                                }
+                            ]
+                        }
+                    ]
+                },
+                "LoggingConfiguration": {
+                    "DestinationBucketName": {
+                        "Ref": "BucketLogsBucket"
+                    },
+                    "LogFilePrefix": "TestingPrivate/"
+                },
+                "PublicAccessBlockConfiguration": {
+                    "BlockPublicAcls": "true",
+                    "BlockPublicPolicy": "true",
+                    "IgnorePublicAcls": "true",
+                    "RestrictPublicBuckets": "true"
+                },
+                "VersioningConfiguration": {
+                    "Status": "Enabled"
+                }
+            },
+            "Type": "AWS::S3::Bucket"
+        },
+        "PrivateNatRoute": {
+            "Properties": {
+                "DestinationCidrBlock": "0.0.0.0/0",
+                "InstanceId": {
+                    "Ref": "router"
+                },
+                "RouteTableId": {
+                    "Ref": "PrivateRouteTable"
+                }
+            },
+            "Type": "AWS::EC2::Route"
+        },
+        "PrivateRouteTable": {
+            "Properties": {
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Join": [
+                                "-",
+                                [
+                                    {
+                                        "Ref": "AWS::StackName"
+                                    },
+                                    "private"
+                                ]
+                            ]
+                        }
+                    }
+                ],
+                "VpcId": {
+                    "Ref": "Vpc"
+                }
+            },
+            "Type": "AWS::EC2::RouteTable"
+        },
+        "PrivateSubnetA": {
+            "Properties": {
+                "AvailabilityZone": {
+                    "Ref": "PrimaryAZ"
+                },
+                "CidrBlock": {
+                    "Ref": "PrivateSubnetACidr"
+                },
+                "MapPublicIpOnLaunch": "false",
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Join": [
+                                "-",
+                                [
+                                    {
+                                        "Ref": "AWS::StackName"
+                                    },
+                                    "private-a"
+                                ]
+                            ]
+                        }
+                    }
+                ],
+                "VpcId": {
+                    "Ref": "Vpc"
+                }
+            },
+            "Type": "AWS::EC2::Subnet"
+        },
+        "PrivateSubnetARouteTableAssociation": {
+            "Properties": {
+                "RouteTableId": {
+                    "Ref": "PrivateRouteTable"
+                },
+                "SubnetId": {
+                    "Ref": "PrivateSubnetA"
+                }
+            },
+            "Type": "AWS::EC2::SubnetRouteTableAssociation"
+        },
+        "PrivateSubnetB": {
+            "Properties": {
+                "AvailabilityZone": {
+                    "Ref": "SecondaryAZ"
+                },
+                "CidrBlock": {
+                    "Ref": "PrivateSubnetBCidr"
+                },
+                "MapPublicIpOnLaunch": "false",
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Join": [
+                                "-",
+                                [
+                                    {
+                                        "Ref": "AWS::StackName"
+                                    },
+                                    "private-b"
+                                ]
+                            ]
+                        }
+                    }
+                ],
+                "VpcId": {
+                    "Ref": "Vpc"
+                }
+            },
+            "Type": "AWS::EC2::Subnet"
+        },
+        "PrivateSubnetBRouteTableAssociation": {
+            "Properties": {
+                "RouteTableId": {
+                    "Ref": "PrivateRouteTable"
+                },
+                "SubnetId": {
+                    "Ref": "PrivateSubnetB"
+                }
+            },
+            "Type": "AWS::EC2::SubnetRouteTableAssociation"
+        },
+        "PublicRoute": {
+            "Properties": {
+                "DestinationCidrBlock": "0.0.0.0/0",
+                "GatewayId": {
+                    "Ref": "InternetGateway"
+                },
+                "RouteTableId": {
+                    "Ref": "PublicRouteTable"
+                }
+            },
+            "Type": "AWS::EC2::Route"
+        },
+        "PublicRouteTable": {
+            "Properties": {
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Join": [
+                                "-",
+                                [
+                                    {
+                                        "Ref": "AWS::StackName"
+                                    },
+                                    "public"
+                                ]
+                            ]
+                        }
+                    }
+                ],
+                "VpcId": {
+                    "Ref": "Vpc"
+                }
+            },
+            "Type": "AWS::EC2::RouteTable"
+        },
+        "PublicSubnetA": {
+            "Properties": {
+                "AvailabilityZone": {
+                    "Ref": "PrimaryAZ"
+                },
+                "CidrBlock": {
+                    "Ref": "PublicSubnetACidr"
+                },
+                "MapPublicIpOnLaunch": "true",
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Join": [
+                                "-",
+                                [
+                                    {
+                                        "Ref": "AWS::StackName"
+                                    },
+                                    "public-a"
+                                ]
+                            ]
+                        }
+                    }
+                ],
+                "VpcId": {
+                    "Ref": "Vpc"
+                }
+            },
+            "Type": "AWS::EC2::Subnet"
+        },
+        "PublicSubnetARouteTableAssociation": {
+            "Properties": {
+                "RouteTableId": {
+                    "Ref": "PublicRouteTable"
+                },
+                "SubnetId": {
+                    "Ref": "PublicSubnetA"
+                }
+            },
+            "Type": "AWS::EC2::SubnetRouteTableAssociation"
+        },
+        "PublicSubnetB": {
+            "Properties": {
+                "AvailabilityZone": {
+                    "Ref": "SecondaryAZ"
+                },
+                "CidrBlock": {
+                    "Ref": "PublicSubnetBCidr"
+                },
+                "MapPublicIpOnLaunch": "true",
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Join": [
+                                "-",
+                                [
+                                    {
+                                        "Ref": "AWS::StackName"
+                                    },
+                                    "public-b"
+                                ]
+                            ]
+                        }
+                    }
+                ],
+                "VpcId": {
+                    "Ref": "Vpc"
+                }
+            },
+            "Type": "AWS::EC2::Subnet"
+        },
+        "PublicSubnetBRouteTableAssociation": {
+            "Properties": {
+                "RouteTableId": {
+                    "Ref": "PublicRouteTable"
+                },
+                "SubnetId": {
+                    "Ref": "PublicSubnetB"
+                }
+            },
+            "Type": "AWS::EC2::SubnetRouteTableAssociation"
+        },
+        "RouterEIP": {
+            "Properties": {
+                "Domain": "vpc"
+            },
+            "Type": "AWS::EC2::EIP"
+        },
+        "RouterEipAssociation": {
+            "Properties": {
+                "AllocationId": {
+                    "Fn::GetAtt": [
+                        "RouterEIP",
+                        "AllocationId"
+                    ]
+                },
+                "InstanceId": {
+                    "Ref": "router"
+                }
+            },
+            "Type": "AWS::EC2::EIPAssociation"
+        },
+        "RouterSecurityGroup": {
+            "Properties": {
+                "GroupDescription": "Allows SSH and HTTPS access from LocalCidr, and OpenVPN from anywhere.",
+                "SecurityGroupIngress": [
+                    {
+                        "CidrIp": {
+                            "Ref": "LocalCidr"
+                        },
+                        "FromPort": 22,
+                        "IpProtocol": "tcp",
+                        "ToPort": 22
+                    },
+                    {
+                        "CidrIp": {
+                            "Ref": "LocalCidr"
+                        },
+                        "FromPort": 443,
+                        "IpProtocol": "tcp",
+                        "ToPort": 443
+                    },
+                    {
+                        "CidrIp": "0.0.0.0/0",
+                        "FromPort": 1194,
+                        "IpProtocol": "udp",
+                        "ToPort": 1194
+                    },
+                    {
+                        "CidrIp": {
+                            "Ref": "VpcCidr"
+                        },
+                        "FromPort": "-1",
+                        "IpProtocol": "-1",
+                        "ToPort": "-1"
+                    }
+                ],
+                "VpcId": {
+                    "Ref": "Vpc"
+                }
+            },
+            "Type": "AWS::EC2::SecurityGroup"
+        },
+        "RouterToBackendSecurityGroupIngressRule": {
+            "Properties": {
+                "FromPort": "-1",
+                "GroupId": {
+                    "Ref": "BackendSecurityGroup"
+                },
+                "IpProtocol": "-1",
+                "SourceSecurityGroupId": {
+                    "Ref": "RouterSecurityGroup"
+                },
+                "ToPort": "-1"
+            },
+            "Type": "AWS::EC2::SecurityGroupIngress"
+        },
+        "VPCS3Endpoint": {
+            "Properties": {
+                "RouteTableIds": [
+                    {
+                        "Ref": "PrivateRouteTable"
+                    }
+                ],
+                "ServiceName": {
+                    "Fn::Sub": "com.amazonaws.${AWS::Region}.s3"
+                },
+                "VpcId": {
+                    "Ref": "Vpc"
+                }
+            },
+            "Type": "AWS::EC2::VPCEndpoint"
+        },
+        "Vpc": {
+            "Properties": {
+                "CidrBlock": {
+                    "Ref": "VpcCidr"
+                },
+                "EnableDnsHostnames": "true",
+                "EnableDnsSupport": "true",
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Join": [
+                                "-",
+                                [
+                                    {
+                                        "Ref": "AWS::StackName"
+                                    },
+                                    "vpc"
+                                ]
+                            ]
+                        }
+                    }
+                ]
+            },
+            "Type": "AWS::EC2::VPC"
+        },
+        "WebServerSecurityGroup": {
+            "Properties": {
+                "GroupDescription": "Backend web server security group.",
+                "SecurityGroupIngress": [
+                    {
+                        "FromPort": "80",
+                        "IpProtocol": "tcp",
+                        "SourceSecurityGroupId": {
+                            "Ref": "AwsElbSecurityGroup"
+                        },
+                        "ToPort": "80"
+                    },
+                    {
+                        "FromPort": "443",
+                        "IpProtocol": "tcp",
+                        "SourceSecurityGroupId": {
+                            "Ref": "AwsElbSecurityGroup"
+                        },
+                        "ToPort": "443"
+                    }
+                ],
+                "VpcId": {
+                    "Ref": "Vpc"
+                }
+            },
+            "Type": "AWS::EC2::SecurityGroup"
+        },
+        "router": {
+            "Properties": {
+                "BlockDeviceMappings": [
+                    {
+                        "DeviceName": "/dev/sda1",
+                        "Ebs": {
+                            "VolumeSize": 8
+                        }
+                    }
+                ],
+                "DisableApiTermination": "true",
+                "ImageId": {
+                    "Ref": "RouterAMI"
+                },
+                "InstanceType": "t2.nano",
+                "KeyName": {
+                    "Ref": "KeyName"
+                },
+                "SecurityGroupIds": [
+                    {
+                        "Ref": "RouterSecurityGroup"
+                    }
+                ],
+                "SourceDestCheck": "false",
+                "SubnetId": {
+                    "Ref": "PublicSubnetA"
+                },
+                "Tags": [
+                    {
+                        "Key": "Environment",
+                        "Value": ""
+                    },
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Join": [
+                                "-",
+                                [
+                                    {
+                                        "Ref": "AWS::StackName"
+                                    },
+                                    "router"
+                                ]
+                            ]
+                        }
+                    }
+                ]
+            },
+            "Type": "AWS::EC2::Instance"
+        }
+    }
+}
