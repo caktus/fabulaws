@@ -2,7 +2,7 @@ from troposphere import AWS_REGION, Equals, If, Ref
 
 from .template import template
 
-environments = ["staging", "production"]
+environments = ["testing", "staging", "production"]
 
 dont_create_value = "(none)"
 

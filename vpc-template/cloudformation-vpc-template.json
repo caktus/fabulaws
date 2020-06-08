@@ -24,6 +24,18 @@
                 }
             ]
         },
+        "AcmCertConditionTesting": {
+            "Fn::Not": [
+                {
+                    "Fn::Equals": [
+                        {
+                            "Ref": "AcmCertArnTesting"
+                        },
+                        ""
+                    ]
+                }
+            ]
+        },
         "AssetsCloudFrontCertArnCondition": {
             "Fn::Not": [
                 {
@@ -111,6 +123,14 @@
                 },
                 ""
             ]
+        },
+        "TcpHealthCheckTesting": {
+            "Fn::Equals": [
+                {
+                    "Ref": "WebWorkerHealthCheck"
+                },
+                ""
+            ]
         }
     },
     "Metadata": {
@@ -121,6 +141,7 @@
                         "default": "Global"
                     },
                     "Parameters": [
+                        "DomainNamesTesting",
                         "DomainNamesStaging",
                         "DomainNamesProduction",
                         "PrimaryAZ",
@@ -139,6 +160,7 @@
                     "Parameters": [
                         "WebWorkerHealthCheck",
                         "ElbAccountID",
+                        "AcmCertArnTesting",
                         "AcmCertArnStaging",
                         "AcmCertArnProduction"
                     ]
@@ -181,6 +203,9 @@
                 "AcmCertArnStaging": {
                     "default": "ACM Certificate ARN (staging)"
                 },
+                "AcmCertArnTesting": {
+                    "default": "ACM Certificate ARN (testing)"
+                },
                 "AssetsCloudFrontCertArn": {
                     "default": "CloudFront SSL Certificate ARN"
                 },
@@ -204,6 +229,9 @@
                 },
                 "DomainNamesStaging": {
                     "default": "Domain Names (staging)"
+                },
+                "DomainNamesTesting": {
+                    "default": "Domain Names (testing)"
                 },
                 "ElbAccountID": {
                     "default": "Elastic Load Balancing Account ID"
@@ -263,6 +291,15 @@
                 ]
             }
         },
+        "AssetsBucketTestingDomainName": {
+            "Description": "Assets bucket domain name (testing)",
+            "Value": {
+                "Fn::GetAtt": [
+                    "AssetsBucketTesting",
+                    "DomainName"
+                ]
+            }
+        },
         "AssetsDistributionProductionDomainName": {
             "Condition": "AssetsUseCloudFrontCondition",
             "Description": "The assets bucket CDN domain name (production)",
@@ -279,6 +316,16 @@
             "Value": {
                 "Fn::GetAtt": [
                     "AssetsDistributionStaging",
+                    "DomainName"
+                ]
+            }
+        },
+        "AssetsDistributionTestingDomainName": {
+            "Condition": "AssetsUseCloudFrontCondition",
+            "Description": "The assets bucket CDN domain name (testing)",
+            "Value": {
+                "Fn::GetAtt": [
+                    "AssetsDistributionTesting",
                     "DomainName"
                 ]
             }
@@ -301,6 +348,15 @@
                 ]
             }
         },
+        "ElbTestingDnsName": {
+            "Description": "Loadbalancer DNS",
+            "Value": {
+                "Fn::GetAtt": [
+                    "ElbTesting",
+                    "DNSName"
+                ]
+            }
+        },
         "PrivateBucketProductionDomainName": {
             "Description": "Private bucket domain name (production)",
             "Value": {
@@ -319,6 +375,15 @@
                 ]
             }
         },
+        "PrivateBucketTestingDomainName": {
+            "Description": "Private bucket domain name (testing)",
+            "Value": {
+                "Fn::GetAtt": [
+                    "PrivateBucketTesting",
+                    "DomainName"
+                ]
+            }
+        },
         "RouterPublicIP": {
             "Description": "Public IP address of router",
             "Value": {
@@ -333,6 +398,11 @@
             "Type": "String"
         },
         "AcmCertArnStaging": {
+            "Default": "",
+            "Description": "ARN of the AWS Certificate Manager certificate (optional). If omitted, TCP connections will be passed directly to the backend instances on port 443.",
+            "Type": "String"
+        },
+        "AcmCertArnTesting": {
             "Default": "",
             "Description": "ARN of the AWS Certificate Manager certificate (optional). If omitted, TCP connections will be passed directly to the backend instances on port 443.",
             "Type": "String"
@@ -378,6 +448,10 @@
         },
         "DomainNamesStaging": {
             "Description": "A comma-separated list of FQDNs for staging.",
+            "Type": "CommaDelimitedList"
+        },
+        "DomainNamesTesting": {
+            "Description": "A comma-separated list of FQDNs for testing.",
             "Type": "CommaDelimitedList"
         },
         "ElbAccountID": {
@@ -576,6 +650,69 @@
             },
             "Type": "AWS::S3::Bucket"
         },
+        "AssetsBucketTesting": {
+            "DeletionPolicy": "Retain",
+            "Properties": {
+                "AccessControl": "Private",
+                "BucketEncryption": {
+                    "ServerSideEncryptionConfiguration": {
+                        "Fn::If": [
+                            "AssetsUseS3EncryptionCondition",
+                            [
+                                {
+                                    "ServerSideEncryptionByDefault": {
+                                        "SSEAlgorithm": "AES256"
+                                    }
+                                }
+                            ],
+                            [
+                                {}
+                            ]
+                        ]
+                    }
+                },
+                "CorsConfiguration": {
+                    "CorsRules": [
+                        {
+                            "AllowedHeaders": [
+                                "*"
+                            ],
+                            "AllowedMethods": [
+                                "POST",
+                                "PUT",
+                                "HEAD",
+                                "GET"
+                            ],
+                            "AllowedOrigins": {
+                                "Fn::Split": [
+                                    ";",
+                                    {
+                                        "Fn::Join": [
+                                            "",
+                                            [
+                                                "https://",
+                                                {
+                                                    "Fn::Join": [
+                                                        ";https://",
+                                                        {
+                                                            "Ref": "DomainNamesTesting"
+                                                        }
+                                                    ]
+                                                }
+                                            ]
+                                        ]
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                },
+                "VersioningConfiguration": {
+                    "Status": "Enabled"
+                }
+            },
+            "Type": "AWS::S3::Bucket"
+        },
         "AssetsCertificate": {
             "Condition": "AssetsCloudFrontDomainAndUsEast1Condition",
             "Properties": {
@@ -703,6 +840,79 @@
                             "DomainName": {
                                 "Fn::GetAtt": [
                                     "AssetsBucketStaging",
+                                    "DomainName"
+                                ]
+                            },
+                            "Id": "Assets",
+                            "S3OriginConfig": {
+                                "OriginAccessIdentity": ""
+                            }
+                        }
+                    ],
+                    "ViewerCertificate": {
+                        "Fn::If": [
+                            "AssetsCloudFrontDomainAndUsEast1Condition",
+                            {
+                                "AcmCertificateArn": {
+                                    "Ref": "AssetsCertificate"
+                                },
+                                "SslSupportMethod": "sni-only"
+                            },
+                            {
+                                "Fn::If": [
+                                    "AssetsCloudFrontCertArnCondition",
+                                    {
+                                        "AcmCertificateArn": {
+                                            "Ref": "AssetsCloudFrontCertArn"
+                                        },
+                                        "SslSupportMethod": "sni-only"
+                                    },
+                                    {
+                                        "Ref": "AWS::NoValue"
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                }
+            },
+            "Type": "AWS::CloudFront::Distribution"
+        },
+        "AssetsDistributionTesting": {
+            "Condition": "AssetsUseCloudFrontCondition",
+            "Properties": {
+                "DistributionConfig": {
+                    "Aliases": {
+                        "Fn::If": [
+                            "AssetsCloudFrontDomainCondition",
+                            [
+                                {
+                                    "Ref": "AssetsCloudFrontDomain"
+                                }
+                            ],
+                            {
+                                "Ref": "AWS::NoValue"
+                            }
+                        ]
+                    },
+                    "DefaultCacheBehavior": {
+                        "ForwardedValues": {
+                            "Headers": [
+                                "Origin",
+                                "Access-Control-Request-Headers",
+                                "Access-Control-Request-Method"
+                            ],
+                            "QueryString": "true"
+                        },
+                        "TargetOriginId": "Assets",
+                        "ViewerProtocolPolicy": "allow-all"
+                    },
+                    "Enabled": "true",
+                    "Origins": [
+                        {
+                            "DomainName": {
+                                "Fn::GetAtt": [
+                                    "AssetsBucketTesting",
                                     "DomainName"
                                 ]
                             },
@@ -872,6 +1082,78 @@
             "Properties": {
                 "AutoScalingGroupName": {
                     "Ref": "AutoScalingGroupStaging"
+                },
+                "PolicyType": "TargetTrackingScaling",
+                "TargetTrackingConfiguration": {
+                    "PredefinedMetricSpecification": {
+                        "PredefinedMetricType": "ASGAverageCPUUtilization"
+                    },
+                    "TargetValue": {
+                        "Ref": "AutoscalingTargetCPU"
+                    }
+                }
+            },
+            "Type": "AWS::AutoScaling::ScalingPolicy"
+        },
+        "AutoScalingGroupTesting": {
+            "Properties": {
+                "HealthCheckGracePeriod": 120,
+                "HealthCheckType": "ELB",
+                "LaunchConfigurationName": {
+                    "Ref": "LaunchConfigurationTesting"
+                },
+                "LoadBalancerNames": [
+                    {
+                        "Ref": "ElbTesting"
+                    }
+                ],
+                "MaxSize": "32",
+                "MinSize": "0",
+                "NotificationConfigurations": [
+                    {
+                        "NotificationTypes": [
+                            "autoscaling:EC2_INSTANCE_LAUNCH",
+                            "autoscaling:EC2_INSTANCE_LAUNCH_ERROR",
+                            "autoscaling:EC2_INSTANCE_TERMINATE",
+                            "autoscaling:EC2_INSTANCE_TERMINATE_ERROR"
+                        ],
+                        "TopicARN": {
+                            "Ref": "AutoscalingNotificationsArn"
+                        }
+                    }
+                ],
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "PropagateAtLaunch": true,
+                        "Value": {
+                            "Fn::Join": [
+                                "-",
+                                [
+                                    {
+                                        "Ref": "AWS::StackName"
+                                    },
+                                    "web_worker"
+                                ]
+                            ]
+                        }
+                    }
+                ],
+                "VPCZoneIdentifier": [
+                    {
+                        "Ref": "PrivateSubnetA"
+                    },
+                    {
+                        "Ref": "PrivateSubnetB"
+                    }
+                ]
+            },
+            "Type": "AWS::AutoScaling::AutoScalingGroup"
+        },
+        "AutoScalingGroupTestingScalingPolicy": {
+            "Properties": {
+                "AutoScalingGroupName": {
+                    "Ref": "AutoScalingGroupTesting"
                 },
                 "PolicyType": "TargetTrackingScaling",
                 "TargetTrackingConfiguration": {
@@ -1060,6 +1342,77 @@
                         "Ref": "BucketLogsBucket"
                     },
                     "LogFilePrefix": "StagingBackups/"
+                },
+                "PublicAccessBlockConfiguration": {
+                    "BlockPublicAcls": "true",
+                    "BlockPublicPolicy": "true",
+                    "IgnorePublicAcls": "true",
+                    "RestrictPublicBuckets": "true"
+                },
+                "VersioningConfiguration": {
+                    "Status": "Enabled"
+                }
+            },
+            "Type": "AWS::S3::Bucket"
+        },
+        "BackupsBucketTesting": {
+            "DeletionPolicy": "Retain",
+            "Properties": {
+                "AccessControl": "Private",
+                "BucketEncryption": {
+                    "ServerSideEncryptionConfiguration": {
+                        "Fn::If": [
+                            "AssetsUseS3EncryptionCondition",
+                            [
+                                {
+                                    "ServerSideEncryptionByDefault": {
+                                        "SSEAlgorithm": "AES256"
+                                    }
+                                }
+                            ],
+                            [
+                                {}
+                            ]
+                        ]
+                    }
+                },
+                "LifecycleConfiguration": {
+                    "Rules": [
+                        {
+                            "ExpirationInDays": 14,
+                            "Id": "Keep Hourly for 14 days",
+                            "Prefix": "_hourly",
+                            "Status": "Enabled"
+                        },
+                        {
+                            "Id": "Transition to IA after 30 days",
+                            "Status": "Enabled",
+                            "Transitions": [
+                                {
+                                    "StorageClass": "STANDARD_IA",
+                                    "TransitionInDays": 30
+                                }
+                            ]
+                        },
+                        {
+                            "ExpirationInDays": 90,
+                            "Id": "Keep Daily for 90 days",
+                            "Prefix": "__daily",
+                            "Status": "Enabled"
+                        },
+                        {
+                            "ExpirationInDays": 365,
+                            "Id": "Keep Weekly for 365 days",
+                            "Prefix": "___weekly",
+                            "Status": "Enabled"
+                        }
+                    ]
+                },
+                "LoggingConfiguration": {
+                    "DestinationBucketName": {
+                        "Ref": "BucketLogsBucket"
+                    },
+                    "LogFilePrefix": "TestingBackups/"
                 },
                 "PublicAccessBlockConfiguration": {
                     "BlockPublicAcls": "true",
@@ -1401,6 +1754,95 @@
             },
             "Type": "AWS::ElasticLoadBalancing::LoadBalancer"
         },
+        "ElbTesting": {
+            "DependsOn": "ElbLogsBucketPolicy",
+            "Properties": {
+                "AccessLoggingPolicy": {
+                    "EmitInterval": 60,
+                    "Enabled": true,
+                    "S3BucketName": {
+                        "Ref": "ElbLogsBucket"
+                    },
+                    "S3BucketPrefix": "testing"
+                },
+                "CrossZone": "true",
+                "HealthCheck": {
+                    "HealthyThreshold": "2",
+                    "Interval": "10",
+                    "Target": {
+                        "Fn::If": [
+                            "TcpHealthCheckTesting",
+                            "TCP:80",
+                            {
+                                "Fn::Join": [
+                                    "",
+                                    [
+                                        "HTTPS:443",
+                                        {
+                                            "Ref": "WebWorkerHealthCheck"
+                                        }
+                                    ]
+                                ]
+                            }
+                        ]
+                    },
+                    "Timeout": "9",
+                    "UnhealthyThreshold": "2"
+                },
+                "Instances": [],
+                "Listeners": [
+                    {
+                        "InstancePort": 80,
+                        "InstanceProtocol": "HTTP",
+                        "LoadBalancerPort": 80,
+                        "Protocol": "HTTP"
+                    },
+                    {
+                        "InstancePort": 443,
+                        "InstanceProtocol": {
+                            "Fn::If": [
+                                "AcmCertConditionTesting",
+                                "HTTPS",
+                                "TCP"
+                            ]
+                        },
+                        "LoadBalancerPort": 443,
+                        "Protocol": {
+                            "Fn::If": [
+                                "AcmCertConditionTesting",
+                                "HTTPS",
+                                "TCP"
+                            ]
+                        },
+                        "SSLCertificateId": {
+                            "Fn::If": [
+                                "AcmCertConditionTesting",
+                                {
+                                    "Ref": "AcmCertArnTesting"
+                                },
+                                {
+                                    "Ref": "AWS::NoValue"
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "SecurityGroups": [
+                    {
+                        "Ref": "AwsElbSecurityGroup"
+                    }
+                ],
+                "Subnets": [
+                    {
+                        "Ref": "PublicSubnetA"
+                    },
+                    {
+                        "Ref": "PublicSubnetB"
+                    }
+                ]
+            },
+            "Type": "AWS::ElasticLoadBalancing::LoadBalancer"
+        },
         "GatewayAttachement": {
             "Properties": {
                 "InternetGatewayId": {
@@ -1451,6 +1893,23 @@
             "Type": "AWS::AutoScaling::LaunchConfiguration"
         },
         "LaunchConfigurationStaging": {
+            "Properties": {
+                "ImageId": {
+                    "Ref": "RouterAMI"
+                },
+                "InstanceType": "t2.nano",
+                "KeyName": {
+                    "Ref": "KeyName"
+                },
+                "SecurityGroups": [
+                    {
+                        "Ref": "WebServerSecurityGroup"
+                    }
+                ]
+            },
+            "Type": "AWS::AutoScaling::LaunchConfiguration"
+        },
+        "LaunchConfigurationTesting": {
             "Properties": {
                 "ImageId": {
                     "Ref": "RouterAMI"
@@ -1639,6 +2098,95 @@
                         "Ref": "BucketLogsBucket"
                     },
                     "LogFilePrefix": "StagingPrivate/"
+                },
+                "PublicAccessBlockConfiguration": {
+                    "BlockPublicAcls": "true",
+                    "BlockPublicPolicy": "true",
+                    "IgnorePublicAcls": "true",
+                    "RestrictPublicBuckets": "true"
+                },
+                "VersioningConfiguration": {
+                    "Status": "Enabled"
+                }
+            },
+            "Type": "AWS::S3::Bucket"
+        },
+        "PrivateBucketTesting": {
+            "DeletionPolicy": "Retain",
+            "Properties": {
+                "AccessControl": "Private",
+                "BucketEncryption": {
+                    "ServerSideEncryptionConfiguration": {
+                        "Fn::If": [
+                            "AssetsUseS3EncryptionCondition",
+                            [
+                                {
+                                    "ServerSideEncryptionByDefault": {
+                                        "SSEAlgorithm": "AES256"
+                                    }
+                                }
+                            ],
+                            [
+                                {}
+                            ]
+                        ]
+                    }
+                },
+                "CorsConfiguration": {
+                    "CorsRules": [
+                        {
+                            "AllowedHeaders": [
+                                "*"
+                            ],
+                            "AllowedMethods": [
+                                "POST",
+                                "PUT",
+                                "HEAD",
+                                "GET"
+                            ],
+                            "AllowedOrigins": {
+                                "Fn::Split": [
+                                    ";",
+                                    {
+                                        "Fn::Join": [
+                                            "",
+                                            [
+                                                "https://",
+                                                {
+                                                    "Fn::Join": [
+                                                        ";https://",
+                                                        {
+                                                            "Ref": "DomainNamesTesting"
+                                                        }
+                                                    ]
+                                                }
+                                            ]
+                                        ]
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                },
+                "LifecycleConfiguration": {
+                    "Rules": [
+                        {
+                            "Id": "Transition to IA after 365 days",
+                            "Status": "Enabled",
+                            "Transitions": [
+                                {
+                                    "StorageClass": "STANDARD_IA",
+                                    "TransitionInDays": 365
+                                }
+                            ]
+                        }
+                    ]
+                },
+                "LoggingConfiguration": {
+                    "DestinationBucketName": {
+                        "Ref": "BucketLogsBucket"
+                    },
+                    "LogFilePrefix": "TestingPrivate/"
                 },
                 "PublicAccessBlockConfiguration": {
                     "BlockPublicAcls": "true",
