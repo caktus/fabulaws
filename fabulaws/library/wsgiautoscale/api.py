@@ -325,18 +325,18 @@ def _allowed_hosts():
     """Returns the allowed hosts that should be set for the current server."""
     server = _current_server()
     # Filter out None or '' (e.g., if the instance doesn't have a public IP)
-    server_addrs = filter(lambda addr: bool(addr), [
+    server_addrs = [addr for addr in [
         server.instance.private_dns_name,
         server.instance.private_ip_address,
         server.instance.public_dns_name,
         server.instance.ip_address,
-    ])
+    ] if bool(addr)]
     return env.site_domains + server_addrs
 
 
 def _change_role(server, new_role):
     """Update the role (and name) of the given server."""
-    print 'Changing role for %s (%s) to %s' % (server.hostname, server.instance.id, new_role)
+    print('Changing role for %s (%s) to %s' % (server.hostname, server.instance.id, new_role))
     server.add_tags({
         'role': new_role,
         'Name': _instance_name(new_role),
@@ -405,7 +405,7 @@ def production(deployment_tag=env.default_deployment, answer=None):
 def call_server_method(method):
     server = _current_server()
     roles = _current_roles()
-    print '\n *** calling {0} on {1} ({2}) ***\n'.format(method, server.hostname, roles[0])
+    print('\n *** calling {0} on {1} ({2}) ***\n'.format(method, server.hostname, roles[0]))
     getattr(server, method)()
 
 
@@ -413,7 +413,7 @@ def call_server_method(method):
 def run_shell_command(method, sudo=False):
     server = _current_server()
     roles = _current_roles()
-    print '\n *** calling {0} on {1} ({2}) ***\n'.format(method, server.hostname, roles[0])
+    print('\n *** calling {0} on {1} ({2}) ***\n'.format(method, server.hostname, roles[0]))
     if sudo:
         sudo(method)
     else:
@@ -446,7 +446,7 @@ def _new(deployment, environment, role, avail_zone=None, count=1, terminate_on_f
     }
     if not avail_zone:
         avail_zone = random.choice(env.avail_zones)
-        print 'Note: Assigning random availability zone "{0}"'.format(avail_zone)
+        print('Note: Assigning random availability zone "{0}"'.format(avail_zone))
     placement = ''.join([env.region, avail_zone])
     _setup_env()
     # copy the original so we don't accidentally store luks_passphrase on the server
@@ -526,7 +526,7 @@ def _retry_new(*args, **kwargs):
                 return _new(*args, terminate_on_failure=True, **kwargs)
             # Fabric may raise our abort_exception OR a NetworkError
             except (RetryFailure, NetworkError):
-                print '\n\n **** Server creation failed; retrying (attempt #%s)... ****\n\n' % (i+2)
+                print('\n\n **** Server creation failed; retrying (attempt #%s)... ****\n\n' % (i+2))
                 continue
     # if the last attempt is still going to fail, let it fail normally:
     return _new(*args, **kwargs)
@@ -548,7 +548,7 @@ class BackgroundCommand(multiprocessing.Process):
     def run(self):
         date = datetime.datetime.now().strftime('%Y-%m-%d_%H:%M:%S')
         filename = '_'.join([date] + list(self.args[1:]) + [str(os.getpid())]) + ".out"
-        print 'Starting log file %s' % filename
+        print('Starting log file %s' % filename)
         # redirect stdout to a log file
         sys.stdout = open(filename, "w")
         sys.stderr = sys.stdout
@@ -571,7 +571,7 @@ class BackgroundCommand(multiprocessing.Process):
 def _create_many(servers):
     """Create many servers at once, in parallel."""
     procs = []
-    print 'Creating servers in parallel; see individual log files for progress...'
+    print('Creating servers in parallel; see individual log files for progress...')
     # make sure we don't pass open SSH connections down to the child procs
     disconnect_all()
     for server in servers:
@@ -579,12 +579,12 @@ def _create_many(servers):
         proc.start()
         procs.append(proc)
     time.sleep(2)
-    print 'Waiting for servers to be created...'
+    print('Waiting for servers to be created...')
     for proc in procs:
         proc.join()
         if proc.exitcode != 0:
             abort('Server creation failed for: %s. Inspect the appropriate log file.' % proc.args)
-    print 'Done.'
+    print('Done.')
 
 
 @task
@@ -869,7 +869,7 @@ def update_local_settings():
     # in sync
     upload_pgbouncer_conf()
     if not env.slave_databases:
-        print 'WARNING: No replica DBs found; using primary DB as read DB'
+        print('WARNING: No replica DBs found; using primary DB as read DB')
         env.slave_databases.append(env.master_database)
     context = env.copy()
     context['current_changeset'] = current_changeset()
@@ -1168,10 +1168,10 @@ def add_to_elb():
             deploy_web()
             end_upgrade()
         for elb_name in env.elb_names:
-            print 'Adding instance %s to ELB %s' % (server.instance.id, elb_name)
+            print('Adding instance %s to ELB %s' % (server.instance.id, elb_name))
             server.add_to_elb(elb_name)
             state = server.wait_for_elb_state(elb_name, 'InService')
-            print 'Instance %s now in state %s' % (server.instance.id, state)
+            print('Instance %s now in state %s' % (server.instance.id, state))
 
 
 @task
@@ -1188,7 +1188,7 @@ def add_all_to_elb():
             server.add_to_elb(elb_name)
         for server in servers:
             state = server.wait_for_elb_state(elb_name, 'InService')
-            print 'Instance %s now in state %s' % (server.instance.id, state)
+            print('Instance %s now in state %s' % (server.instance.id, state))
 
 
 ###### DATABASE MAINTENANCE ######
@@ -1287,8 +1287,8 @@ def promote_replica(index=0, override_servers={}):
         executel('install_rsyslog', roles=['db-primary'])
     if env.awslogs_access_key_id:
         executel('install_awslogs', roles=['db-primary'])
-    print 'NOTE: you must now update the local_settings.py files on the web'\
-          'servers to point to the new primary DB ({0}).'.format(replica.hostname)
+    print('NOTE: you must now update the local_settings.py files on the web'\
+          'servers to point to the new primary DB ({0}).'.format(replica.hostname))
 
 
 ###### ROUTINE MAINTENANCE ######
@@ -1338,7 +1338,7 @@ def mount_encrypted(drive_letter='f'):
     """mount the luks encrypted partition and start the services there"""
     require('environment', provided_by=env.environments)
     if not env.host_string:
-        print 'no hosts found; exiting cleanly'
+        print('no hosts found; exiting cleanly')
         return
     device = '/dev/sd' + drive_letter
     crypt = 'crypt-sd' + drive_letter
@@ -1347,7 +1347,7 @@ def mount_encrypted(drive_letter='f'):
         crypt = 'crypt-xvd' + drive_letter
     crypt_dev = '/dev/mapper/{0}'.format(crypt)
     if exists(crypt_dev):
-        print '{0} already exists on {1}, exiting'.format(crypt_dev, env.host_string)
+        print('{0} already exists on {1}, exiting'.format(crypt_dev, env.host_string))
         return
     _load_passwords(['luks_passphrase'])
     # stop redis and nginx (postgres will have failed to start without
@@ -1373,8 +1373,8 @@ def mount_encrypted(drive_letter='f'):
     if 'cache' in _current_roles():
         sudo('service redis-server start', pty=False)
         sudo('service rabbitmq-server start', pty=False)
-        print '*** WARNING: While immediately restarting a cache server works as expected, '\
-              'stopping and later restarting does not. For more information, see docs/servers/maintenance.rst ***'
+        print('*** WARNING: While immediately restarting a cache server works as expected, '\
+              'stopping and later restarting does not. For more information, see docs/servers/maintenance.rst ***')
     if 'web' in _current_roles():
         # if we're being created from an image, make sure the hostname gets updated
         # in both the Nginx config and local_settings.py
@@ -1429,7 +1429,7 @@ def create_environment(deployment_tag, environment, num_web=2):
     """Sets up all servers for the given environment for the first time."""
 
     _setup_env(deployment_tag, environment)
-    print 'Starting AMI and launch config creation in the background'
+    print('Starting AMI and launch config creation in the background')
     # make sure we don't pass open SSH connections down to the child procs
     disconnect_all()
     lc_creator = BackgroundCommand(_create_server_for_image, capture_result=True)
@@ -1448,7 +1448,7 @@ def create_environment(deployment_tag, environment, num_web=2):
     # if we create all servers at once, the replica won't be sync'ed yet
     executel('reset_slaves')
 
-    print 'Waiting for launch config creation to complete...'
+    print('Waiting for launch config creation to complete...')
     # wait for the launch config to finish creating if needed
     lc_creator.join()
     instance_id = lc_creator.result()
@@ -1461,12 +1461,12 @@ def create_environment(deployment_tag, environment, num_web=2):
     lc = _create_launch_config(server=server)
     # clean up the leftover server in EC2
     server.terminate()
-    print 'Running deploy_full...'
+    print('Running deploy_full...')
     # run the initial deployment with the new AMI containing the latest code
     deploy_full(deployment_tag, environment, launch_config_name=lc.name, num_web=num_web)
 
-    print 'The non-web servers have been created and the autoscaling group has been updated '\
-          'with a new launch configuration.'
+    print('The non-web servers have been created and the autoscaling group has been updated '\
+          'with a new launch configuration.')
 
 
 @task
@@ -1520,22 +1520,21 @@ def update_newrelic_keys(deployment_tag, environment):
 @runs_once
 def describe(deployment_tag, environment):
     executel(environment, deployment_tag)
-    roles = env.roles
-    roles.sort()
+    roles = sorted(env.roles)
     for role in roles:
         if env.servers[role]:
-            print '{0} servers:'.format(role)
+            print('{0} servers:'.format(role))
             for server in env.servers[role]:
-                print '  Instance ID: {0}'.format(server.instance.id)
-                print '     Hostname: {0}'.format(server.hostname)
-                print '  Internal IP: {0}'.format(server.internal_ip)
-                print '    Placement: {0}'.format(server._placement)
+                print('  Instance ID: {0}'.format(server.instance.id))
+                print('     Hostname: {0}'.format(server.hostname))
+                print('  Internal IP: {0}'.format(server.internal_ip))
+                print('    Placement: {0}'.format(server._placement))
                 if role == 'web':
                     elb_names = _find(env.load_balancers, env.deployment_tag, env.environment)
                     for elb_name in elb_names:
-                        print '    ELB State: {0} ({1})'.format(server.elb_state(elb_name), elb_name)
-                print ''
-            print ''
+                        print('    ELB State: {0} ({1})'.format(server.elb_state(elb_name), elb_name))
+                print('')
+            print('')
 
 
 @task
@@ -1568,11 +1567,11 @@ def deploy_serial_without_autoscaling(deployment_tag, environment, wait=30):
     for server in servers:
         for elb_name in env.elb_names:
             if initial_states[(server.instance.id, elb_name)] == 'InService':
-                print 'Removing instance %s from ELB %s' % (server.instance.id, elb_name)
+                print('Removing instance %s from ELB %s' % (server.instance.id, elb_name))
                 server.remove_from_elb(elb_name)
             state = server.wait_for_elb_state(elb_name, 'OutOfService')
-            print 'Instance %s now in state %s' % (server.instance.id, state)
-        print 'Waiting %s seconds for requests to finish processing...' % wait
+            print('Instance %s now in state %s' % (server.instance.id, state))
+        print('Waiting %s seconds for requests to finish processing...' % wait)
         time.sleep(wait) # wait for instance to process outstanding requests
         # be honest to the load balancer(s) about our status (not healthy)
         executel('begin_upgrade', stay_healthy=False, hosts=[server.hostname])
@@ -1580,7 +1579,7 @@ def deploy_serial_without_autoscaling(deployment_tag, environment, wait=30):
         executel('end_upgrade', hosts=[server.hostname])
         for elb_name in env.elb_names:
             if initial_states[(server.instance.id, elb_name)] == 'InService':
-                print 'Adding instance %s to ELB %s' % (server.instance.id, elb_name)
+                print('Adding instance %s to ELB %s' % (server.instance.id, elb_name))
                 server.add_to_elb(elb_name)
 
 
@@ -1594,12 +1593,12 @@ def recreate_servers(deployment_tag, environment, wait=30):
     orig_servers = dict(env.servers.items())
     for role, servers in orig_servers.iteritems():
         config[role] = [s._placement[-1] for s in servers]
-    print 'Starting AMI and launch config creation in the background'
+    print('Starting AMI and launch config creation in the background')
     # make sure we don't pass open SSH connections down to the child procs
     disconnect_all()
     lc_creator = BackgroundCommand(_create_server_for_image, capture_result=True)
     lc_creator.start()
-    print 'Recreating servers for: %s' % config
+    print('Recreating servers for: %s' % config)
     # first, create a new replica & cache to replace the current primary & cache servers
     servers = [(deployment_tag, environment, 'db-replica', config['db-primary'][0])]
     servers += [(deployment_tag, environment, 'cache', z) for z in config['cache']]
@@ -1607,7 +1606,7 @@ def recreate_servers(deployment_tag, environment, wait=30):
     start_time = datetime.datetime.now()
     executel('begin_upgrade')
     _stop_all()
-    print 'Decommisioning old servers...'
+    print('Decommisioning old servers...')
     # rename the original replica server(s)
     for replica in orig_servers['db-replica']:
         _change_role(replica, 'db-replica-OLD')
@@ -1626,7 +1625,7 @@ def recreate_servers(deployment_tag, environment, wait=30):
     executel('end_upgrade')
     end_time = datetime.datetime.now()
     downtime = end_time - start_time
-    print 'downtime complete; total = %s secs' % downtime.total_seconds()
+    print('downtime complete; total = %s secs' % downtime.total_seconds())
 
     # next, create the new replica, worker, and web servers
     servers = [(deployment_tag, environment, 'db-replica', z) for z in config['db-replica']]
@@ -1637,7 +1636,7 @@ def recreate_servers(deployment_tag, environment, wait=30):
         _change_role(worker, 'worker-OLD')
 
     # wait for the launch config to finish creating if needed
-    print 'waiting for launch config to finish creating'
+    print('waiting for launch config to finish creating')
     lc_creator.join()
     instance_id = lc_creator.result()
     # reload the environment once more, after we know the background image
@@ -1652,7 +1651,7 @@ def recreate_servers(deployment_tag, environment, wait=30):
     # make sure all the web servers get re-created using auto-scaling
     deploy_serial(deployment_tag, environment, launch_config_name=lc.name, answer='y')
 
-    print 'recreate_servers complete; total downtime was %s secs' % downtime.total_seconds()
+    print('recreate_servers complete; total downtime was %s secs' % downtime.total_seconds())
 
 
 @task
@@ -1683,7 +1682,7 @@ def install_rsyslog():
             sudo("apt-get -qq update || apt-get -qq update")
         sudo("apt-get -qq -y install rsyslog")
 
-    print 'Ignore any useradd or chgrp warnings below.'
+    print('Ignore any useradd or chgrp warnings below.')
     with settings(warn_only=True):
         sudo('useradd --system --groups adm syslog')
     sudo('service rsyslog restart')
@@ -1708,7 +1707,7 @@ def install_logstash():
         if not exists('logstash.jar'):
             sudo('apt-get -qq -y install default-jre')
             sudo('wget https://download.elasticsearch.org/logstash/logstash/logstash-1.1.7-monolithic.jar -O logstash.jar', user=env.deploy_user)
-            print 'Ignore any useradd or chgrp warnings below.'
+            print('Ignore any useradd or chgrp warnings below.')
             with settings(warn_only=True):
                 sudo('useradd --system --groups adm logstash')
                 sudo('chgrp -R adm /var/log/rabbitmq')
@@ -1757,8 +1756,7 @@ def install_awslogs():
 def generate_and_upload_munin_conf(deployment_tag, environment):
     """Generate and upload the munin server configuration based on servers in the current environment."""
     executel(environment, deployment_tag)
-    roles = env.roles
-    roles.sort()
+    roles = sorted(env.roles)
     munin_conf = ''
     for role in roles:
         if env.servers[role]:
@@ -1781,7 +1779,7 @@ def suspend_autoscaling_processes(deployment_tag, environment, *processes):
     group = _get_autoscaling_group()
     group.suspend_processes(processes or None)
     processes = ', '.join(processes) if processes else "all processes"
-    print ("Suspended these processes for the autoscaling group named "
+    print("Suspended these processes for the autoscaling group named "
            "'{0}': {1}".format(group.name, processes))
 
 
@@ -1792,7 +1790,7 @@ def resume_autoscaling_processes(deployment_tag, environment, *processes):
     group = _get_autoscaling_group()
     group.resume_processes(processes or None)
     processes = ', '.join(processes) if processes else "all processes"
-    print ("Resumed these processes for the autoscaling group named "
+    print("Resumed these processes for the autoscaling group named "
            "'{0}': {1}".format(group.name, processes))
 
 
@@ -1808,7 +1806,7 @@ def create_launch_config_for_deployment(deployment_tag, environment):
     """
     executel(environment, deployment_tag)
     launch_config = _create_launch_config()
-    print ("Created a new launch configuration named '{0}' to deploy "
+    print("Created a new launch configuration named '{0}' to deploy "
            "{1}.".format(launch_config.name, launch_config.image_id))
 
 
@@ -1837,7 +1835,7 @@ def deploy_full(deployment_tag, environment, launch_config_name=None, num_web=2)
 
     # Prevent the group from creating new instances before we're ready.
     group.suspend_processes(["Launch"])
-    print "Suspended 'Launch' autoscaling process."
+    print("Suspended 'Launch' autoscaling process.")
 
     # Update the group to use the new launch config.
     group = _update_autoscaling_group(launch_config)
@@ -1855,18 +1853,18 @@ def deploy_full(deployment_tag, environment, launch_config_name=None, num_web=2)
     # ensure max_size is at least as big as min_size
     group.max_size = max(group.max_size, group.min_size)
     group.update()
-    print ("Temporarily updated the autoscaling group's minimum/desired "
+    print("Temporarily updated the autoscaling group's minimum/desired "
            "instance capacity to {0}".format(curr_servers + curr_desired))
 
     # Allow the group to create the new instances, but not to add them
     # to the load balancer(s) just yet.
     group.suspend_processes(["AddToLoadBalancer"])
-    print "Suspended 'AddToLoadBalancer' autoscaling process."
+    print("Suspended 'AddToLoadBalancer' autoscaling process.")
     group.resume_processes(["Launch"])
-    print "Resumed 'Launch' autoscaling process."
+    print("Resumed 'Launch' autoscaling process.")
 
     # Wait for new instances to be created.
-    print "Waiting for new instances to be in service."
+    print("Waiting for new instances to be in service.")
     waited = 0
     while True:
         time.sleep(5)
@@ -1876,16 +1874,16 @@ def deploy_full(deployment_tag, environment, launch_config_name=None, num_web=2)
                          if i.launch_config_name == group.launch_config_name
                             and i.lifecycle_state == "InService"]
         if len(new_instances) >= curr_minimum:
-            print ("Created {0} new servers in {1} "
+            print("Created {0} new servers in {1} "
                    "seconds.".format(len(new_instances), waited))
             break
         else:
             count = len(new_instances)
-            print ("{0} seconds: Have {1} instances and need at least {2} "
+            print("{0} seconds: Have {1} instances and need at least {2} "
                    "more.".format(waited, count, curr_minimum - count))
 
     # Wait to make sure that the encrypted drive is mounted.
-    print ("Waiting 120 seconds for nodes to launch and to ensure that the "
+    print("Waiting 120 seconds for nodes to launch and to ensure that the "
            "encrypted drive is mounted on all new instances.")
     time.sleep(120)
 
@@ -1903,12 +1901,12 @@ def deploy_full(deployment_tag, environment, launch_config_name=None, num_web=2)
     # It's safe to add to the load balancer now, since all servers have the
     # upgrade message.
     group.resume_processes(["AddToLoadBalancer"])
-    print "Resumed 'AddToLoadBalancer' autoscaling process."
+    print("Resumed 'AddToLoadBalancer' autoscaling process.")
 
     # Even though AddToLoadBalancer has resumed, we must manually add
     # the just-created instances to the load balancer(s) and wait for them to
     # be healthy in the load balancer(s).
-    print "Waiting for new instances to be InService with the load balancer(s)."
+    print("Waiting for new instances to be InService with the load balancer(s).")
     add_all_to_elb()
 
     old_instances = [i for i in group.instances
@@ -1919,18 +1917,18 @@ def deploy_full(deployment_tag, environment, launch_config_name=None, num_web=2)
     curr_policies = group.termination_policies
     group.termination_policies = ['OldestInstance']
     group.update()
-    print "Updated the termination policy to 'OldestInstance'."
+    print("Updated the termination policy to 'OldestInstance'.")
 
     # Reset the group's minimum and desired number of servers.
     group.min_size = curr_minimum
     group.desired_capacity = curr_desired
     group.update()
-    print "Reset minimum and desired number of servers."
+    print("Reset minimum and desired number of servers.")
 
     # Wait for the old instances to be killed.
     for elb_name in env.elb_names:
         for old_instance in old_instances:
-            print ("Waiting for {0} to be OutOfService with the load "
+            print("Waiting for {0} to be OutOfService with the load "
                    "balancer {1}.".format(old_instance.instance_id, elb_name))
             _wait_for_elb_state(elb_name, old_instance.instance_id,
                                 "OutOfService")
@@ -1938,7 +1936,7 @@ def deploy_full(deployment_tag, environment, launch_config_name=None, num_web=2)
     # Reset the group's termination policies.
     group.termination_policies = curr_policies
     group.update()
-    print "Reset the termination policies."
+    print("Reset the termination policies.")
 
     # Reload the environment to remove the old web servers.
     executel(environment, deployment_tag)
@@ -1976,7 +1974,7 @@ def deploy_serial(deployment_tag, environment, launch_config_name=None, answer=N
     # recreate it (if needed) using the new launch config.
     _refresh_instances(autoscaling_group)
 
-    print "Completed deployment with autoscaling."
+    print("Completed deployment with autoscaling.")
 
 
 def _ag_instances(autoscaling_group, current=True):
@@ -2018,19 +2016,19 @@ def _refresh_instances(autoscaling_group):
     max_inst_create_time = 180 # seconds
     check_period = 5 # seconds
     old_instances = _ag_instances(autoscaling_group, current=False)
-    print "Found {0} old instances.".format(len(old_instances))
+    print("Found {0} old instances.".format(len(old_instances)))
     for old_instance in old_instances:
-        print "Starting to bring down old instance with id {0}.".format(
-               old_instance.instance_id)
+        print("Starting to bring down old instance with id {0}.".format(
+               old_instance.instance_id))
         conn.set_instance_health(old_instance.instance_id, "Unhealthy")
         for elb_name in env.elb_names:
-            print "Waiting for {0} to be out of service with load balancer {1}. "\
+            print("Waiting for {0} to be out of service with load balancer {1}. "\
                   "Note: ignore any 'InvalidInstance' errors.".format(
-                   old_instance.instance_id, elb_name)
+                   old_instance.instance_id, elb_name))
             _wait_for_elb_state(elb_name, old_instance.instance_id,
                                 "OutOfService")
-        print "{0} is now out of service. Waiting for autoscaling group...".format(
-               old_instance.instance_id)
+        print("{0} is now out of service. Waiting for autoscaling group...".format(
+               old_instance.instance_id))
         time.sleep(45)  # Wait for the autoscaling group to catch up.
                         # This time amount is just a guess - it seems to take
                         # that long for the group to decide whether or not to
@@ -2045,27 +2043,27 @@ def _refresh_instances(autoscaling_group):
             # Wait for a new instance, if any, to be fully brought up.
             # (If we had more-than-the minimum instances before the upgrade, then
             # the autoscaling group might not bring up another immediately.)
-            print "Checking for any new instances to be in service..."
+            print("Checking for any new instances to be in service...")
             if _ag_instances(autoscaling_group, current=True):
                 break
         else:
-            print "WARNING: no new instances detected after %s seconds" % max_inst_create_time
+            print("WARNING: no new instances detected after %s seconds" % max_inst_create_time)
         # Wait for all instances currently known to the auto scaling group to be in
         # service with each load balancer. We may get 400 Bad Request / Could not find
         # instance responses while this is in process.
         inst_states = _ag_inst_states(autoscaling_group)
         while not all([(s == 'InService') for s in inst_states.values()]):
-            print "Waiting for the following instances to be in service:"
+            print("Waiting for the following instances to be in service:")
             for k, v in inst_states.items():
                 if v != 'InService':
-                    print '    %s: %s' % k # k is tuple of (elb_name, instance_id)
+                    print('    %s: %s' % k) # k is tuple of (elb_name, instance_id)
             time.sleep(10)
             # refresh instance states
             autoscaling_group = _get_autoscaling_group()  # Refresh instances list.
             inst_states = _ag_inst_states(autoscaling_group)
-        print ("Finished bringing down old instance with id {0}.".format(
+        print("Finished bringing down old instance with id {0}.".format(
                old_instance.instance_id))
-    print "All old instances have been terminated."
+    print("All old instances have been terminated.")
 
 
 def _elb_state(elb_name, instance_id):
@@ -2085,7 +2083,7 @@ def _wait_for_elb_state(elb_name, instance_id, state):
     """
     waited = 0
     while True:
-        print ("Have waited {0} seconds for {1} to be {2}...".format(waited, instance_id, state))
+        print("Have waited {0} seconds for {1} to be {2}...".format(waited, instance_id, state))
         if _elb_state(elb_name, instance_id) == state:
             return state
         time.sleep(5)
@@ -2118,7 +2116,7 @@ def _create_image_from_server(server):
         server.cleanup()
     # reload the environment WITHOUT the new server
     _setup_env(env.deployment_tag, env.environment)
-    print "Created a new AMI with id {0}.".format(image.id)
+    print("Created a new AMI with id {0}.".format(image.id))
     return image
 
 
@@ -2146,7 +2144,7 @@ def _create_launch_config(server=None):
             instance_monitoring=True,
         )
         AutoScaleConnection().create_launch_configuration(lc)
-        print "Created a new launch config with name {0}.".format(lc.name)
+        print("Created a new launch config with name {0}.".format(lc.name))
         return lc
     finally:
         # if we created the server, clean it up here
@@ -2164,7 +2162,7 @@ def _get_launch_config(name):
         raise Exception("Found more than one launch configuration with "
                         "the name '{name}'.".format(name=name))
     config = configs[0]
-    print "Retrieved launch configuration named '{0}'.".format(config.name)
+    print("Retrieved launch configuration named '{0}'.".format(config.name))
     return config
 
 
@@ -2182,7 +2180,7 @@ def _get_autoscaling_group(name=None):
     elif len(groups) >= 2:
         raise Exception("Found more than one autoscaling group with "
                         "the name '{name}'.".format(name=name))
-    print "Retrieved auto scaling group named '{0}'.".format(groups[0].name)
+    print("Retrieved auto scaling group named '{0}'.".format(groups[0].name))
     return groups[0]
 
 
@@ -2207,7 +2205,7 @@ def _update_autoscaling_group(launch_config):
             propagate_at_launch=True, resource_id=group.name),
     ])
 
-    print ("Autoscaling group {0} has been updated to use launch config "
+    print("Autoscaling group {0} has been updated to use launch config "
            "{1}.".format(group.name, launch_config.name))
 
     return group

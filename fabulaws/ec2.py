@@ -7,7 +7,7 @@ import tempfile
 import logging
 import string
 from random import choice
-from StringIO import StringIO
+from io import StringIO
 
 import traceback
 import paramiko
@@ -248,7 +248,7 @@ class EC2Instance(object):
                             allow_agent=False, look_for_keys=False, username=user,
                             key_filename=key, timeout=self.ssh_timeout)
                 break
-            except (EOFError, socket.error, paramiko.SSHException), e:
+            except (EOFError, socket.error, paramiko.SSHException) as e:
                 logger.debug('Error connecting ({0}); retrying in {1} '
                              'seconds'.format(e, wait))
                 times += 1

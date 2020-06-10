@@ -1,6 +1,6 @@
-fabric==1.10.2
-boto==2.39.0
-pyyaml==3.11
+fabric<2
+boto3
+pyyaml
 argyle==0.2.1
 awacs==0.5.4
 troposphere==2.6.1

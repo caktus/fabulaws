@@ -5,7 +5,7 @@ FabulAWS
 ephemeral EC2 instances using Python, like so::
 
     from fabulaws.ec2 import MicroLucidInstance
-    
+
     with MicroLucidInstance():
         run('uname -a')
 

@@ -286,7 +286,7 @@ class UbuntuInstance(BaseAptMixin, EC2Instance):
                 sudo('passwd -d {0}'.format(name))
                 sudo('mkdir /home/{0}/.ssh'.format(name))
             put(keyfile, '/home/{0}/.ssh/authorized_keys2'.format(name),
-                use_sudo=True, mode=0600)
+                use_sudo=True, mode=0o600)
             sudo('chown -R {0} /home/{0}/.ssh'.format(name))
             # if a file exists with the comment field (e.g., for GECOS info)
             # for the user, use usermod -c to add it.

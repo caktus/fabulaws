@@ -79,18 +79,18 @@ class BaseInstance(FirewallMixin, UbuntuInstance):
         swap_mb = self.server_memory * self.swap_multiplier
         devs = ['/dev/xvdb', '/dev/xvdc']
         for dev in devs:
-            print 'attempting swap creation on {0}...'.format(dev)
+            print('attempting swap creation on {0}...'.format(dev))
             if swap_mb <= 0:
-                print 'no additional swap needed; skipping'
+                print('no additional swap needed; skipping')
                 break
             if not files.exists(dev):
-                print 'no such device {0}; skipping'.format(dev)
+                print('no such device {0}; skipping'.format(dev))
                 continue
             size = sudo('blockdev --getsize64 {0}'.format(dev))
             try:
                 size = int(size) / 1024 / 1024
             except ValueError:
-                print 'no size found for {0}'.format(dev)
+                print('no size found for {0}'.format(dev))
                 continue
             # decrement size regardless of whether or not we create swap; if
             # crypt device exists, assume we created it previously and don't 
@@ -100,7 +100,7 @@ class BaseInstance(FirewallMixin, UbuntuInstance):
                 sudo('umount {0}'.format(dev))
             crypt_name = 'cryptswap-{0}'.format(dev.split('/')[-1])
             if files.exists('/dev/mapper/{0}'.format(crypt_name)):
-                print 'crypt device {0} already exists; skipping'.format(crypt_name)
+                print('crypt device {0} already exists; skipping'.format(crypt_name))
                 continue
             sudo('cryptsetup -d /dev/urandom create {0} {1}'.format(crypt_name, dev))
             files.append('/etc/crypttab',
@@ -115,7 +115,7 @@ class BaseInstance(FirewallMixin, UbuntuInstance):
                 sudo('chmod 600 {0}'.format(self.default_swap_file))
                 self._add_swap(self.default_swap_file)
             else:
-                print 'swap file {0} already exists; skipping'.format(self.default_swap_file)
+                print('swap file {0} already exists; skipping'.format(self.default_swap_file))
         # remove old swap at the end in case it's already in use (otherwise swapoff might fail)
         old_swap = ['/dev/xvda3']
         for swap in old_swap:
@@ -132,7 +132,7 @@ class BaseInstance(FirewallMixin, UbuntuInstance):
         """
         sudoers_file = os.path.join(self.deployment_dir, 'templates', 'sudoers')
         files.upload_template(sudoers_file, '/etc/sudoers.new', backup=False,
-                              use_sudo=True, mode=0440)
+                              use_sudo=True, mode=0o440)
         sudo('chown root:root /etc/sudoers.new')
         sudo('mv /etc/sudoers.new /etc/sudoers')
 
