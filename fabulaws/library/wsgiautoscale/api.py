@@ -832,7 +832,7 @@ def create_virtualenv():
     """ setup virtualenv on remote host """
 
     require('virtualenv_root', provided_by=env.environments)
-    cmd = ['virtualenv', '--clear', '--distribute',
+    cmd = ['virtualenv', '--clear',
            '--python=%(python)s' % env, env.virtualenv_root]
     sudo(' '.join(cmd), user=env.deploy_user)
 
@@ -1737,8 +1737,11 @@ def install_awslogs():
     destination = '/etc/init/awslogs.service'
     _upload_template(template, destination, user='root', context=context)
     with(cd('/tmp')):
+        # FIXME: Switch to new (.deb based) CloudWatch agent (ensuring that it picks up all the same log files!)
         sudo('curl https://s3.amazonaws.com/aws-cloudwatch/downloads/latest/awslogs-agent-setup.py -O', user=env.deploy_user)
-        sudo('python awslogs-agent-setup.py --region us-east-1 --non-interactive --configfile awslogs.conf')
+        # This script only supports Python 2.6 - 3.5, so make sure Python 2.7 is installed (any Python 3 version is likely too new)
+        sudo('apt-get install -y python2.7')
+        sudo('python2 awslogs-agent-setup.py --region us-east-1 --non-interactive --configfile awslogs.conf')
         sudo('rm awslogs.conf')
     # upload AWS credentials
     template = os.path.join(env.templates_dir, 'awslogs', 'aws.conf')

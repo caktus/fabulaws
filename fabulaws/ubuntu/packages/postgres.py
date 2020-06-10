@@ -84,7 +84,7 @@ class PostgresMixin(AptMixin):
     @uses_fabric
     def pg_version(self):
         version = run('pg_config --version')
-        return re.findall(r'(\d+\.\d+)\.?\d+?', version)[0]
+        return re.findall(r'(\d+\.\d+)\.?', version)[0]
 
     @cached_property()
     @uses_fabric

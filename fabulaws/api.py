@@ -43,8 +43,8 @@ def call_python(method, *args):
     """
     module = '.'.join(method.split('.')[:-1])
     args = json.dumps(args)[1:-1]
-    output = run('/usr/bin/env python -c \'import json, {module};'
-                 'print json.dumps({method}({args}))\''
+    output = run('/usr/bin/env python3 -c \'import json, {module};'
+                 'print(json.dumps({method}({args})))\''
                  ''.format(module=module, method=method, args=args))
     return json.loads(output)
 

@@ -110,7 +110,7 @@ class BaseInstance(FirewallMixin, UbuntuInstance):
             self._add_swap('/dev/mapper/{0}'.format(crypt_name))
         if swap_mb > 0:
             if not files.exists(self.default_swap_file):
-                sudo('dd if=/dev/zero of={0} bs=1M count={1}'.format(self.default_swap_file, swap_mb))
+                sudo('fallocate -l {0}M {1}'.format(swap_mb, self.default_swap_file))
                 sudo('chown root:root {0}'.format(self.default_swap_file))
                 sudo('chmod 600 {0}'.format(self.default_swap_file))
                 self._add_swap(self.default_swap_file)
@@ -277,10 +277,6 @@ class AppMixin(PythonMixin):
     Mixin that installs the Python application dependencies, including the appropriate
     versions of Python, PIP, and virtualenv.
     """
-
-    python_packages = ['python2.7', 'python2.7-dev']
-    python_pip_version = '9.0.3'
-    python_virtualenv_version = '15.2.0'
 
     @uses_fabric
     def install_less_and_yuglify(self):
