@@ -122,7 +122,7 @@ class PostgresMixin(AptMixin):
 
     @uses_fabric
     def pg_set_str(self, setting, value):
-        self.sed(r'^#? ?{setting} = \'.+\''.format(setting=setting),
+        self.sed('^#? ?{setting} = \'.*\''.format(setting=setting),
                  '{setting} = \'{value}\''.format(setting=setting, value=value),
                  self.pg_conf)
 
@@ -240,14 +240,13 @@ class PostgresMixin(AptMixin):
                        host=master_db.internal_ip, user=user),
              user='postgres')
         with cd(self.pg_data):
-            recovery = 'recovery.conf'
-            sudo('echo "standby_mode = \'on\'" > {file_}'
-                 ''.format(file_=recovery), user='postgres')
-            sudo('echo "primary_conninfo = \'host={host} user={user} '
-                 'password={password}\'" >> {file_}'
-                 ''.format(host=master_db.internal_ip, file_=recovery,
-                           user=user, password=password), user='postgres')
-            sudo('chmod 600 {0}'.format(recovery), user='postgres')
+            signal = 'standby.signal'
+            sudo('touch {file_}'.format(file_=signal), user='postgres')
+            self.pg_set_str(
+                'primary_conninfo',
+                'host={host} user={user} password={password}'
+                ''.format(host=master_db.internal_ip,
+                          user=user, password=password))
             sudo('ln -s /etc/ssl/certs/ssl-cert-snakeoil.pem server.crt')
             sudo('ln -s /etc/ssl/private/ssl-cert-snakeoil.key server.key')
         self.pg_cmd('start')
