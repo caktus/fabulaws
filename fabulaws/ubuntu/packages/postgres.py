@@ -1,11 +1,10 @@
 import re
-import datetime
 
-from fabric.api import *
+from fabric.api import cd, run, sudo
 from fabric.contrib import files
 
-from fabulaws.decorators import *
-from fabulaws.api import *
+from fabulaws.decorators import cached_property, uses_fabric
+# from fabulaws.api import
 from fabulaws.ubuntu.packages.base import AptMixin
 
 
@@ -18,41 +17,44 @@ class PostgresMixin(AptMixin):
     postgresql_packages = ['postgresql', 'libpq-dev']
     postgresql_tune = True
     postgresql_tune_type = 'Web'
-    postgresql_shmmax = 107374182400 # 100 GB
-    postgresql_shmall = 26214400 # 100 GB / PAGE_SIZE (4096)
+    postgresql_shmmax = 107374182400  # 100 GB
+    postgresql_shmall = 26214400  # 100 GB / PAGE_SIZE (4096)
     # for help adjusting these settings, see:
     # http://wiki.postgresql.org/wiki/Tuning_Your_PostgreSQL_Server
     # http://wiki.postgresql.org/wiki/Number_Of_Database_Connections
     # http://thebuild.com/presentations/not-my-job-djangocon-us.pdf
     postgresql_settings = {
         # connections
-        'max_connections': '80', # _active_ connections are limited by pgbouncer
+        'max_connections': '80',  # _active_ connections are limited by pgbouncer
         # replication settings
         'wal_level': 'hot_standby',
         'hot_standby': 'on',
         'hot_standby_feedback': 'on',
         'max_wal_senders': '3',
-        'wal_keep_segments': '3000', # during client deletion 50 or more may be generated per minute; this allows an hour
+        # during client deletion 50 or more may be generated per minute; this allows an hour
+        'wal_keep_segments': '3000',
         # resources - set these dynamically based on actual machine resources (see pg_resource_settings())
-        #'shared_buffers': '8GB',
-        #'work_mem': '750MB',
-        #'maintenance_work_mem': '1GB',
-        #'effective_cache_size': '48GB',
+        # 'shared_buffers': '8GB',
+        # 'work_mem': '750MB',
+        # 'maintenance_work_mem': '1GB',
+        # 'effective_cache_size': '48GB',
         # checkpoint settings
         'wal_buffers': '16MB',
         'checkpoint_completion_target': '0.9',
         'checkpoint_timeout': '10min',
-        'checkpoint_segments': '256', # if checkpoints are happening more often than the timeout, increase this up to 256
+        # if checkpoints are happening more often than the timeout, increase this up to 256
+        'checkpoint_segments': '256',
         # logging
         'log_min_duration_statement': '500',
         'log_checkpoints': 'on',
         'log_lock_waits': 'on',
         'log_temp_files': '0',
         # write optimizations
-        'commit_delay': '4000', # delay each commit this many microseconds in case we can do a group commit
-        'commit_siblings': '5', # only delay if at least N transactions are in process
+        'commit_delay': '4000',  # delay each commit this many microseconds in case we can do a group commit
+        'commit_siblings': '5',  # only delay if at least N transactions are in process
         # index usage optimizations
-        'random_page_cost': '2', # our DB servers have a lot of RAM and may tend to prefer Seq Scans if this is too high
+        # our DB servers have a lot of RAM and may tend to prefer Seq Scans if this is too high
+        'random_page_cost': '2',
     }
     postgresql_networks = ['10.0.0.0/8', '172.16.0.0/12']
     postgresql_disable_oom = False
@@ -84,7 +86,13 @@ class PostgresMixin(AptMixin):
     @uses_fabric
     def pg_version(self):
         version = run('pg_config --version')
-        return re.findall(r'(\d+\.\d+)\.?', version)[0]
+        version = re.findall(r'(\d+\.\d+)\.?', version)[0]
+        if float(version) >= 10:
+            # For Postgres 10 and newer, return just the major version number (used in file paths)
+            return version.split(".")[0]
+        else:
+            # Otherwise, return the full version, e.g., "9.5"
+            return version
 
     @cached_property()
     @uses_fabric
@@ -114,13 +122,13 @@ class PostgresMixin(AptMixin):
 
     @uses_fabric
     def pg_set_str(self, setting, value):
-        self.sed('^#? ?{setting} = \'.+\''.format(setting=setting),
+        self.sed(r'^#? ?{setting} = \'.+\''.format(setting=setting),
                  '{setting} = \'{value}\''.format(setting=setting, value=value),
                  self.pg_conf)
 
     @uses_fabric
     def pg_set(self, setting, value):
-        self.sed('^#? ?{setting} = \S+'.format(setting=setting),
+        self.sed(r'^#? ?{setting} = \S+'.format(setting=setting),
                  '{setting} = {value}'.format(setting=setting, value=value),
                  self.pg_conf)
 
@@ -227,7 +235,7 @@ class PostgresMixin(AptMixin):
         sudo('echo "{line}" > {file_}'
              ''.format(file_=self.pgpass, line=pgpass_line), user='postgres')
         sudo('chmod 600 {0}'.format(self.pgpass), user='postgres')
-        sudo('{pg_bin}/pg_basebackup -x -D {pg_data} -P -h {host} -U {user}'
+        sudo('{pg_bin}/pg_basebackup -X stream -D {pg_data} -P -h {host} -U {user}'
              ''.format(pg_bin=self.pg_bin, pg_data=self.pg_data,
                        host=master_db.internal_ip, user=user),
              user='postgres')
