@@ -1741,7 +1741,7 @@ def install_awslogs():
         sudo('curl https://s3.amazonaws.com/aws-cloudwatch/downloads/latest/awslogs-agent-setup.py -O', user=env.deploy_user)
         # This script only supports Python 2.6 - 3.5, so make sure Python 2.7 is installed (any Python 3 version is likely too new)
         sudo('apt-get install -y python2.7')
-        sudo('python2 awslogs-agent-setup.py --region us-east-1 --non-interactive --configfile awslogs.conf')
+        sudo('python2.7 awslogs-agent-setup.py --region us-east-1 --non-interactive --configfile awslogs.conf')
         sudo('rm awslogs.conf')
     # upload AWS credentials
     template = os.path.join(env.templates_dir, 'awslogs', 'aws.conf')
