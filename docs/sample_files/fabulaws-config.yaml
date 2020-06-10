@@ -22,7 +22,7 @@ webserver_user: myproject-web
 database_host: localhost
 database_user: dbuser
 home: /home/myproject/
-python: /usr/bin/python2.7
+python: /usr/bin/python3
 
 ## LOCAL / PROJECT SETTINGS ##
 disable_known_hosts: true
@@ -263,7 +263,7 @@ volume_types:
   worker: gp2
 
 app_server_packages:
-  - python2.7-dev
+  - python3.8-dev
   - libpq-dev
   - libmemcached-dev
   - supervisor

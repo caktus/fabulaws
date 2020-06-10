@@ -105,9 +105,9 @@ You'll need to make several changes to your local machine to use FabulAWS:
 System Requirements
 +++++++++++++++++++
 
-* Ubuntu Linux 14.04 or later
-* Python 2.7 or 3.8
-* PostgreSQL 9.3
+* Ubuntu Linux 18.04 or later
+* Python 3.8
+* PostgreSQL 10
 * virtualenv and virtualenvwrapper are highly recommended
 
 AWS API Credentials
