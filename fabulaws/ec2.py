@@ -5,19 +5,13 @@ import time
 import socket
 import tempfile
 import logging
-import string
-from random import choice
-from io import StringIO
 
-import traceback
 import paramiko
 from boto.ec2.connection import EC2Connection
 from boto.ec2 import elb
 from boto.ec2 import blockdevicemapping
 from boto.exception import BotoServerError
 from fabric.api import *
-from fabric.contrib import files
-from fabulaws.api import *
 
 logger = logging.getLogger('fabulaws.ec2')
 

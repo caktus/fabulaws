@@ -1,0 +1,2 @@
+deb http://www.rabbitmq.com/debian/ testing main (http://www.rabbitmq.com/rabbitmq-signing-key-public.asc)
+deb http://example.com/deb lucid main

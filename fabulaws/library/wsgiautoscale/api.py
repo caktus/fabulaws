@@ -22,15 +22,15 @@ from boto.ec2.elb import ELBConnection
 from boto.ec2.autoscale import AutoScaleConnection, LaunchConfiguration, Tag
 from boto.exception import BotoServerError
 
-from fabric.api import (abort, cd, env, execute, hide, hosts, local, parallel,
+from fabric.api import (abort, cd, env, execute, hide, local, parallel,
     prompt, put, roles, require, run, runs_once, settings, sudo, task)
 from fabric.colors import red
 from fabric.contrib.files import exists, upload_template, append, uncomment, sed
 from fabric.exceptions import NetworkError
 from fabric.network import disconnect_all
 
-from argyle import system
-from argyle.supervisor import supervisor_command
+from fabulaws.argyle import system
+from fabulaws.argyle.supervisor import supervisor_command
 
 from fabulaws.api import answer_sudo, ec2_instances, sshagent_run
 
@@ -59,7 +59,7 @@ env.role_class_map = {
 }
 
 config_file = 'fabulaws-config.yml'
-config = yaml.load(file(config_file, 'r'))
+config = yaml.load(open(config_file, 'r'))
 for key, value in config.items():
     setattr(env, key, value)
 _reset_hosts()
@@ -113,11 +113,13 @@ def _find(dict_, key1, key2):
         raise ValueError('No combination of (%s, %s) found in %s!' % (key1, key2, dict_))
 
 
-def _setup_env(deployment_tag=None, environment=None, override_servers={}):
+def _setup_env(deployment_tag=None, environment=None, override_servers=None):
     """
     Sets up paths and other configuration in the ``env`` dictionary necessary
     for running Fabric commands.
     """
+    if override_servers is None:
+        override_servers = {}
     if deployment_tag is not None:
         env.deployment_tag = deployment_tag
     if environment is not None:
@@ -214,7 +216,7 @@ def _setup_env(deployment_tag=None, environment=None, override_servers={}):
         ('gunicorn', os.path.join(env.log_dir, 'gunicorn.log'), '%Y-%m-%d %H:%M:%S'),
         ('pgbouncer', os.path.join(env.log_dir, 'pgbouncer.log'), '%Y-%m-%d %H:%M:%S'),
         ('stunnel', os.path.join(env.log_dir, 'stunnel.log'), '%Y-%m-%d %H:%M:%S'),
-        ('celery', os.path.join(env.log_dir, 'celerycam.log'), '%Y-%m-%d %H:%M:%S'),
+        ('celery', os.path.join(env.log_dir, 'celerycam.log'), '%Y-%m-%d %H:%M:%S'),  # django-celery-monitor
         ('celery', os.path.join(env.log_dir, 'celerybeat.log'), '%Y-%m-%d %H:%M:%S'),
     ]
     # add celery logs, based on the workers configured in fabulaws-config.yaml
@@ -257,7 +259,7 @@ def _read_local_secrets():
     return secrets
 
 
-def _random_password(length=8, chars=string.letters + string.digits):
+def _random_password(length=8, chars=string.ascii_letters + string.digits):
     """Generates a random password with the specificed length and chars."""
     return ''.join([random.choice(chars) for i in range(length)])
 
@@ -410,11 +412,11 @@ def call_server_method(method):
 
 
 @task
-def run_shell_command(method, sudo=False):
+def run_shell_command(method, use_sudo=False):
     server = _current_server()
     roles = _current_roles()
     print('\n *** calling {0} on {1} ({2}) ***\n'.format(method, server.hostname, roles[0]))
-    if sudo:
+    if use_sudo:
         sudo(method)
     else:
         run(method)
@@ -1267,7 +1269,7 @@ def reset_slaves():
 @task
 @runs_once
 @roles('db-replica')
-def promote_replica(index=0, override_servers={}):
+def promote_replica(index=0, override_servers=None):
     """Promotes a replica to the db-primary role and decommissions the old primary."""
 
     require('environment', provided_by=env.environments)
@@ -1280,6 +1282,8 @@ def promote_replica(index=0, override_servers={}):
                 # Shoot The Other Node In The Head:
                 sudo('service postgresql stop')
     _change_role(replica, 'db-primary')
+    if override_servers is None:
+        override_servers = {}
     _setup_env(override_servers=override_servers)
     if env.gelf_log_host:
         executel('install_logstash', roles=['db-primary'])

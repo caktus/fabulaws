@@ -1,9 +1,4 @@
-import copy
-import random
-import urllib2
-
-from fabric.api import *
-from fabric.contrib import files
+from fabric.api import sudo
 
 from fabulaws.decorators import uses_fabric
 from fabulaws.ubuntu.packages.base import AptMixin

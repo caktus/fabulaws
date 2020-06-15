@@ -1,0 +1,2 @@
+ppa:nginx/stable
+ppa:pitti/postgresql
