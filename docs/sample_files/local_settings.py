@@ -92,9 +92,9 @@ CACHES = {
 # Task queue settings
 
 # see https://github.com/ask/celery/issues/436
-BROKER_URL = "amqp://{{ deploy_user }}:{{ broker_password }}@{{ cache_server.internal_ip }}:5672/{{ vhost }}"
-BROKER_CONNECTION_TIMEOUT = 4
-BROKER_POOL_LIMIT = 10
+CELERY_BROKER_URL = "amqp://{{ deploy_user }}:{{ broker_password }}@{{ cache_server.internal_ip }}:5672/{{ vhost }}"
+CELERY_BROKER_CONNECTION_TIMEOUT = 4
+CELERY_BROKER_POOL_LIMIT = 10
 CELERY_RESULT_BACKEND = "redis://{{ cache_server.internal_ip }}:6379/2"
 
 # Session settings
