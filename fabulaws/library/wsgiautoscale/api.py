@@ -22,15 +22,12 @@ from boto.ec2.elb import ELBConnection
 from boto.ec2.autoscale import AutoScaleConnection, LaunchConfiguration, Tag
 from boto.exception import BotoServerError
 
-from fabric.api import (abort, cd, env, execute, hide, hosts, local, parallel,
+from fabric.api import (abort, cd, env, execute, hide, local, parallel,
     prompt, put, roles, require, run, runs_once, settings, sudo, task)
 from fabric.colors import red
 from fabric.contrib.files import exists, upload_template, append, uncomment, sed
 from fabric.exceptions import NetworkError
 from fabric.network import disconnect_all
-
-from argyle import system
-from argyle.supervisor import supervisor_command
 
 from fabulaws.api import answer_sudo, ec2_instances, sshagent_run
 
@@ -59,7 +56,7 @@ env.role_class_map = {
 }
 
 config_file = 'fabulaws-config.yml'
-config = yaml.load(file(config_file, 'r'))
+config = yaml.load(open(config_file, 'r'))
 for key, value in config.items():
     setattr(env, key, value)
 _reset_hosts()
@@ -113,11 +110,13 @@ def _find(dict_, key1, key2):
         raise ValueError('No combination of (%s, %s) found in %s!' % (key1, key2, dict_))
 
 
-def _setup_env(deployment_tag=None, environment=None, override_servers={}):
+def _setup_env(deployment_tag=None, environment=None, override_servers=None):
     """
     Sets up paths and other configuration in the ``env`` dictionary necessary
     for running Fabric commands.
     """
+    if override_servers is None:
+        override_servers = {}
     if deployment_tag is not None:
         env.deployment_tag = deployment_tag
     if environment is not None:
@@ -214,7 +213,7 @@ def _setup_env(deployment_tag=None, environment=None, override_servers={}):
         ('gunicorn', os.path.join(env.log_dir, 'gunicorn.log'), '%Y-%m-%d %H:%M:%S'),
         ('pgbouncer', os.path.join(env.log_dir, 'pgbouncer.log'), '%Y-%m-%d %H:%M:%S'),
         ('stunnel', os.path.join(env.log_dir, 'stunnel.log'), '%Y-%m-%d %H:%M:%S'),
-        ('celery', os.path.join(env.log_dir, 'celerycam.log'), '%Y-%m-%d %H:%M:%S'),
+        ('celery', os.path.join(env.log_dir, 'celerycam.log'), '%Y-%m-%d %H:%M:%S'),  # django-celery-monitor
         ('celery', os.path.join(env.log_dir, 'celerybeat.log'), '%Y-%m-%d %H:%M:%S'),
     ]
     # add celery logs, based on the workers configured in fabulaws-config.yaml
@@ -257,7 +256,7 @@ def _read_local_secrets():
     return secrets
 
 
-def _random_password(length=8, chars=string.letters + string.digits):
+def _random_password(length=8, chars=string.ascii_letters + string.digits):
     """Generates a random password with the specificed length and chars."""
     return ''.join([random.choice(chars) for i in range(length)])
 
@@ -410,11 +409,11 @@ def call_server_method(method):
 
 
 @task
-def run_shell_command(method, sudo=False):
+def run_shell_command(method, use_sudo=False):
     server = _current_server()
     roles = _current_roles()
     print('\n *** calling {0} on {1} ({2}) ***\n'.format(method, server.hostname, roles[0]))
-    if sudo:
+    if use_sudo:
         sudo(method)
     else:
         run(method)
@@ -709,7 +708,7 @@ def upload_supervisor_conf(run_update=True):
         sudo('rm /etc/supervisor/conf.d/%(project)s-*.conf' % env)
     sudo('ln -s /%(home)s/services/supervisor/%(environment)s.conf /etc/supervisor/conf.d/%(project)s-%(environment)s.conf' % env)
     if run_update:
-        supervisor_command('update')
+        sudo(u'supervisorctl update')
 
 
 @task
@@ -1039,7 +1038,7 @@ def restart_nginx():
     """Restart Nginx."""
 
     require('environment', provided_by=env.environments)
-    system.restart_service('nginx')
+    sudo("service nginx restart")
 
 
 @task
@@ -1053,9 +1052,10 @@ def supervisor(command, group, process=None):
     env.supervisor_group = group
     if process:
         env.supervisor_process = process
-        supervisor_command('%(supervisor_command)s %(environment)s-%(supervisor_group)s:%(environment)s-%(supervisor_process)s' % env)
+        command = '%(supervisor_command)s %(environment)s-%(supervisor_group)s:%(environment)s-%(supervisor_process)s' % env
     else:
-        supervisor_command('%(supervisor_command)s %(environment)s-%(supervisor_group)s:*' % env)
+        command = '%(supervisor_command)s %(environment)s-%(supervisor_group)s:*' % env
+    sudo(u'supervisorctl %s' % command)
 
 
 @task
@@ -1267,7 +1267,7 @@ def reset_slaves():
 @task
 @runs_once
 @roles('db-replica')
-def promote_replica(index=0, override_servers={}):
+def promote_replica(index=0, override_servers=None):
     """Promotes a replica to the db-primary role and decommissions the old primary."""
 
     require('environment', provided_by=env.environments)
@@ -1280,6 +1280,8 @@ def promote_replica(index=0, override_servers={}):
                 # Shoot The Other Node In The Head:
                 sudo('service postgresql stop')
     _change_role(replica, 'db-primary')
+    if override_servers is None:
+        override_servers = {}
     _setup_env(override_servers=override_servers)
     if env.gelf_log_host:
         executel('install_logstash', roles=['db-primary'])
@@ -1300,7 +1302,7 @@ def update_sysadmin_users():
     """Create sysadmin users on the server"""
 
     require('environment', provided_by=env.environments)
-    for role, servers in env.servers.iteritems():
+    for role, servers in env.servers.items():
         for server in servers:
             server.create_users(server._get_users())
             server.update_deployer_keys()
@@ -1418,7 +1420,7 @@ def executel(cmd, *args, **kwargs):
         name = cmd.name.upper()
     else:
         name = str(cmd).upper()
-    arguments = [str(v) for v in args] + ['%s=%s' % (k, v) for k, v in kwargs.iteritems()]
+    arguments = [str(v) for v in args] + ['%s=%s' % (k, v) for k, v in kwargs.items]
     logger.info('\n\n **** %s (%s) ****\n\n' % (name, ', '.join(arguments)))
     execute(cmd, *args, **kwargs)
 
@@ -1485,7 +1487,7 @@ def reboot_environment(deployment_tag, environment, sleep_time=180):
     """Tests rebooting and re-mounting the encrypted drives on all servers."""
     sleep_time = int(sleep_time)
     executel(environment, deployment_tag)
-    for role, servers in env.servers.iteritems():
+    for role, servers in env.servers.items():
         if role == 'logger':
             continue
         for server in servers:
@@ -1591,7 +1593,7 @@ def recreate_servers(deployment_tag, environment, wait=30):
     _setup_env(deployment_tag, environment)
     config = {}
     orig_servers = dict(env.servers.items())
-    for role, servers in orig_servers.iteritems():
+    for role, servers in orig_servers.items():
         config[role] = [s._placement[-1] for s in servers]
     print('Starting AMI and launch config creation in the background')
     # make sure we don't pass open SSH connections down to the child procs

@@ -1,6 +1,6 @@
 from decimal import Decimal
 
-from fabric.api import *
+from fabric.api import sudo, settings
 from fabric.contrib import files
 
 from fabulaws.decorators import uses_fabric

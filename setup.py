@@ -26,7 +26,6 @@ setup(
     install_requires=[
         'pyyaml',
         'boto>=2.39,<3',
-        'fabric>=1.10,<2',
-        'argyle>=0.2.1,<1'
+        'fabric3',
     ]
 )

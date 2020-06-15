@@ -1,7 +1,6 @@
-fabric<2
+fabric3
 boto3
 pyyaml
-argyle==0.2.1
 awacs==0.5.4
 troposphere==2.6.1
 flake8==3.4.1
