@@ -29,9 +29,6 @@ from fabric.contrib.files import exists, upload_template, append, uncomment, sed
 from fabric.exceptions import NetworkError
 from fabric.network import disconnect_all
 
-from fabulaws.argyle import system
-from fabulaws.argyle.supervisor import supervisor_command
-
 from fabulaws.api import answer_sudo, ec2_instances, sshagent_run
 
 from .servers import (CacheInstance, DbPrimaryInstance,
@@ -711,7 +708,7 @@ def upload_supervisor_conf(run_update=True):
         sudo('rm /etc/supervisor/conf.d/%(project)s-*.conf' % env)
     sudo('ln -s /%(home)s/services/supervisor/%(environment)s.conf /etc/supervisor/conf.d/%(project)s-%(environment)s.conf' % env)
     if run_update:
-        supervisor_command('update')
+        sudo(u'supervisorctl update')
 
 
 @task
@@ -1041,7 +1038,7 @@ def restart_nginx():
     """Restart Nginx."""
 
     require('environment', provided_by=env.environments)
-    system.restart_service('nginx')
+    sudo("service nginx restart")
 
 
 @task
@@ -1055,9 +1052,10 @@ def supervisor(command, group, process=None):
     env.supervisor_group = group
     if process:
         env.supervisor_process = process
-        supervisor_command('%(supervisor_command)s %(environment)s-%(supervisor_group)s:%(environment)s-%(supervisor_process)s' % env)
+        command = '%(supervisor_command)s %(environment)s-%(supervisor_group)s:%(environment)s-%(supervisor_process)s' % env
     else:
-        supervisor_command('%(supervisor_command)s %(environment)s-%(supervisor_group)s:*' % env)
+        command = '%(supervisor_command)s %(environment)s-%(supervisor_group)s:*' % env
+    sudo(u'supervisorctl %s' % command)
 
 
 @task
@@ -1304,7 +1302,7 @@ def update_sysadmin_users():
     """Create sysadmin users on the server"""
 
     require('environment', provided_by=env.environments)
-    for role, servers in env.servers.iteritems():
+    for role, servers in env.servers.items():
         for server in servers:
             server.create_users(server._get_users())
             server.update_deployer_keys()
@@ -1422,7 +1420,7 @@ def executel(cmd, *args, **kwargs):
         name = cmd.name.upper()
     else:
         name = str(cmd).upper()
-    arguments = [str(v) for v in args] + ['%s=%s' % (k, v) for k, v in kwargs.iteritems()]
+    arguments = [str(v) for v in args] + ['%s=%s' % (k, v) for k, v in kwargs.items]
     logger.info('\n\n **** %s (%s) ****\n\n' % (name, ', '.join(arguments)))
     execute(cmd, *args, **kwargs)
 
@@ -1489,7 +1487,7 @@ def reboot_environment(deployment_tag, environment, sleep_time=180):
     """Tests rebooting and re-mounting the encrypted drives on all servers."""
     sleep_time = int(sleep_time)
     executel(environment, deployment_tag)
-    for role, servers in env.servers.iteritems():
+    for role, servers in env.servers.items():
         if role == 'logger':
             continue
         for server in servers:
@@ -1595,7 +1593,7 @@ def recreate_servers(deployment_tag, environment, wait=30):
     _setup_env(deployment_tag, environment)
     config = {}
     orig_servers = dict(env.servers.items())
-    for role, servers in orig_servers.iteritems():
+    for role, servers in orig_servers.items():
         config[role] = [s._placement[-1] for s in servers]
     print('Starting AMI and launch config creation in the background')
     # make sure we don't pass open SSH connections down to the child procs
