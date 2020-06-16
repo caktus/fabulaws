@@ -60,7 +60,7 @@ from the web servers and delegating them to the worker server for completion.
 * Sample security groups: myproject-sg, myproject-cache-sg, myproject-queue-sg
 
 Database Primary
----------------
+----------------
 
 The database primary server runs PostgreSQL.  It allows encrypted connections
 from the web and worker servers.
@@ -68,7 +68,7 @@ from the web and worker servers.
 * Sample security groups: myproject-sg, myproject-db-sg
 
 Database Replica
---------------
+----------------
 
 The database replica server also runs PostgreSQL, and is setup with streaming
 replication from the primary database server.  This results in very fast

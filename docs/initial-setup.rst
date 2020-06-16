@@ -389,10 +389,7 @@ but these are the ones that Fabulaws has most recently been confirmed to work wi
   django-redis-cache==2.1.1
   django-cache-machine==1.1.0
   newrelic==5.12.1.141
-
-In addition, the following requirements are needed for deployment:
-
-.. literalinclude:: ../deploy.in
+  Fabric3
 
 First Deployment
 ----------------

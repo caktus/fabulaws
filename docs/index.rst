@@ -37,6 +37,7 @@ Contents
    troubleshooting
    internals
    useful_commands
+   releases
 
 Indices and tables
 ==================

@@ -51,7 +51,7 @@ After doing this, be sure to run ``deploy_worker`` (or if it was already
 running, let it complete) so as to restore Celery to a running state again.
 
 Primary database goes down
--------------------------
+--------------------------
 
 If the primary database goes down, manually make sure it's permanently lost
 before converting a replica into the primary.  At this point you probably also
@@ -84,7 +84,7 @@ site::
     fab <environment> end_upgrade
 
 Replica database goes down
--------------------------
+--------------------------
 
 If a replica database goes down, first enable the pretty upgrade message on all
 the web servers::
@@ -104,7 +104,7 @@ site::
     fab <environment> end_upgrade
 
 Adding a new replica
-------------------
+--------------------
 
 If a replica database is lost (either due to promotion to the primary role or
 because it was itself lost), it is desirable to return the application to
@@ -127,7 +127,7 @@ This will take the web servers down one at a time, deploy the latest code,
 and update the settings file to use the newly added database server.
 
 Replica database loses replication connection
--------------------------------------------
+---------------------------------------------
 
 While PostgreSQL administration is outside the scope of this guide, if you
 have determined that a replica database has lost the replication connection
