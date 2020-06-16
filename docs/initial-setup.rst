@@ -105,9 +105,9 @@ You'll need to make several changes to your local machine to use FabulAWS:
 System Requirements
 +++++++++++++++++++
 
-* Ubuntu Linux 14.04 or later
-* Python 2.7
-* PostgreSQL 9.3
+* Ubuntu Linux 18.04 or later
+* Python 3.8
+* PostgreSQL 10
 * virtualenv and virtualenvwrapper are highly recommended
 
 AWS API Credentials
@@ -370,30 +370,29 @@ Python Requirements
 +++++++++++++++++++
 
 The following are the minimum Python requirements for deploying a web application
-using FabulAWS (update version numbers as needed):
+using FabulAWS (update version numbers as needed).  (Other versions might work,
+but these are the ones that Fabulaws has most recently been confirmed to work with.)
 
 .. code-block:: text
 
-  Django==1.8.8
-  psycopg2==2.6.1
-  pytz==2015.7
-  django-celery==3.1.17
-  celery==3.1.19
-  gunicorn==19.4.5
-  django-balancer==0.4
-  boto==2.39.0
-  django-storages==1.1.8
-  django-compressor==2.0
-  python-memcached==1.57
-  redis==2.10.5
-  django-redis-cache==1.6.5
-  django-cache-machine==0.9.1
-  newrelic==2.60.0.46
+  Django==2.2.13
+  psycopg2==2.8.5
+  pytz==2020.1
+  celery==4.4.3
+  gunicorn==20.0.4
+  django-balancer==0.5
+  boto3==1.13.19
+  django-storages==1.9.1
+  django-compressor==2.4
+  python-memcached==1.59
+  redis==3.5.2
+  django-redis-cache==2.1.1
+  django-cache-machine==1.1.0
+  newrelic==5.12.1.141
 
 In addition, the following requirements are needed for deployment:
 
-
-.. literalinclude:: ../requirements.txt
+.. literalinclude:: ../deploy.in
 
 First Deployment
 ----------------

@@ -5,19 +5,13 @@ import time
 import socket
 import tempfile
 import logging
-import string
-from random import choice
-from StringIO import StringIO
 
-import traceback
 import paramiko
 from boto.ec2.connection import EC2Connection
 from boto.ec2 import elb
 from boto.ec2 import blockdevicemapping
 from boto.exception import BotoServerError
 from fabric.api import *
-from fabric.contrib import files
-from fabulaws.api import *
 
 logger = logging.getLogger('fabulaws.ec2')
 
@@ -248,7 +242,7 @@ class EC2Instance(object):
                             allow_agent=False, look_for_keys=False, username=user,
                             key_filename=key, timeout=self.ssh_timeout)
                 break
-            except (EOFError, socket.error, paramiko.SSHException), e:
+            except (EOFError, socket.error, paramiko.SSHException) as e:
                 logger.debug('Error connecting ({0}); retrying in {1} '
                              'seconds'.format(e, wait))
                 times += 1

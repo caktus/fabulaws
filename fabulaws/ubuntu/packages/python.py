@@ -1,9 +1,4 @@
-import copy
-import random
-import urllib2
-
-from fabric.api import *
-from fabric.contrib import files
+from fabric.api import sudo
 
 from fabulaws.decorators import uses_fabric
 from fabulaws.ubuntu.packages.base import AptMixin
@@ -16,10 +11,9 @@ class PythonMixin(AptMixin):
 
     package_name = 'python'
     python_ppa = None
-    python_packages = ['python', 'python-dev']
+    python_packages = ['python3', 'python3-dev']
     python_install_tools = True
-    python_pip_version = None # install the latest version
-    python_virtualenv_version = None # install the latest version
+    python_virtualenv_version = None  # install the latest version
 
     @uses_fabric
     def install_python_tools(self):
@@ -27,15 +21,12 @@ class PythonMixin(AptMixin):
         Installs the required Python tools from PyPI.
         """
 
-        mirror = 'https://pypi.python.org'
-        version = ''
-        if self.python_pip_version:
-            version = '==%s' % self.python_pip_version
-        sudo("easy_install -i %s/simple/ -U pip%s" % (mirror, version))
+        sudo('curl https://bootstrap.pypa.io/get-pip.py --output /tmp/get-pip.py')
+        sudo("python3 /tmp/get-pip.py")
         version = ''
         if self.python_virtualenv_version:
             version = '==%s' % self.python_virtualenv_version
-        sudo("pip install -i %s/simple/ -U virtualenv%s" % (mirror, version))
+        sudo("pip install -U virtualenv%s" % version)
 
     def setup(self):
         """
@@ -44,5 +35,4 @@ class PythonMixin(AptMixin):
         """
         super(PythonMixin, self).setup()
         if self.python_install_tools:
-            self.install_packages(['python-setuptools'])
             self.install_python_tools()
