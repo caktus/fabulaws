@@ -131,7 +131,7 @@ autoscaling group as unhealthy, and then waiting for the group to create a new,
 healthy instance before proceeding. A serial deployment can be started as
 follows::
 
-    fab deploy_serial:cmyproject,<environment>[,<launch config name>]
+    fab deploy_serial:myproject,<environment>[,<launch config name>]
 
 Again, the launch config is optional and one will be created automatically if
 not specified.

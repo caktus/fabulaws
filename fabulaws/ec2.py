@@ -149,7 +149,7 @@ class EC2Instance(object):
         key = self.conn.create_key_pair(key_name)
         try:
             logger.debug('Created key pair {0}'.format(key_name))
-            key_file = tempfile.NamedTemporaryFile()
+            key_file = tempfile.NamedTemporaryFile(mode="w", encoding="utf-8")
             key_file.write(key.material)
             # make sure the data is there when read by SSH
             key_file.flush()

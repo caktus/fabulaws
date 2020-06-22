@@ -90,10 +90,7 @@ class AptMixinMetaclass(type):
         return new_class
 
 
-class AptMixin(BaseAptMixin):
-
-    __metaclass__ = AptMixinMetaclass
-
+class AptMixin(BaseAptMixin, metaclass=AptMixinMetaclass):
     def setup(self, propagate=True):
         super(AptMixin, self).setup()
         for attr_prefix in self._package_names:

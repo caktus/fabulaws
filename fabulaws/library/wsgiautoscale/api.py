@@ -1420,7 +1420,7 @@ def executel(cmd, *args, **kwargs):
         name = cmd.name.upper()
     else:
         name = str(cmd).upper()
-    arguments = [str(v) for v in args] + ['%s=%s' % (k, v) for k, v in kwargs.items]
+    arguments = [str(v) for v in args] + ['%s=%s' % (k, v) for k, v in kwargs.items()]
     logger.info('\n\n **** %s (%s) ****\n\n' % (name, ', '.join(arguments)))
     execute(cmd, *args, **kwargs)
 
