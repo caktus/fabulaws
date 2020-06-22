@@ -1,7 +1,7 @@
 Release History
 ===============
 
-* v1.0.1 (unreleased)
+* v1.0.1, June 22, 2020
 
   * Minor bug fixes for Python 3 support
 
