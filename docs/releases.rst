@@ -1,7 +1,7 @@
 Release History
 ===============
 
-* v1.0.2, UNRELEASED
+* v1.0.2, July 2, 2020
 
   * Fix error waiting for autoscaling group to finish restarting.
 
