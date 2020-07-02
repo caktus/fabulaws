@@ -2039,7 +2039,7 @@ def _refresh_instances(autoscaling_group):
                         # 30 didn't seem to be long enough.
         # If this is the first instance we're adding, make sure at least one new
         # one comes up before continuing.
-        for i in range(max_inst_create_time/check_period):
+        for i in range(int(max_inst_create_time/check_period)):
             time.sleep(check_period)
             autoscaling_group = _get_autoscaling_group()  # Refresh instances list.
             # Wait for a new instance, if any, to be fully brought up.
