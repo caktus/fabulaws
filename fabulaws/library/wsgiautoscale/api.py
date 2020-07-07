@@ -130,7 +130,8 @@ def _setup_env(deployment_tag=None, environment=None, override_servers=None):
     env.static_root = os.path.join(env.root, 'static_media')
     env.services = os.path.join(env.home, 'services')
     env.nginx_conf = os.path.join(env.services, 'nginx', '%s.conf' % env.environment)
-    env.local_settings_py = os.path.join(env.project_root, 'local_settings.py')
+    env.setdefault('local_settings_py_relative_path', 'local_settings.py')
+    env.local_settings_py = os.path.join(env.project_root, env.local_settings_py_relative_path)
     env.database_name = '%s_%s' % (env.project, env.environment)
     env.staticfiles_s3_bucket = '-'.join([env.deployment_tag, env.environment, 'static', 'files'])
     env.site_domains = env.site_domains_map[env.environment]
