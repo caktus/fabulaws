@@ -124,6 +124,9 @@ static_hosting: remote
 celery_workers:
   main: -c 10 -Q celeryd
 
+# module name for celery app
+  celery_application: proj.celery
+
 # Start this many Gunicorn workers for each CPU core
 gunicorn_worker_multiplier: 8
 
