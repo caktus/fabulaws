@@ -34,12 +34,15 @@ project: myproject
 wsgi_app: myproject.wsgi:application
 requirements_file: requirements/app.txt
 requirements_sdists:
-settings_managepy: myproject.local_settings
+settings_managepy: myproject.settings.local
 static_html:
   upgrade_message: deployment/templates/html/503.html
   healthcheck_override: deployment/templates/html/healthcheck.html
 localsettings_template: deployment/templates/local_settings.py
 logstash_config: deployment/templates/logstash.conf
+# A path to the local settings file relative to the myproject directory. If unset,
+# then local_settings.py is used.
+local_settings_py_relative_path: settings/local.py
 
 # Set gelf_log_host to the host of your Graylog2 server (or other GELF log
 # receiver)
@@ -120,6 +123,9 @@ static_hosting: remote
 # the concurrency and queue name(s)
 celery_workers:
   main: -c 10 -Q celeryd
+
+# module name for celery app
+  celery_application: proj.celery
 
 # Start this many Gunicorn workers for each CPU core
 gunicorn_worker_multiplier: 8
