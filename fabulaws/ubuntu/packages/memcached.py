@@ -32,7 +32,7 @@ class MemcachedMixin(AptMixin):
 
     @uses_fabric
     def memcached_configure(self, **kwargs):
-        for key, (opt, pat) in self.memcached_conf_patterns.iteritems():
+        for key, (opt, pat) in self.memcached_conf_patterns.items():
             if key in kwargs:
                 val = kwargs[key]
             else:
