@@ -709,7 +709,7 @@ def upload_supervisor_conf(run_update=True):
         sudo('rm /etc/supervisor/conf.d/%(project)s-*.conf' % env)
     sudo('ln -s /%(home)s/services/supervisor/%(environment)s.conf /etc/supervisor/conf.d/%(project)s-%(environment)s.conf' % env)
     if run_update:
-        sudo(u'supervisorctl update')
+        sudo('supervisorctl update')
 
 
 @task
@@ -1056,7 +1056,7 @@ def supervisor(command, group, process=None):
         command = '%(supervisor_command)s %(environment)s-%(supervisor_group)s:%(environment)s-%(supervisor_process)s' % env
     else:
         command = '%(supervisor_command)s %(environment)s-%(supervisor_group)s:*' % env
-    sudo(u'supervisorctl %s' % command)
+    sudo('supervisorctl %s' % command)
 
 
 @task

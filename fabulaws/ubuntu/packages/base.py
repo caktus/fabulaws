@@ -20,7 +20,7 @@ class BaseAptMixin(object):
     def install_packages(self, packages):
         """Install apt packages from a list."""
 
-        sudo(u"apt-get -qq -y install %s" % u" ".join(packages))
+        sudo("apt-get -qq -y install %s" % " ".join(packages))
 
     @uses_fabric
     def install_packages_from_file(self, file_name):
@@ -32,7 +32,7 @@ class BaseAptMixin(object):
     def update_apt_sources(self):
         """Update apt source."""
         with settings(warn_only=True):
-            sudo(u"apt-get -qq update || apt-get -qq update")
+            sudo("apt-get -qq update || apt-get -qq update")
 
     @uses_fabric
     def upgrade_packages(self):
@@ -41,7 +41,7 @@ class BaseAptMixin(object):
         self.update_apt_sources()
         # make sure apt/dpkg keep our installed config files, if any, and don't
         # prompt for user input:
-        sudo(u'export DEBIAN_FRONTEND=noninteractive ; apt-get dist-upgrade -y '
+        sudo('export DEBIAN_FRONTEND=noninteractive ; apt-get dist-upgrade -y '
              '-o Dpkg::Options::="--force-confdef" '
              '-o Dpkg::Options::="--force-confold" --force-yes')
 
@@ -50,9 +50,9 @@ class BaseAptMixin(object):
         """Add personal package archive."""
 
         if self.ubuntu_release >= Decimal('12.04'):
-            sudo(u"apt-add-repository -y %s" % name)
+            sudo("apt-add-repository -y %s" % name)
         else:
-            sudo(u"apt-add-repository %s" % name)
+            sudo("apt-add-repository %s" % name)
         self.update_apt_sources()
 
     @uses_fabric

@@ -299,12 +299,12 @@ class PostgresMixin(AptMixin):
         self.sql("ALTER USER %s WITH PASSWORD '%s'" % (username, password))
 
     @uses_fabric
-    def create_db(self, name, owner=None, encoding=u'UTF-8'):
+    def create_db(self, name, owner=None, encoding='UTF-8'):
         """Create a Postgres database."""
 
-        flags = u''
+        flags = ''
         if encoding:
-            flags = u'-E %s' % encoding
+            flags = '-E %s' % encoding
         if owner:
-            flags = u'%s -O %s' % (flags, owner)
+            flags = '%s -O %s' % (flags, owner)
         sudo('createdb %s %s' % (flags, name), user='postgres')
