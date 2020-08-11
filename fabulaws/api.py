@@ -1,12 +1,17 @@
-import os
 import json
+import os
 import tempfile
 
-from fabric.api import *
+from fabric.api import env, local, put, run, sudo
 from fabric.operations import _prefix_commands, _prefix_env_vars
 
-
-__all__ = ['sshagent_run', 'call_python', 'ec2_hostnames', 'ec2_instances', 'answer_sudo']
+__all__ = [
+    "sshagent_run",
+    "call_python",
+    "ec2_hostnames",
+    "ec2_instances",
+    "answer_sudo",
+]
 
 
 def sshagent_run(cmd, user=None):
@@ -18,19 +23,18 @@ def sshagent_run(cmd, user=None):
     This helper uses your system's ssh to do so.
     """
     # Handle context manager modifications
-    wrapped_cmd = _prefix_commands(_prefix_env_vars(cmd), 'remote')
+    wrapped_cmd = _prefix_commands(_prefix_env_vars(cmd), "remote")
     if user is None:
         user = env.user
-    opts = ['-A', '-o ServerAliveInterval=60']
+    opts = ["-A", "-o ServerAliveInterval=60"]
     if env.disable_known_hosts:
-        opts += ['-o StrictHostKeyChecking=no',
-                 '-o UserKnownHostsFile=/dev/null']
+        opts += ["-o StrictHostKeyChecking=no", "-o UserKnownHostsFile=/dev/null"]
     try:
-        host, port = env.host_string.split(':')
-        opts.append('-p %s' % port)
+        host, port = env.host_string.split(":")
+        opts.append("-p %s" % port)
     except ValueError:
         host = env.host_string
-    opts = ' '.join(opts)
+    opts = " ".join(opts)
     return local("ssh %s %s@%s '%s'" % (opts, user, host, wrapped_cmd))
 
 
@@ -41,11 +45,13 @@ def call_python(method, *args):
     method.  Only JSON-serializable arguments and return values are
     supported.
     """
-    module = '.'.join(method.split('.')[:-1])
+    module = ".".join(method.split(".")[:-1])
     args = json.dumps(args)[1:-1]
-    output = run('/usr/bin/env python3 -c \'import json, {module};'
-                 'print(json.dumps({method}({args})))\''
-                 ''.format(module=module, method=method, args=args))
+    output = run(
+        "/usr/bin/env python3 -c 'import json, {module};"
+        "print(json.dumps({method}({args})))'"
+        "".format(module=module, method=method, args=args)
+    )
     return json.loads(output)
 
 
@@ -54,6 +60,7 @@ def ec2_hostnames(*args, **kwargs):
     Returns a list of hostnames for the specified filters.
     """
     from fabulaws.ec2 import EC2Service
+
     return EC2Service().public_dns(*args, **kwargs)
 
 
@@ -62,6 +69,7 @@ def ec2_instances(*args, **kwargs):
     Returns a list of instances for the specified filters.
     """
     from fabulaws.ec2 import EC2Service
+
     return EC2Service().instances(*args, **kwargs)
 
 
@@ -72,32 +80,36 @@ def answer_sudo(cmd, *args, **kwargs):
     (question, answer) pairs.  The questions are in regular expression format,
     so ensure that any special characters are appropriately escaped.
     """
-    answers = kwargs.pop('answers', [])
+    answers = kwargs.pop("answers", [])
     if answers:
         # use shared memory rather than potentially writing passwords to the
         # most likely unencrypted disk
-        tmpdir = os.path.exists('/dev/shm') and '/dev/shm' or None
+        tmpdir = os.path.exists("/dev/shm") and "/dev/shm" or None
         script = tempfile.NamedTemporaryFile(dir=tmpdir)
-        script.writelines([
-            "import pexpect, sys\n",
-            "child = pexpect.spawn('{0}')\n".format(cmd),
-            # the following line may be enabled for debugging purposes, but
-            # will spill passphrases in plain text in log files
-            #"child.logfile = sys.stdout\n"
-        ])
+        script.writelines(
+            [
+                "import pexpect, sys\n",
+                "child = pexpect.spawn('{0}')\n".format(cmd),
+                # the following line may be enabled for debugging purposes, but
+                # will spill passphrases in plain text in log files
+                # "child.logfile = sys.stdout\n"
+            ]
+        )
         for question, answer in answers:
-            script.writelines([
-                "child.expect('{0}')\n".format(question),
-                "child.sendline('{0}')\n".format(answer),
-            ])
+            script.writelines(
+                [
+                    "child.expect('{0}')\n".format(question),
+                    "child.sendline('{0}')\n".format(answer),
+                ]
+            )
         # this is important, otherwise pexect will kill the process before it's
         # finished
         script.writelines(["child.wait()\n"])
         script.flush()
-        remote_file = '/dev/shm/{0}'.format(os.path.basename(script.name))
+        remote_file = "/dev/shm/{0}".format(os.path.basename(script.name))
         put(script.name, remote_file, mirror_local_mode=True)
-        cmd = 'python {0}'.format(remote_file)
+        cmd = "python {0}".format(remote_file)
     result = sudo(cmd, *args, **kwargs)
     if answers:
-        run('rm {0}'.format(remote_file))
+        run("rm {0}".format(remote_file))
     return result

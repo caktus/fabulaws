@@ -3,7 +3,8 @@ from functools import wraps
 
 from fabulaws.ec2 import EC2Instance
 
-__all__ = ['cached_property', 'uses_fabric']
+__all__ = ["cached_property", "uses_fabric"]
+
 
 # copied from http://wiki.python.org/moin/PythonDecoratorLibrary#Cached_Properties
 # (c) 2011 Christopher Arndt, MIT License
@@ -34,10 +35,11 @@ class cached_property(object):
     zero for the cached value to never expire.
 
     To expire a cached property value manually just do::
-    
+
         del instance._cache[<property name>]
 
     """
+
     def __init__(self, ttl=300):
         self.ttl = ttl
 
@@ -68,8 +70,10 @@ def uses_fabric(f):
     @wraps(f)
     def wrapper(self, *args, **kwds):
         if not isinstance(self, EC2Instance):
-            raise ValueError('@uses_fabric can only wrap methods on '
-                             'ECInstance classes')
+            raise ValueError(
+                "@uses_fabric can only wrap methods on " "ECInstance classes"
+            )
         with self:
             return f(self, *args, **kwds)
+
     return wrapper
