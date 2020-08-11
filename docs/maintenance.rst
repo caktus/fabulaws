@@ -22,35 +22,71 @@ Then ask someone who has access to run this command::
 
     fab staging update_sysadmin_users
 
+Updating passwords used in ``local_settings.py``
+------------------------------------------------
+
+First, make sure your local ``fabsecrets_<environment>.py`` file is up to date::
+
+    fab production update_local_fabsecrets
+
+Next, update your local ``fabsecrets_<environment>.py`` file with the new
+password(s), update the corresponding entry in LastPass, and inform any
+developers who may deploy in the future of the updated LastPass entry.
+
+Then, update the secrets on the staging servers::
+
+    fab staging update_server_passwords
+
+Finally, update the local settings file on staging and restart the Celery and
+Gunicorn processes::
+
+    fab staging update_local_settings
+    fab staging supervisor:restart,celery,roles=worker
+    fab staging supervisor:restart,web,roles=web
+
+Note this short method of updating the configuration files involves a brief
+moment of downtime (10-20 seconds). After this completes, check the staging
+environment to make sure everything is working as expected.
+
+On production the process is similarly, but the secrets should be updated with
+a full deployment, whenever possible, to avoid any unnecessary downtime::
+
+    fab production update_server_passwords
+    fab deploy_serial:ccsr-sam,production
+
 Updating New Relic keys
------------------------
++++++++++++++++++++++++
+
+New Relic requires an extra step because its keys are used outside of
+``local_settings.py`` on the server.
 
 To update the New Relic API and License keys, first find the new keys from
 the new account. The License Key can be found from the main account page, and
 the API key can be found via these instructions: https://docs.newrelic.com/docs/apis/api-key
 
-Next, make sure your local fabsecrets_<environment>.py file is up to date::
+Next, make sure your local ``fabsecrets_<environment>.py`` file is up to date::
 
     fab production update_local_fabsecrets
 
 Next, update the ``newrelic_license_key`` and ``newrelic_api_key`` values
 inside the ``fabsecrets_<environment>.py`` file with the new values. Then, update the keys
-on the servers::
+on the staging servers::
 
     fab staging update_server_passwords
-    fab production update_server_passwords
 
 Finally, update the configuration files containing the New Relic keys and
 restart the Celery and Gunicorn processes::
 
     fab update_newrelic_keys:myproject,staging
-    fab update_newrelic_keys:myproject,production
 
 Note this short method of updating the configuration files involves a brief
-moment of downtime (10-20 seconds). If no downtime is desired, you can
-achieve the same result by repeating the following commands for each
-environment, as needed (but it will take much longer, i.e., 30-60 minutes)::
+moment of downtime (10-20 seconds). After this completes, check the staging
+environment to make sure everything is working as expected.
 
+On production the process is similarly, but the secrets should be updated with
+a full deployment, whenever possible, to avoid any unnecessary downtime::
+
+    fab production update_server_passwords
     fab production upload_newrelic_sysmon_conf
     fab production upload_newrelic_conf
     fab deploy_serial:myproject,production
