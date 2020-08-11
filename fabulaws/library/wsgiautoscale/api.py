@@ -1562,7 +1562,7 @@ def deploy_serial_without_autoscaling(deployment_tag, environment, wait=30):
     initial_states = dict([((server.instance.id, elb_name), server.elb_state(elb_name))
                            for server in servers for elb_name in env.elb_names])
     # make sure we have at least two servers in service in the load balancer(s)
-    assert initial_states.values().count('InService') >= 2*len(env.elb_names), \
+    assert list(initial_states.values()).count('InService') >= 2*len(env.elb_names), \
            'Need 2 or more instances per load balancer in service to run deploy_serial_without_autoscaling'
     executel('deploy_worker')
     for server in servers:
