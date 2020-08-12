@@ -1,5 +1,3 @@
-from __future__ import absolute_import
-
 import os
 import sys
 import time
@@ -709,7 +707,7 @@ def upload_supervisor_conf(run_update=True):
         sudo('rm /etc/supervisor/conf.d/%(project)s-*.conf' % env)
     sudo('ln -s /%(home)s/services/supervisor/%(environment)s.conf /etc/supervisor/conf.d/%(project)s-%(environment)s.conf' % env)
     if run_update:
-        sudo(u'supervisorctl update')
+        sudo('supervisorctl update')
 
 
 @task
@@ -1056,7 +1054,7 @@ def supervisor(command, group, process=None):
         command = '%(supervisor_command)s %(environment)s-%(supervisor_group)s:%(environment)s-%(supervisor_process)s' % env
     else:
         command = '%(supervisor_command)s %(environment)s-%(supervisor_group)s:*' % env
-    sudo(u'supervisorctl %s' % command)
+    sudo('supervisorctl %s' % command)
 
 
 @task
@@ -1564,7 +1562,7 @@ def deploy_serial_without_autoscaling(deployment_tag, environment, wait=30):
     initial_states = dict([((server.instance.id, elb_name), server.elb_state(elb_name))
                            for server in servers for elb_name in env.elb_names])
     # make sure we have at least two servers in service in the load balancer(s)
-    assert initial_states.values().count('InService') >= 2*len(env.elb_names), \
+    assert list(initial_states.values()).count('InService') >= 2*len(env.elb_names), \
            'Need 2 or more instances per load balancer in service to run deploy_serial_without_autoscaling'
     executel('deploy_worker')
     for server in servers:

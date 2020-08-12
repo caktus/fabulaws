@@ -46,22 +46,22 @@ class RabbitMqMixin(AptMixin):
     def rabbitmq_command(self, command):
         """Run a rabbitmqctl command."""
 
-        sudo(u'rabbitmqctl %s' % command)
+        sudo('rabbitmqctl %s' % command)
 
     def create_mq_user(self, username, password):
         """Create a rabbitmq user."""
 
-        self.rabbitmq_command(u'add_user %s %s' % (username, password))
+        self.rabbitmq_command('add_user %s %s' % (username, password))
 
     def create_mq_vhost(self, name):
         """Create a rabbitmq vhost."""
 
-        self.rabbitmq_command(u'add_vhost %s' % name)
+        self.rabbitmq_command('add_vhost %s' % name)
 
     def set_mq_vhost_permissions(self, vhost, username, permissions='".*" ".*" ".*"'):
         """Set permssions for a user on a given vhost."""
 
-        self.rabbitmq_command(u'set_permissions -p %s %s %s' % (vhost, username, permissions))
+        self.rabbitmq_command('set_permissions -p %s %s %s' % (vhost, username, permissions))
 
     @uses_fabric
     def rabbitmq_configure(self):
