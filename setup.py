@@ -23,5 +23,5 @@ setup(
         "Programming Language :: Python :: 3.8",
     ],
     long_description=open("README.rst").read(),
-    install_requires=["pyyaml", "boto>=2.39,<3", "fabric3",],
+    install_requires=["pyyaml", "boto>=2.39,<3", "fabric3"],
 )

@@ -11,7 +11,6 @@ repos:
     - id: check-yaml
     - id: check-added-large-files
     - id: check-json
-    - id: flake8
 - repo: https://github.com/psf/black
   rev: 19.10b0
   hooks:
@@ -20,3 +19,7 @@ repos:
   rev: 5.3.2
   hooks:
     - id: isort
+- repo: https://gitlab.com/pycqa/flake8
+  rev: 3.8.3
+  hooks:
+    - id: flake8
