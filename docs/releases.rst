@@ -1,6 +1,11 @@
 Release History
 ===============
 
+* v1.0.4, August 12, 2020
+
+  * Minor bug fixes from Python 3 upgrade
+  * Reformat the code via Black, Flake8, and isort
+
 * v1.0.3, July 16, 2020
 
   * Allow customizing where the custom settings file is generated
