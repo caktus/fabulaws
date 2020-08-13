@@ -1187,13 +1187,24 @@ def dbrestore(filepath):
         abort("Aborted.")
     # make sure we have the key before taking down the servers
     dest = "/tmp"
+    # local AND remote temp path to private key file
     private_key = os.path.join(dest, "caktus_admin-private.asc")
-    local(
-        "gpg --export-secret-keys --armor Caktus > {0}".format(
-            os.path.join(dest, "caktus_admin-private.asc")
-        )
-    )
+    local("gpg --export-secret-keys --armor Caktus > {0}".format(private_key))
     try:
+        put(private_key, dest)
+        with settings(warn_only=True):
+            sudo(
+                'gpg --homedir {0} --batch --delete-secret-keys "{1}"'.format(
+                    env.gpg_dir, env.backup_key_fingerprint
+                ),
+                user=env.webserver_user,
+            )
+        sudo(
+            "gpg --pinentry-mode=loopback --homedir {0} --import {1}".format(
+                env.gpg_dir, private_key
+            ),
+            user=env.webserver_user,
+        )
         executel("begin_upgrade")
         executel("supervisor", "stop", "web", roles=["web"])
         executel("supervisor", "stop", "celery", roles=["worker"])
@@ -1204,39 +1215,25 @@ def dbrestore(filepath):
             env.database_name, owner=env.database_user
         )
         executel("supervisor", "start", "pgbouncer")
-        with cd(dest):
-            put(private_key, dest)
-            with settings(warn_only=True):
-                sudo(
-                    'gpg --homedir {0} --batch --delete-secret-keys "{1}"'.format(
-                        env.gpg_dir, env.backup_key_fingerprint
-                    ),
-                    user=env.webserver_user,
-                )
-            sudo(
-                "gpg --homedir {0} --import {1}".format(
-                    env.gpg_dir, os.path.split(private_key)[1]
-                ),
-                user=env.webserver_user,
-            )
-            _call_managepy(
-                "dbrestore --database=default --input-filename={0}".format(filepath),
-                pty=True,
-            )
+        _call_managepy(
+            "dbrestore --database=default --input-filename={0}".format(filepath),
+            pty=True,
+        )
+        sudo("gpg --homedir {0} -K".format(env.gpg_dir), user=env.webserver_user)
+        executel("migrate")
+        executel("supervisor", "start", "celery", roles=["worker"])
+        executel("supervisor", "start", "web", roles=["web"])
+        executel("end_upgrade")
+    finally:
+        with settings(warn_only=True):
             sudo(
                 'gpg --homedir {0} --batch --delete-secret-keys "{1}"'.format(
                     env.gpg_dir, env.backup_key_fingerprint
                 ),
                 user=env.webserver_user,
             )
-            sudo("gpg --homedir {0} -K".format(env.gpg_dir), user=env.webserver_user)
-            sudo("rm {0}".format(os.path.join(dest, os.path.split(private_key)[1])))
-        executel("migrate")
-        executel("supervisor", "start", "celery", roles=["worker"])
-        executel("supervisor", "start", "web", roles=["web"])
-        executel("end_upgrade")
-    finally:
-        local("rm {0}".format(private_key))
+        sudo("rm -f {0}".format(private_key))
+        local("rm -f {0}".format(private_key))
 
 
 @task
