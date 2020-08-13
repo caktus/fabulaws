@@ -1,6 +1,10 @@
 Release History
 ===============
 
+* v1.0.5, August 13, 2020
+
+  * Update ``dbrestore`` command to work with Ubuntu 20.04
+
 * v1.0.4, August 12, 2020
 
   * Minor bug fixes from Python 3 upgrade
