@@ -807,6 +807,7 @@ def upload_supervisor_conf(run_update=True):
     """Upload Supervisor configuration from the template."""
 
     require("environment", provided_by=env.environments)
+    _load_passwords(["database_password"])
     destination = os.path.join(env.services, "supervisor", "%(environment)s.conf" % env)
     context = env.copy()
     cpu_count = int(run("cat /proc/cpuinfo|grep processor|wc -l"))
@@ -816,6 +817,10 @@ def upload_supervisor_conf(run_update=True):
         getattr(env, "gunicorn_worker_multiplier", 4)
     )
     context["current_role"] = _current_roles()[0]
+    entrypoint_dest = os.path.join(
+        env.services, "supervisor", "gunicorn-%(environment)s-entrypoint.sh" % env
+    )
+    context["gunicorn_entrypoint"] = entrypoint_dest
     _upload_template(
         "supervisor.conf",
         destination,
@@ -824,6 +829,15 @@ def upload_supervisor_conf(run_update=True):
         use_jinja=True,
         template_dir=env.templates_dir,
     )
+    _upload_template(
+        "gunicorn-entrypoint.sh",
+        entrypoint_dest,
+        context=context,
+        user=env.deploy_user,
+        use_jinja=True,
+        template_dir=env.templates_dir,
+    )
+    sudo("chmod a+x {}".format(entrypoint_dest))
     with settings(warn_only=True):
         sudo("rm /etc/supervisor/conf.d/%(project)s-*.conf" % env)
     sudo(
