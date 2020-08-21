@@ -37,6 +37,7 @@ from fabric.api import (
 from fabric.colors import red
 from fabric.contrib.files import append, exists, sed, uncomment, upload_template
 from fabric.exceptions import NetworkError
+from fabric.main import list_commands
 from fabric.network import disconnect_all
 
 from fabulaws.api import answer_sudo, ec2_instances, sshagent_run
@@ -584,6 +585,10 @@ def _new(
             executel("install_awslogs", hosts=env.roledefs[role])
         if role in ("worker", "web"):
             executel("bootstrap", hosts=env.roledefs[role])
+            # Run a "post_bootstrap" task, if it's defined.
+            available_commands = list_commands("", "short")
+            if "post_bootstrap" in available_commands:
+                executel("post_bootstrap")
     except:  # noqa: E722
         logger.exception(
             "server post-setup failed. tags=%s; terminate_on_failure=%s.",
