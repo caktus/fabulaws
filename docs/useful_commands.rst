@@ -52,7 +52,11 @@ Misc
 EC2 instances
 -------------
 
-* ``fab new:deployment,environment,role[,avail_zone[,count]]``
+* ``fab new:deployment,environment,role[,avail_zone[,count]]`` - set up a new EC2 instance,
+  including installing a number of things. Note: FabulAWS runs a ``bootstrap`` task as a
+  part of ``new``. If you would like FabulAWS to also run some tasks after its ``bootstrap``
+  task, define a ``post_bootstrap`` task in your fabfile.py, and FabulAWS will
+  automatically run it after running its ``bootstrap`` task.
 
 Handling secrets
 ----------------
