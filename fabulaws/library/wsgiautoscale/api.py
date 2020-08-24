@@ -795,9 +795,12 @@ def setup_dirs():
 def _upload_template(filename, destination, **kwargs):
     """Upload template and chown to given user"""
     user = kwargs.pop("user")
+    mode = kwargs.pop("mode", None)
     kwargs["use_sudo"] = True
     upload_template(filename, destination, **kwargs)
     sudo("chown %(user)s:%(user)s %(dest)s" % {"user": user, "dest": destination})
+    if mode:
+        sudo("chmod %(mode)s %(dest)s" % {"mode": mode, "dest": destination})
 
 
 @task
@@ -832,12 +835,10 @@ def upload_supervisor_conf(run_update=True):
     _upload_template(
         "gunicorn-entrypoint.sh",
         entrypoint_dest,
-        context=context,
         user=env.deploy_user,
-        use_jinja=True,
+        mode="0755",
         template_dir=env.templates_dir,
     )
-    sudo("chmod a+x {}".format(entrypoint_dest))
     with settings(warn_only=True):
         sudo("rm /etc/supervisor/conf.d/%(project)s-*.conf" % env)
     sudo(
