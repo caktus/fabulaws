@@ -795,9 +795,12 @@ def setup_dirs():
 def _upload_template(filename, destination, **kwargs):
     """Upload template and chown to given user"""
     user = kwargs.pop("user")
+    mode = kwargs.pop("mode", None)
     kwargs["use_sudo"] = True
     upload_template(filename, destination, **kwargs)
     sudo("chown %(user)s:%(user)s %(dest)s" % {"user": user, "dest": destination})
+    if mode:
+        sudo("chmod %(mode)s %(dest)s" % {"mode": mode, "dest": destination})
 
 
 @task
@@ -807,6 +810,7 @@ def upload_supervisor_conf(run_update=True):
     """Upload Supervisor configuration from the template."""
 
     require("environment", provided_by=env.environments)
+    _load_passwords(["database_password"])
     destination = os.path.join(env.services, "supervisor", "%(environment)s.conf" % env)
     context = env.copy()
     cpu_count = int(run("cat /proc/cpuinfo|grep processor|wc -l"))
@@ -816,12 +820,23 @@ def upload_supervisor_conf(run_update=True):
         getattr(env, "gunicorn_worker_multiplier", 4)
     )
     context["current_role"] = _current_roles()[0]
+    entrypoint_dest = os.path.join(
+        env.services, "supervisor", "gunicorn-%(environment)s-entrypoint.sh" % env
+    )
+    context["gunicorn_entrypoint"] = entrypoint_dest
     _upload_template(
         "supervisor.conf",
         destination,
         context=context,
         user=env.deploy_user,
         use_jinja=True,
+        template_dir=env.templates_dir,
+    )
+    _upload_template(
+        "gunicorn-entrypoint.sh",
+        entrypoint_dest,
+        user=env.deploy_user,
+        mode="0755",
         template_dir=env.templates_dir,
     )
     with settings(warn_only=True):
