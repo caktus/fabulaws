@@ -1453,6 +1453,11 @@ def reload_production_db(prod_env=env.default_deployment, src_env="production"):
     executel("end_upgrade")
     executel("resume_autoscaling_processes", env.deployment_tag, env.environment)
 
+    # Run a "post_reload_production_db" task, if it's defined.
+    available_commands = list_commands("", "short")
+    if "post_reload_production_db" in available_commands:
+        executel("post_reload_production_db")
+
 
 @task
 @roles("db-primary")
