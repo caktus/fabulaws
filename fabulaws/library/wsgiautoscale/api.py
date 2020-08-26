@@ -1935,6 +1935,11 @@ def install_munin():
 @task
 @parallel
 def install_rsyslog():
+    # Run a "pre_install_rsyslog" task, if it's defined.
+    available_commands = list_commands("", "short")
+    if "pre_install_rsyslog" in available_commands:
+        executel("pre_install_rsyslog")
+
     require("environment", provided_by=env.environments)
     context = dict(env)
     context["current_role"] = _current_roles()[0]
