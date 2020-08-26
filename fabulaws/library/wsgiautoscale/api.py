@@ -585,10 +585,6 @@ def _new(
             executel("install_awslogs", hosts=env.roledefs[role])
         if role in ("worker", "web"):
             executel("bootstrap", hosts=env.roledefs[role])
-            # Run a "post_bootstrap" task, if it's defined.
-            available_commands = list_commands("", "short")
-            if "post_bootstrap" in available_commands:
-                executel("post_bootstrap")
     except:  # noqa: E722
         logger.exception(
             "server post-setup failed. tags=%s; terminate_on_failure=%s.",
@@ -1072,6 +1068,11 @@ def bootstrap(purge=False):
     update_services()
     create_virtualenv()
     update_requirements()
+
+    # Run a "post_bootstrap" task, if it's defined.
+    available_commands = list_commands("", "short")
+    if "post_bootstrap" in available_commands:
+        executel("post_bootstrap")
 
 
 # CODE DEPLOYMENT
