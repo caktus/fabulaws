@@ -1,7 +1,11 @@
 Release History
 ===============
 
-* v1.0.5, August 27, 2020
+* v1.0.7, August 27, 2020
+
+  * Fix bug introduced in 1.0.6 with pre/post tasks running on more hosts than intended
+
+* v1.0.6, August 27, 2020
 
   * Add hooks to fix pre/post commands for ``bootstrap``, ``reload_production_db``,
     and ``install_rsyslog``
