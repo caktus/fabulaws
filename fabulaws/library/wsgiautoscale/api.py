@@ -1087,7 +1087,7 @@ def bootstrap(purge=False):
     # Run a "post_bootstrap" task, if it's defined.
     available_commands = list_commands("", "short")
     if "post_bootstrap" in available_commands:
-        executel("post_bootstrap")
+        executel("post_bootstrap", hosts=[env.host])
 
 
 # CODE DEPLOYMENT
@@ -1472,7 +1472,7 @@ def reload_production_db(prod_env=env.default_deployment, src_env="production"):
     # Run a "post_reload_production_db" task, if it's defined.
     available_commands = list_commands("", "short")
     if "post_reload_production_db" in available_commands:
-        executel("post_reload_production_db")
+        executel("post_reload_production_db", hosts=[env.host])
 
 
 @task
@@ -1959,7 +1959,7 @@ def install_rsyslog():
     # Run a "pre_install_rsyslog" task, if it's defined.
     available_commands = list_commands("", "short")
     if "pre_install_rsyslog" in available_commands:
-        executel("pre_install_rsyslog")
+        executel("pre_install_rsyslog", hosts=[env.host])
 
     require("environment", provided_by=env.environments)
     context = dict(env)
