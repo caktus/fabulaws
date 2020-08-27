@@ -1,6 +1,12 @@
 Release History
 ===============
 
+* v1.0.5, August 27, 2020
+
+  * Add hooks to fix pre/post commands for ``bootstrap``, ``reload_production_db``,
+    and ``install_rsyslog``
+  * Add gunicorn entrypoint script to wait for database connection on launch
+
 * v1.0.5, August 13, 2020
 
   * Update ``dbrestore`` command to work with Ubuntu 20.04
