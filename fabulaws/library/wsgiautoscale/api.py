@@ -37,6 +37,7 @@ from fabric.api import (
 from fabric.colors import red
 from fabric.contrib.files import append, exists, sed, uncomment, upload_template
 from fabric.exceptions import NetworkError
+from fabric.main import list_commands
 from fabric.network import disconnect_all
 
 from fabulaws.api import answer_sudo, ec2_instances, sshagent_run
@@ -1083,6 +1084,11 @@ def bootstrap(purge=False):
     create_virtualenv()
     update_requirements()
 
+    # Run a "post_bootstrap" task, if it's defined.
+    available_commands = list_commands("", "short")
+    if "post_bootstrap" in available_commands:
+        executel("post_bootstrap")
+
 
 # CODE DEPLOYMENT
 
@@ -1462,6 +1468,11 @@ def reload_production_db(prod_env=env.default_deployment, src_env="production"):
     executel("supervisor", "start", "web", roles=["web"])
     executel("end_upgrade")
     executel("resume_autoscaling_processes", env.deployment_tag, env.environment)
+
+    # Run a "post_reload_production_db" task, if it's defined.
+    available_commands = list_commands("", "short")
+    if "post_reload_production_db" in available_commands:
+        executel("post_reload_production_db")
 
 
 @task
@@ -1945,6 +1956,11 @@ def install_munin():
 @task
 @parallel
 def install_rsyslog():
+    # Run a "pre_install_rsyslog" task, if it's defined.
+    available_commands = list_commands("", "short")
+    if "pre_install_rsyslog" in available_commands:
+        executel("pre_install_rsyslog")
+
     require("environment", provided_by=env.environments)
     context = dict(env)
     context["current_role"] = _current_roles()[0]

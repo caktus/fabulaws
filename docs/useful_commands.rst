@@ -52,7 +52,11 @@ Misc
 EC2 instances
 -------------
 
-* ``fab new:deployment,environment,role[,avail_zone[,count]]``
+* ``fab new:deployment,environment,role[,avail_zone[,count]]`` - set up a new EC2 instance,
+  including installing a number of things. Note: FabulAWS runs a ``bootstrap`` task as a
+  part of ``new``. If you would like FabulAWS to also run some tasks after its ``bootstrap``
+  task, define a ``post_bootstrap`` task in your fabfile.py, and FabulAWS will
+  automatically run it after running its ``bootstrap`` task.
 
 Handling secrets
 ----------------
@@ -99,7 +103,10 @@ Databases
 ---------
 
 * ``fab environment upload_pgbouncer_conf``
-* ``fab reload_production_db[:prod_env[,src_env]]``
+* ``fab reload_production_db[:prod_env[,src_env]]`` - Note: If you would like FabulAWS
+  to also run some tasks after its ``reload_production_db`` task, define a
+  ``post_reload_production_db`` task in your fabfile.py, and FabulAWS will
+  automatically run it after running its ``reload_production_db`` task.
 * ``fab reset_local_db:dbname``
 * ``fab environment reset_slaves`` - this resets the config & data on the db slaves and is a good
   way to get things back into a working state if the replication seems broken
