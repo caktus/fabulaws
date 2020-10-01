@@ -68,8 +68,8 @@ class BaseInstance(FirewallMixin, UbuntuInstance):
         users = [
             (n, os.path.join(users_dir, n))
             for n in os.listdir(users_dir)
-            if "." not in n
-        ]  # skip files ending in '.gecos' or other suffixes
+            if not n.endswith(".gecos")
+        ]  # skip files ending in '.gecos'
         return users
 
     def _add_swap(self, path):
