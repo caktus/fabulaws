@@ -1,6 +1,10 @@
 Release History
 ===============
 
+* v1.0.?, ???
+
+  * Fix bug where users with periods in their usernames were ignored
+
 * v1.0.7, August 27, 2020
 
   * Fix bug introduced in 1.0.6 with pre/post tasks running on more hosts than intended
