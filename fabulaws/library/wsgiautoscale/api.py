@@ -1215,7 +1215,7 @@ def dbrestore(filepath):
         put(private_key, dest)
         with settings(warn_only=True):
             sudo(
-                'gpg --homedir {0} --batch --delete-secret-keys "{1}"'.format(
+                'gpg --homedir {0} --batch --yes --delete-secret-keys "{1}"'.format(
                     env.gpg_dir, env.backup_key_fingerprint
                 ),
                 user=env.webserver_user,
@@ -1248,7 +1248,7 @@ def dbrestore(filepath):
     finally:
         with settings(warn_only=True):
             sudo(
-                'gpg --homedir {0} --batch --delete-secret-keys "{1}"'.format(
+                'gpg --homedir {0} --batch --yes --delete-secret-keys "{1}"'.format(
                     env.gpg_dir, env.backup_key_fingerprint
                 ),
                 user=env.webserver_user,
