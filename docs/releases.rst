@@ -1,7 +1,7 @@
 Release History
 ===============
 
-* v1.0.?, ???
+* v1.0.8, October 26, 2020
 
   * Fix bug where users with periods in their usernames were ignored
   * Pass ``--yes`` to ``gpg`` to auto-confirm removal of private key from key ring during dbrestore process
