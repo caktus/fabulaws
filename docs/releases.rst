@@ -1,7 +1,17 @@
 Release History
 ===============
 
-* v1.0.5, August 27, 2020
+* v1.0.8, October 26, 2020
+
+  * Fix bug where users with periods in their usernames were ignored
+  * Pass ``--yes`` to ``gpg`` to auto-confirm removal of private key from key ring during dbrestore process
+  * Set ``autostart=true`` for celerybeat and celerycam supervisor processes on worker
+
+* v1.0.7, August 27, 2020
+
+  * Fix bug introduced in 1.0.6 with pre/post tasks running on more hosts than intended
+
+* v1.0.6, August 27, 2020
 
   * Add hooks to fix pre/post commands for ``bootstrap``, ``reload_production_db``,
     and ``install_rsyslog``

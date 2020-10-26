@@ -6,3 +6,5 @@ fabulaws.egg-info/
 *~
 docs/_build/
 .tox
+.python-version
+.vscode
