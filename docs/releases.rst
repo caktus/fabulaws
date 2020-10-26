@@ -5,6 +5,7 @@ Release History
 
   * Fix bug where users with periods in their usernames were ignored
   * Pass ``--yes`` to ``gpg`` to auto-confirm removal of private key from key ring during dbrestore process
+  * Set ``autostart=true`` for celerybeat and celerycam supervisor processes on worker
 
 * v1.0.7, August 27, 2020
 
