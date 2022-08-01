@@ -2,9 +2,11 @@
 config.py
 build/
 dist/
+.idea/
 fabulaws.egg-info/
 *~
 docs/_build/
 .tox
 .python-version
 .vscode
+*.iml
