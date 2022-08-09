@@ -1,9 +1,12 @@
+import logging
 from decimal import Decimal
 
 from fabric.api import settings, sudo
 from fabric.contrib import files
 
 from fabulaws.decorators import uses_fabric
+
+logger = logging.getLogger(__name__)
 
 
 class BaseAptMixin(object):
@@ -21,19 +24,24 @@ class BaseAptMixin(object):
     def install_packages(self, packages):
         """Install apt packages from a list."""
 
-        sudo("apt-get -qq -y install %s" % " ".join(packages))
+        sudo(
+            "export DEBIAN_FRONTEND=noninteractive ; apt-get -qq -y install %s"
+            % " ".join(packages)
+        )
 
     @uses_fabric
     def install_packages_from_file(self, file_name):
         """Install apt packages from a file list."""
-
         self.install_packages(self._read_lines_from_file(file_name))
 
     @uses_fabric
     def update_apt_sources(self):
         """Update apt source."""
+        logger.info("Update apt source.")
         with settings(warn_only=True):
-            sudo("apt-get -qq update || apt-get -qq update")
+            sudo(
+                "export DEBIAN_FRONTEND=noninteractive ; apt-get -qq update || apt-get -qq update"
+            )
 
     @uses_fabric
     def upgrade_packages(self):
@@ -42,6 +50,7 @@ class BaseAptMixin(object):
         self.update_apt_sources()
         # make sure apt/dpkg keep our installed config files, if any, and don't
         # prompt for user input:
+        logger.info("Upgrading Packages")
         sudo(
             "export DEBIAN_FRONTEND=noninteractive ; apt-get dist-upgrade -y "
             '-o Dpkg::Options::="--force-confdef" '

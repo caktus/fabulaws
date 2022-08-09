@@ -73,7 +73,7 @@ env.role_class_map = {
 }
 
 config_file = "fabulaws-config.yml"
-config = yaml.load(open(config_file, "r"))
+config = yaml.full_load(open(config_file, "r"))
 for key, value in config.items():
     setattr(env, key, value)
 _reset_hosts()
@@ -505,7 +505,7 @@ def _new(
     terminate_on_failure=False,
     **kwargs
 ):
-    """ create new server on AWS using the given deployment, environment, and role """
+    """create new server on AWS using the given deployment, environment, and role"""
     if deployment not in env.deployments:
         abort("Choose a valid deployment: %s" % ", ".join(env.deployments))
     if environment not in env.environments:
@@ -729,7 +729,7 @@ def vcs(cmd, args=None):
 @runs_once
 @roles("worker")
 def update_local_fabsecrets():
-    """ create or update the local fabsecrets_<environment>.py file based on the passwords on the server """
+    """create or update the local fabsecrets_<environment>.py file based on the passwords on the server"""
 
     require("environment", provided_by=env.environments)
 
@@ -763,7 +763,7 @@ def update_local_fabsecrets():
 @parallel
 @roles("web", "worker")
 def clone_repo():
-    """ clone a new copy of the code repository """
+    """clone a new copy of the code repository"""
 
     with cd(env.root):
         vcs("clone", [env.repo, env.code_root])
@@ -775,7 +775,7 @@ def clone_repo():
 @parallel
 @roles("web", "worker")
 def setup_dirs():
-    """ create (if necessary) and make writable uploaded media, log, etc. directories """
+    """create (if necessary) and make writable uploaded media, log, etc. directories"""
 
     require("environment", provided_by=env.environments)
     sudo("mkdir -p %(log_dir)s" % env, user=env.deploy_user)
@@ -999,7 +999,7 @@ def upload_newrelic_conf():
 @parallel
 @roles("web", "worker")
 def update_services():
-    """ upload changes to services configurations as nginx """
+    """upload changes to services configurations as nginx"""
 
     setup_dirs()
     upload_newrelic_conf()
@@ -1013,7 +1013,7 @@ def update_services():
 @parallel
 @roles("web", "worker")
 def create_virtualenv():
-    """ setup virtualenv on remote host """
+    """setup virtualenv on remote host"""
 
     require("virtualenv_root", provided_by=env.environments)
     cmd = ["virtualenv", "--clear", "--python=%(python)s" % env, env.virtualenv_root]
@@ -1024,7 +1024,7 @@ def create_virtualenv():
 @parallel
 @roles("web", "worker")
 def update_requirements():
-    """ update external dependencies on remote host """
+    """update external dependencies on remote host"""
 
     require("code_root", provided_by=env.environments)
     # add HOME= so if there's an error, pip can save the log (Fabric doesn't
@@ -1042,7 +1042,7 @@ def update_requirements():
 @parallel
 @roles("web", "worker")
 def update_local_settings():
-    """ create local_settings.py on the remote host """
+    """create local_settings.py on the remote host"""
 
     require("environment", provided_by=env.environments)
     _load_passwords(env.password_names)
@@ -1072,7 +1072,7 @@ def update_local_settings():
 @parallel
 @roles("web", "worker")
 def bootstrap(purge=False):
-    """ initialize remote host environment (virtualenv, deploy, update) """
+    """initialize remote host environment (virtualenv, deploy, update)"""
 
     require("environment", provided_by=env.environments)
 
@@ -1437,7 +1437,7 @@ def add_all_to_elb():
 @task
 @roles("db-primary")  # only supported on combo web & database servers
 def reload_production_db(prod_env=env.default_deployment, src_env="production"):
-    """ Replace the testing or staging database with the production database """
+    """Replace the testing or staging database with the production database"""
     if env.environment not in ("staging", "testing"):
         abort("prod_to_staging requires the staging or testing environment.")
     executel("suspend_autoscaling_processes", env.deployment_tag, env.environment)
@@ -1459,7 +1459,8 @@ def reload_production_db(prod_env=env.default_deployment, src_env="production"):
         )
     )
     load_cmd = 'bash -o pipefail -c "{dump_cmd} | psql {db_name}"'.format(
-        dump_cmd=dump_cmd, db_name=env.database_name,
+        dump_cmd=dump_cmd,
+        db_name=env.database_name,
     )
     sshagent_run(load_cmd, user=env.deploy_user)
     executel("supervisor", "start", "pgbouncer")
@@ -1478,7 +1479,7 @@ def reload_production_db(prod_env=env.default_deployment, src_env="production"):
 @task
 @roles("db-primary")
 def reset_local_db(db_name):
-    """ Replace the local database with the remote database """
+    """Replace the local database with the remote database"""
 
     require("environment", provided_by=env.environments)
     answer = prompt(
@@ -1494,7 +1495,9 @@ def reset_local_db(db_name):
         local("dropdb {0}".format(db_name))
     local("createdb {0}".format(db_name))
     cmd = "ssh -C {user}@{host} pg_dump -Ox {db_name} | ".format(
-        user=env.deploy_user, host=env.host_string, db_name=env.database_name,
+        user=env.deploy_user,
+        host=env.host_string,
+        db_name=env.database_name,
     )
     cmd += "psql {0}".format(db_name)
     local(cmd)
@@ -1561,14 +1564,20 @@ def update_sysadmin_users():
 
 @task
 def upgrade_packages():
-    """ update packages on the servers """
+    """update packages on the servers"""
 
     with settings(warn_only=True):
-        sudo("apt-get -qq update || apt-get -qq update")
+        sudo(
+            "export DEBIAN_FRONTEND=noninteractive ; apt-get -qq update || apt-get -qq update"
+        )
     if "web" in _current_roles() or "worker" in _current_roles():
         packages = env.app_server_packages
-        sudo("apt-get -qq -y install {0}".format(" ".join(packages)))
-    sudo("apt-get -qq -y upgrade")
+        sudo(
+            "export DEBIAN_FRONTEND=noninteractive ; apt-get -qq -y install {0}".format(
+                " ".join(packages)
+            )
+        )
+    sudo("export DEBIAN_FRONTEND=noninteractive ; apt-get -qq -y upgrade")
 
 
 @task
@@ -1946,7 +1955,9 @@ def recreate_servers(deployment_tag, environment, wait=30):
 @parallel
 def install_munin():
     require("environment", provided_by=env.environments)
-    sudo("apt-get -qq -y install munin-node munin-plugins-extra libdbd-pg-perl")
+    sudo(
+        "export DEBIAN_FRONTEND=noninteractive ; apt-get -qq -y install munin-node munin-plugins-extra libdbd-pg-perl"
+    )
     append("/etc/munin/munin-node.conf", "cidr_allow 10.0.0.0/8", use_sudo=True)
     append("/etc/munin/munin-node.conf", "cidr_allow 172.16.0.0/12", use_sudo=True)
     append("/etc/munin/munin-node.conf", "cidr_allow 192.168.0.0/16", use_sudo=True)
@@ -1978,10 +1989,14 @@ def install_rsyslog():
 
     output = run("rsyslogd -v")
     if "rsyslogd 8" not in output:
-        sudo("add-apt-repository --yes ppa:adiscon/v8-stable")
+        sudo(
+            "export DEBIAN_FRONTEND=noninteractive ; add-apt-repository --yes ppa:adiscon/v8-stable"
+        )
         with settings(warn_only=True):
-            sudo("apt-get -qq update || apt-get -qq update")
-        sudo("apt-get -qq -y install rsyslog")
+            sudo(
+                "export DEBIAN_FRONTEND=noninteractive ; apt-get -qq update || apt-get -qq update"
+            )
+        sudo("export DEBIAN_FRONTEND=noninteractive ; apt-get -qq -y install rsyslog")
 
     print("Ignore any useradd or chgrp warnings below.")
     with settings(warn_only=True):
@@ -2012,7 +2027,9 @@ def install_logstash():
     _upload_template(template, destination, user="root", context=context)
     with (cd("/tmp")):
         if not exists("logstash.jar"):
-            sudo("apt-get -qq -y install default-jre")
+            sudo(
+                "export DEBIAN_FRONTEND=noninteractive ; apt-get -qq -y install default-jre"
+            )
             sudo(
                 "wget https://download.elasticsearch.org/logstash/logstash/logstash-1.1.7-monolithic.jar -O logstash.jar",
                 user=env.deploy_user,
@@ -2058,7 +2075,7 @@ def install_awslogs():
             user=env.deploy_user,
         )
         # This script only supports Python 2.6 - 3.5, so make sure Python 2.7 is installed (any Python 3 version is likely too new)
-        sudo("apt-get install -y python2.7")
+        sudo("export DEBIAN_FRONTEND=noninteractive ; apt-get install -y python2.7")
         sudo(
             "python2.7 awslogs-agent-setup.py --region us-east-1 --non-interactive --configfile awslogs.conf"
         )
