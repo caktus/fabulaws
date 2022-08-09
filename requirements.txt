@@ -1,9 +1,9 @@
-fabric3
-boto3
-pyyaml
+fabric<2.0
+boto>=2.39,<3
+pyyaml<5.5,>=3.10
 awacs==0.5.4
 troposphere==2.6.1
 flake8==3.8.3
 isort==5.3.2
-black==19.10b0
-pre-commit==2.6.0
+black==22.6.0
+pre-commit==2.20.0

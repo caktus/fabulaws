@@ -10,3 +10,5 @@ docs/_build/
 .python-version
 .vscode
 *.iml
+.direnv/
+.envrc
