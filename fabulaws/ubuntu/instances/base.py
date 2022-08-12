@@ -77,7 +77,8 @@ class UbuntuInstance(BaseAptMixin, EC2Instance):
         run("dmesg")
         raise ValueError(
             "Devices {0} never appeared; nvme_devs={1}.".format(
-                ", ".join(devices), str(nvme_devs),
+                ", ".join(devices),
+                str(nvme_devs),
             )
         )
 
@@ -291,6 +292,13 @@ class UbuntuInstance(BaseAptMixin, EC2Instance):
         a list of (username, keyfile) tuples.  The users will be created with
         empty passwords.
         """
+
+        # This reverts Ubuntu >= 21.04 back to more permissive home directory permissions
+        # Without this many setup processes fail because they cannot access files and directories
+        # within the /home/sam directory
+        sudo("dpkg-reconfigure -f noninteractive adduser")
+        sudo(r"sed -i 's/^\(HOME_MODE\s\+0750\)/#\1/' /etc/login.defs")
+
         if self.admin_groups:
             groups = "-G {0}".format(",".join(self.admin_groups))
         else:
