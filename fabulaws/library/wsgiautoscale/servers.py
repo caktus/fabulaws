@@ -1,3 +1,4 @@
+import logging
 import os
 
 from fabric.api import env, settings, sudo
@@ -11,6 +12,8 @@ from fabulaws.ubuntu.packages.postgres import PostgresMixin
 from fabulaws.ubuntu.packages.python import PythonMixin
 from fabulaws.ubuntu.packages.rabbitmq import RabbitMqMixin
 from fabulaws.ubuntu.packages.redis import RedisMixin
+
+logger = logging.getLogger(__name__)
 
 __all__ = [
     "CacheInstance",
@@ -307,7 +310,7 @@ class AppMixin(PythonMixin):
 
         node_version = getattr(env, "node_version", "6.x")
         sudo("curl -sL https://deb.nodesource.com/setup_%s | bash -" % node_version)
-        sudo("apt-get -qq -y install nodejs")
+        sudo("export DEBIAN_FRONTEND=noninteractive ; apt-get -qq -y install nodejs")
         less_version = getattr(env, "less_version", "1.3.3")
         sudo("npm install -g less@%s" % less_version)
         sudo("npm install -g yuglify")
