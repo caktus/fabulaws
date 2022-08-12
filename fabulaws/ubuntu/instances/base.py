@@ -294,8 +294,9 @@ class UbuntuInstance(BaseAptMixin, EC2Instance):
         """
 
         # This reverts Ubuntu >= 21.04 back to more permissive home directory permissions
+        # https://ubuntu.com/blog/private-home-directories-for-ubuntu-21-04
         # Without this many setup processes fail because they cannot access files and directories
-        # within the /home/sam directory
+        # within the /home/sam directory.
         sudo("dpkg-reconfigure -f noninteractive adduser")
         sudo(r"sed -i 's/^\(HOME_MODE\s\+0750\)/#\1/' /etc/login.defs")
 
