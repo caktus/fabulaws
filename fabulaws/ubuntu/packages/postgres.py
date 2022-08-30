@@ -76,7 +76,9 @@ class PostgresMixin(AptMixin):
         # Override individual default settings with whatever settings the project has specified.
         self.postgresql_settings = self.postgresql_settings.copy()
         self.postgresql_settings.update(db_settings.pop("postgresql_settings", {}))
-
+        self.pg_pw_encryption = self.postgresql_settings.get(
+            "password_encryption", default="md5"
+        )
         if db_settings:
             # There were keys we did not recognize; complain rather than let the
             # user think we're applying setttings that we're not.
@@ -221,7 +223,9 @@ class PostgresMixin(AptMixin):
         self.pg_set_str("listen_addresses", "*")
         files.uncomment(self.pg_hba, "local +replication", use_sudo=True)
         for ip_range in ip_ranges:
-            hostssl_line = f"hostssl    all    all    {ip_range} {self.postgresql_settings.get('password_encryption', default='md5')}"
+            hostssl_line = (
+                f"hostssl    all    all    {ip_range} {self.pg_pw_encryption}"
+            )
             files.append(self.pg_hba, hostssl_line, use_sudo=True)
         if restart:
             self.pg_cmd("restart")
@@ -242,7 +246,9 @@ class PostgresMixin(AptMixin):
         self.create_db_user(user, password, replication=True)
         files.uncomment(self.pg_hba, "local +replication", use_sudo=True)
         for ip_range in ip_ranges:
-            hostssl_line = f"hostssl    replication    all   {ip_range}   {self.postgresql_settings.get('password_encryption', default='md5')}"
+            hostssl_line = (
+                f"hostssl    replication    all   {ip_range}   {self.pg_pw_encryption}"
+            )
             files.append(self.pg_hba, hostssl_line, use_sudo=True)
         if restart:
             sudo("service postgresql restart")
