@@ -40,9 +40,6 @@ class PostgresMixin(AptMixin):
         # 'effective_cache_size': '48GB',
         # checkpoint settings
         "wal_buffers": "16MB",
-        # Password encryption needs to be set to md5 on Postgres 14, until the SCRAM connection issue can be resolved.
-        # https://github.com/caktus/fabulaws/issues/101
-        "password_encryption": "md5",
         "checkpoint_completion_target": "0.9",
         "checkpoint_timeout": "10min",
         # if checkpoints are happening more often than the timeout, increase this up to 256
@@ -221,11 +218,10 @@ class PostgresMixin(AptMixin):
     @uses_fabric
     def pg_allow_from(self, ip_ranges, restart=True):
         """Allow external connections from the given IP range."""
-        pwd_encryption = "md5"
         self.pg_set_str("listen_addresses", "*")
         files.uncomment(self.pg_hba, "local +replication", use_sudo=True)
         for ip_range in ip_ranges:
-            hostssl_line = f"hostssl    all    all    {ip_range} {pwd_encryption}"
+            hostssl_line = f"hostssl    all    all    {ip_range} {self.postgresql_settings.get('password_encryption', default='md5')}"
             files.append(self.pg_hba, hostssl_line, use_sudo=True)
         if restart:
             self.pg_cmd("restart")
@@ -243,13 +239,10 @@ class PostgresMixin(AptMixin):
         """Creates a user for replication and enables replication in pg_hba.conf."""
 
         # XXX: does not support differing primary/replica pg versions
-        pwd_encryption = "md5"
         self.create_db_user(user, password, replication=True)
         files.uncomment(self.pg_hba, "local +replication", use_sudo=True)
         for ip_range in ip_ranges:
-            hostssl_line = (
-                f"hostssl    replication    all   {ip_range}   {pwd_encryption}"
-            )
+            hostssl_line = f"hostssl    replication    all   {ip_range}   {self.postgresql_settings.get('password_encryption', default='md5')}"
             files.append(self.pg_hba, hostssl_line, use_sudo=True)
         if restart:
             sudo("service postgresql restart")
