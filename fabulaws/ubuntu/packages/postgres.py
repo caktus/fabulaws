@@ -77,7 +77,7 @@ class PostgresMixin(AptMixin):
         self.postgresql_settings = self.postgresql_settings.copy()
         self.postgresql_settings.update(db_settings.pop("postgresql_settings", {}))
         self.pg_pw_encryption = self.postgresql_settings.get(
-            "password_encryption", default="md5"
+            "password_encryption", "md5"
         )
         if db_settings:
             # There were keys we did not recognize; complain rather than let the
