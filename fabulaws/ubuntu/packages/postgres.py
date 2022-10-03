@@ -31,8 +31,7 @@ class PostgresMixin(AptMixin):
         "hot_standby": "on",
         "hot_standby_feedback": "on",
         "max_wal_senders": "3",
-        # during client deletion 50 or more may be generated per minute; this allows an hour
-        "wal_keep_segments": "3000",
+        "wal_keep_size": "48000",  # Replaces wal_keep_segments
         # resources - set these dynamically based on actual machine resources (see pg_resource_settings())
         # 'shared_buffers': '8GB',
         # 'work_mem': '750MB',
