@@ -79,10 +79,10 @@ license_key: {{newrelic_license_key}}
 # Value    : Use optional key-value pairs to build filter sets, group your
 #            results, annotate your data, etc.
 #
-#custom_attributes:
+custom_attributes:
   environment: {{ environment.title() }}
-  role: {{ current_role.title().replace('-','') }}
-  deployment: {{ deployment_tag.title().replace('-', '') }}
+  role: {{ current_role.title().replace("-","") }}
+  deployment: {{ deployment_tag.title().replace("-", "") }}
 #  service: login service
 #  team: alpha-team
 #

@@ -8,6 +8,7 @@ import subprocess
 import sys
 import time
 from getpass import getpass
+from io import BytesIO
 from runpy import run_path
 from tempfile import mkstemp
 
@@ -16,6 +17,7 @@ from boto.cloudfront import CloudFrontConnection
 from boto.ec2.autoscale import AutoScaleConnection, LaunchConfiguration, Tag
 from boto.ec2.elb import ELBConnection
 from boto.exception import BotoServerError
+from fabric import operations
 from fabric.api import (
     abort,
     cd,
@@ -53,6 +55,20 @@ from .servers import (
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
+
+
+def render_template(filename, context, template_dir):
+    # Pulled from Fabric's files.upload_template method.
+    from fabric.utils import apply_lcwd
+
+    template_dir = apply_lcwd(template_dir, env)
+    from jinja2 import Environment, FileSystemLoader
+
+    jenv = Environment(
+        loader=FileSystemLoader(template_dir), keep_trailing_newline=False
+    )
+    text = jenv.get_template(filename).render(**context or {})
+    return text
 
 
 def _reset_hosts():
@@ -1683,13 +1699,13 @@ def mount_encrypted(drive_letter="f"):
 @parallel
 def install_newrelic_infrastructure_agent():
     require("environment", provided_by=env.environments)
-    release = run("cat /etc/lsb-release").strip()
+    release = run("lsb_release -c -s").strip()
     sudo(
         "curl -s https://download.newrelic.com/infrastructure_agent/gpg/newrelic-infra.gpg | apt-key add -",
         shell=True,
     )
     sudo(
-        f'printf "deb https://download.newrelic.com/infrastructure_agent/linux/apt/ {release} main" | tee -a /etc/apt/sources.list.d/newrelic-infra.list',
+        f'printf "deb https://download.newrelic.com/infrastructure_agent/linux/apt/ {release} main" | tee /etc/apt/sources.list.d/newrelic-infra.list',
         shell=True,
     )
     with settings(warn_only=True):
@@ -1708,15 +1724,17 @@ def upload_newrelic_infrastructure_conf():
     hostname = "_".join([_instance_name(_current_roles()[0]), run("hostname")])
     context["hostname"] = hostname
     # main, official monitoring agent
-    template = "newrelic_infra.yml"
-    destination = f"/etc/{template}"
-    upload_template(
-        template,
-        destination,
-        context=context,
+
+    # This little bit of hodoo is required because of an error encounted when uploading the
+    # yaml with Fabric's upload_template, which seems to run into this particular paramiko issue.
+    # https://github.com/paramiko/paramiko/issues/1133
+    template = render_template(
+        "newrelic-infra.yml", context=context, template_dir=env.templates_dir
+    )
+    operations.put(
+        local_path=BytesIO(bytes(template, encoding="utf-8")),
+        remote_path="/etc/newrelic-infra.yml",
         use_sudo=True,
-        use_jinja=True,
-        template_dir=env.templates_dir,
     )
     # leave the hostname the same for the system monitoring so the servers
     # can be linked up properly with the apps by New Relic
