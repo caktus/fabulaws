@@ -1729,7 +1729,7 @@ def upload_newrelic_infrastructure_conf():
     # yaml with Fabric's upload_template, which seems to run into this particular paramiko issue.
     # https://github.com/paramiko/paramiko/issues/1133
     template = render_template(
-        "newrelic-infra.yml", context=context, template_dir=env.templates_dir
+        "newrelic-infra.yml_template", context=context, template_dir=env.templates_dir
     )
     operations.put(
         local_path=BytesIO(bytes(template, encoding="utf-8")),
