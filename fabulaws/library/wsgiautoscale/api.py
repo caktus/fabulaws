@@ -1709,8 +1709,10 @@ def install_newrelic_infrastructure_agent():
         shell=True,
     )
     with settings(warn_only=True):
-        sudo("apt-get -qq update || apt-get -qq update")
-    sudo("apt-get install newrelic-infra -y")
+        sudo(
+            "export DEBIAN_FRONTEND=noninteractive; apt-get -qq update || apt-get -qq update"
+        )
+    sudo("export DEBIAN_FRONTEND=noninteractive; apt-get install newrelic-infra -y")
     upload_newrelic_infrastructure_conf()
 
 
@@ -1736,8 +1738,8 @@ def upload_newrelic_infrastructure_conf():
         remote_path="/etc/newrelic-infra.yml",
         use_sudo=True,
     )
-    # leave the hostname the same for the system monitoring so the servers
-    # can be linked up properly with the apps by New Relic
+    # # leave the hostname the same for the system monitoring so the servers
+    # # can be linked up properly with the apps by New Relic
     sudo("systemctl restart newrelic-infra")
 
 
