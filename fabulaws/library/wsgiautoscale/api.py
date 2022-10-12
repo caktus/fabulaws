@@ -8,6 +8,7 @@ import subprocess
 import sys
 import time
 from getpass import getpass
+from io import BytesIO
 from runpy import run_path
 from tempfile import mkstemp
 
@@ -16,6 +17,7 @@ from boto.cloudfront import CloudFrontConnection
 from boto.ec2.autoscale import AutoScaleConnection, LaunchConfiguration, Tag
 from boto.ec2.elb import ELBConnection
 from boto.exception import BotoServerError
+from fabric import operations
 from fabric.api import (
     abort,
     cd,
@@ -53,6 +55,20 @@ from .servers import (
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
+
+
+def render_template(filename, context, template_dir):
+    # Pulled from Fabric's files.upload_template method.
+    from fabric.utils import apply_lcwd
+
+    template_dir = apply_lcwd(template_dir, env)
+    from jinja2 import Environment, FileSystemLoader
+
+    jenv = Environment(
+        loader=FileSystemLoader(template_dir), keep_trailing_newline=False
+    )
+    text = jenv.get_template(filename).render(**context or {})
+    return text
 
 
 def _reset_hosts():
@@ -503,7 +519,7 @@ def _new(
     avail_zone=None,
     count=1,
     terminate_on_failure=False,
-    **kwargs
+    **kwargs,
 ):
     """create new server on AWS using the given deployment, environment, and role"""
     if deployment not in env.deployments:
@@ -554,7 +570,7 @@ def _new(
             volume_type=vol_type,
             deploy_user=env.deploy_user,
             security_groups=sec_grps,
-            **extra_args
+            **extra_args,
         )
         try:
             server.setup()
@@ -576,6 +592,7 @@ def _new(
         env.roledefs[role] = [server.hostname for server in servers]
         env.servers[role] = servers
         executel("update_server_passwords", hosts=env.roledefs[role])
+        executel("install_newrelic_infrastructure_agent", hosts=env.roledefs[role])
         executel("install_munin", hosts=env.roledefs[role])
         if env.gelf_log_host:
             executel("install_logstash", hosts=env.roledefs[role])
@@ -1535,6 +1552,7 @@ def promote_replica(index=0, override_servers=None):
     if override_servers is None:
         override_servers = {}
     _setup_env(override_servers=override_servers)
+    executel("upload_newrelic_infrastructure_agent", roles=["db-master"])
     if env.gelf_log_host:
         executel("install_logstash", roles=["db-primary"])
     if env.syslog_server:
@@ -1633,6 +1651,7 @@ def mount_encrypted(drive_letter="f"):
         )
     if exists(current_server.default_swap_file):
         sudo("swapon %s" % current_server.default_swap_file)
+    upload_newrelic_infrastructure_conf()
     if "db-primary" in _current_roles() or "db-replica" in _current_roles():
         sudo("service postgresql start")
     if "cache" in _current_roles():
@@ -1674,6 +1693,52 @@ def mount_encrypted(drive_letter="f"):
         sudo("service rsyslog restart")
     if env.awslogs_access_key_id:
         sudo("service awslogs restart")
+
+
+@task
+@parallel
+def install_newrelic_infrastructure_agent():
+    require("environment", provided_by=env.environments)
+    release = run("lsb_release -c -s").strip()
+    sudo(
+        "curl -s https://download.newrelic.com/infrastructure_agent/gpg/newrelic-infra.gpg | apt-key add -",
+        shell=True,
+    )
+    sudo(
+        f'printf "deb https://download.newrelic.com/infrastructure_agent/linux/apt/ {release} main" | tee /etc/apt/sources.list.d/newrelic-infra.list',
+        shell=True,
+    )
+    with settings(warn_only=True):
+        sudo("apt-get -qq update || apt-get -qq update")
+    sudo("apt-get install newrelic-infra -y")
+    upload_newrelic_infrastructure_conf()
+
+
+@task
+@parallel
+def upload_newrelic_infrastructure_conf():
+    require("environment", provided_by=env.environments)
+    _load_passwords(["newrelic_license_key"])
+    context = dict(env)
+    context["current_role"] = _current_roles()[0]
+    hostname = "_".join([_instance_name(_current_roles()[0]), run("hostname")])
+    context["hostname"] = hostname
+    # main, official monitoring agent
+
+    # This little bit of hodoo is required because of an error encounted when uploading the
+    # yaml with Fabric's upload_template, which seems to run into this particular paramiko issue.
+    # https://github.com/paramiko/paramiko/issues/1133
+    template = render_template(
+        "newrelic-infra.yml_template", context=context, template_dir=env.templates_dir
+    )
+    operations.put(
+        local_path=BytesIO(bytes(template, encoding="utf-8")),
+        remote_path="/etc/newrelic-infra.yml",
+        use_sudo=True,
+    )
+    # leave the hostname the same for the system monitoring so the servers
+    # can be linked up properly with the apps by New Relic
+    sudo("systemctl restart newrelic-infra")
 
 
 # TESTING and USAGE EXAMPLES
@@ -1787,6 +1852,7 @@ def update_newrelic_keys(deployment_tag, environment):
     if answer != "y":
         abort("Aborted.")
     executel("upload_newrelic_conf")
+    executel("upload_newrelic_infrastructure_conf")
     executel("supervisor", "restart", "celery", roles=["worker"])
     executel("begin_upgrade")
     executel("supervisor", "restart", "web", roles=["web"])

@@ -87,7 +87,7 @@ On production the process is similarly, but the secrets should be updated with
 a full deployment, whenever possible, to avoid any unnecessary downtime::
 
     fab production update_server_passwords
-    fab production upload_newrelic_sysmon_conf
+    fab production install_newrelic_infrastructure_agent
     fab production upload_newrelic_conf
     fab deploy_serial:myproject,production
 
