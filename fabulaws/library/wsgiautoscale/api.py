@@ -2054,7 +2054,9 @@ def install_rsyslog():
         use_jinja=True,
         template_dir=env.templates_dir,
     )
-
+    # Required to address a bug in rsyslog https://github.com/rsyslog/rsyslog/issues/4975
+    # This should be removed once the bug fix is released.
+    append("/etc/rsyslog.conf", 'global(internalmsg.severity="info")', use_sudo=True)
     output = run("rsyslogd -v")
     if "rsyslogd 8" not in output:
         sudo(
@@ -2064,7 +2066,11 @@ def install_rsyslog():
             sudo(
                 "export DEBIAN_FRONTEND=noninteractive ; apt-get -qq update || apt-get -qq update"
             )
-        sudo("export DEBIAN_FRONTEND=noninteractive ; apt-get -qq -y install rsyslog")
+        # This was added in support of the custom /etc/rsyslog.conf above and can be removed once
+        # the bug is fixed.
+        sudo(
+            "export DEBIAN_FRONTEND=noninteractive ; apt-get --yes --force-yes -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' -qq -y install rsyslog"
+        )
 
     print("Ignore any useradd or chgrp warnings below.")
     with settings(warn_only=True):
