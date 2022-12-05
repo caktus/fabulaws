@@ -2064,7 +2064,12 @@ def install_rsyslog():
             sudo(
                 "export DEBIAN_FRONTEND=noninteractive ; apt-get -qq update || apt-get -qq update"
             )
-        sudo("export DEBIAN_FRONTEND=noninteractive ; apt-get -qq -y install rsyslog")
+        # The extra Options and --force-yes were added in support of a custom /etc/rsyslog.conf in pre_install_syslog
+        # This should be okay as a universal change, but if it causes issues, we can remove it once the underlying
+        # need for a custom rsyslog.conf is resolved.
+        sudo(
+            "export DEBIAN_FRONTEND=noninteractive ; apt-get --yes --force-yes -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' -qq -y install rsyslog"
+        )
 
     print("Ignore any useradd or chgrp warnings below.")
     with settings(warn_only=True):
